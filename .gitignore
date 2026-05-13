@@ -36,3 +36,6 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Coolify / deployment logs (jangan commit, sering ada hostname internal)
+deployment-*-logs-*.txt

@@ -306,3 +306,62 @@ cd /path/to/repo
 docker build --target api -t adms-api .
 docker build --target web -t adms-web .
 ```
+
+---
+
+## 11. Hardening Keamanan (PENTING)
+
+### 11.1 Postgres jangan di-expose ke publik
+
+Kalau di log Postgres muncul pola seperti ini:
+```
+FATAL: unsupported frontend protocol 0.0/255.255/2.0
+LOG:  invalid length of startup packet
+FATAL: password authentication failed for user "wog"
+FATAL: password authentication failed for user "postgres"
+FATAL: canceling authentication due to timeout
+```
+Itu artinya port 5432 **ter-expose ke internet** dan sedang di-scan/brute-force oleh bot.
+
+**Fix di Coolify:**
+1. Buka resource **PostgreSQL** di dashboard Coolify.
+2. Tab **Settings / Network** → matikan toggle **"Public"** atau **"Make it publicly available"**.
+3. Pastikan API connect via hostname internal Docker network (`postgres-internal`), bukan IP publik.
+4. Restart resource Postgres.
+
+Hal yang sama berlaku untuk Redis (port 6379). Database tidak boleh di-expose ke internet kecuali ada alasan kuat dan firewall/IP allowlist.
+
+### 11.2 Verifikasi network internal Coolify
+
+`DATABASE_URL` di env API harusnya:
+```
+postgres://<user>:<password>@postgres-internal:5432/<db_name>
+```
+Bukan IP publik VPS atau `localhost`. Coolify auto-generate hostname internal saat create database resource — copy dari panel "Connect" di resource Postgres.
+
+### 11.3 ADMS secret key
+
+`ADMS_SECRET_KEY` melindungi endpoint `/iclock/*` dari spam. Mesin harus kirim `?key=<value>` di setiap request. Kalau tidak di-set, endpoint terbuka untuk siapa saja yang tahu URL-nya — risiko data palsu di-inject.
+
+### 11.4 Cek log Postgres untuk attempt mencurigakan
+
+Setelah di-private-kan, log scanner harusnya hilang. Verifikasi dengan:
+```bash
+# Di Coolify dashboard → resource Postgres → Logs
+# Atau via SSH:
+docker logs <postgres_container> --tail 200 | grep -E "FATAL|invalid length"
+```
+Yang masih boleh muncul: koneksi sukses dari API, dan checkpoint normal. Yang TIDAK boleh muncul: protocol mismatch dari IP eksternal.
+
+### 11.5 Log analysis cepat
+
+| Log | Arti | Tindakan |
+|-----|------|----------|
+| `Role "X" does not exist` | Bot brute-force username | Privatkan port |
+| `password authentication failed` | Salah password atau brute-force | Privatkan port + cek env API |
+| `unsupported frontend protocol` | HTTP/scanner nyasar ke port DB | Privatkan port |
+| `canceling authentication due to timeout` | Client hang / network issue | Cek koneksi API ↔ DB |
+| `invalid length of startup packet` | Probe non-Postgres | Privatkan port |
+| `database system is ready to accept connections` | Normal startup | OK |
+| `checkpoint complete` | Normal background task | OK |
+

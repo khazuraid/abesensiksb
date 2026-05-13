@@ -1,15 +1,21 @@
+# File ini hanya untuk self-hosted (docker compose up).
+# Saat deploy via Coolify, file ini TIDAK dipakai — Coolify pakai apps/api/Dockerfile
+# dan managed Postgres/Redis resource. Lihat DEPLOYMENT.md.
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: adms
+      POSTGRES_USER: ${DB_USER:-adms}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: adms_db
+      POSTGRES_DB: ${DB_NAME:-adms_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # PENTING: jangan expose port 5432 ke host kalau VPS punya IP publik.
+    # Postgres hanya boleh diakses dari Docker network internal.
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U adms"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-adms}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -17,6 +23,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    # Sama: jangan expose port 6379 ke publik.
 
   api:
     build:
@@ -29,7 +36,7 @@ services:
       redis:
         condition: service_started
     environment:
-      DATABASE_URL: postgres://adms:${DB_PASSWORD}@postgres:5432/adms_db
+      DATABASE_URL: postgres://${DB_USER:-adms}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-adms_db}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
