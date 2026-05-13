@@ -1,0 +1,206 @@
+import { z } from "zod";
+
+export const RoleSchema = z.enum(["ADMIN", "HRD", "USER"]);
+export type Role = z.infer<typeof RoleSchema>;
+
+export const UserSchema = z.object({
+	email: z.string().email(),
+	password: z.string().min(6),
+	name: z.string(),
+	role: RoleSchema.optional(),
+});
+
+export type User = z.infer<typeof UserSchema>;
+
+export const EmployeeSchema = z.object({
+	id: z.number(),
+	userId: z.number().nullable().optional(),
+	employeeCode: z.string().min(1, "NIP/Kode Pegawai wajib diisi"),
+	name: z.string().min(1, "Nama wajib diisi"),
+	department: z.string().nullable().optional(),
+	position: z.string().nullable().optional(),
+	branch: z.string().nullable().optional(),
+	shiftId: z.number().nullable().optional(),
+	biometricId: z.string().nullable().optional(),
+	biometricSyncedAt: z.date().nullable().optional(),
+	isActive: z.boolean().default(true),
+	createdAt: z.date(),
+	updatedAt: z.date(),
+});
+
+export const CreateEmployeeSchema = EmployeeSchema.omit({
+	id: true,
+	biometricSyncedAt: true,
+	createdAt: true,
+	updatedAt: true,
+});
+
+export const UpdateEmployeeSchema = CreateEmployeeSchema.partial();
+
+export type Employee = z.infer<typeof EmployeeSchema>;
+export type CreateEmployee = z.infer<typeof CreateEmployeeSchema>;
+export type UpdateEmployee = z.infer<typeof UpdateEmployeeSchema>;
+
+export const AttendanceLogSchema = z.object({
+	id: z.number(),
+	employeeId: z.number(),
+	deviceId: z.number().nullable().optional(),
+	timestamp: z.date(),
+	type: z.enum(["IN", "OUT"]),
+	status: z.enum(["PRESENT", "LATE", "ABSENT"]),
+	photoUrl: z.string().nullable().optional(),
+	verified: z.boolean().default(true),
+	createdAt: z.date(),
+});
+
+export type AttendanceLog = z.infer<typeof AttendanceLogSchema> & {
+	employee?: Partial<Employee>;
+	device?: Partial<Device>;
+};
+
+export const DeviceSchema = z.object({
+	id: z.number(),
+	serialNumber: z.string().min(1, "Serial Number wajib diisi"),
+	name: z.string().min(1, "Nama Perangkat wajib diisi"),
+	location: z.string().nullable().optional(),
+	ipAddress: z.string().nullable().optional(),
+	isOnline: z.boolean().default(false),
+	lastSeen: z.date().nullable().optional(),
+	createdAt: z.date(),
+	updatedAt: z.date(),
+});
+
+export const CreateDeviceSchema = DeviceSchema.omit({
+	id: true,
+	isOnline: true,
+	lastSeen: true,
+	createdAt: true,
+	updatedAt: true,
+});
+
+export const UpdateDeviceSchema = CreateDeviceSchema.partial();
+
+export type Device = z.infer<typeof DeviceSchema>;
+export type CreateDevice = z.infer<typeof CreateDeviceSchema>;
+export type UpdateDevice = z.infer<typeof UpdateDeviceSchema>;
+
+export const ShiftSchema = z.object({
+	id: z.number(),
+	name: z.string().min(1, "Nama Shift wajib diisi"),
+	startTime: z
+		.string()
+		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm"),
+	endTime: z
+		.string()
+		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm"),
+	toleranceMinutes: z.number().min(0).default(0),
+	earlyOutTolerance: z.number().min(0).default(0),
+	maxLateTime: z
+		.string()
+		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm")
+		.nullable()
+		.optional(),
+	minOutTime: z
+		.string()
+		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm")
+		.nullable()
+		.optional(),
+	workDays: z.array(z.number().min(0).max(6)).default([1, 2, 3, 4, 5]),
+	isActive: z.boolean().default(true),
+	createdAt: z.date(),
+	updatedAt: z.date(),
+});
+
+export const CreateShiftSchema = ShiftSchema.omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
+});
+
+export const UpdateShiftSchema = CreateShiftSchema.partial();
+
+export type Shift = z.infer<typeof ShiftSchema>;
+export type CreateShift = z.infer<typeof CreateShiftSchema>;
+export type UpdateShift = z.infer<typeof UpdateShiftSchema>;
+
+export const HolidaySchema = z.object({
+	id: z.number(),
+	date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal: YYYY-MM-DD"),
+	name: z.string().min(1, "Nama wajib diisi"),
+	description: z.string().nullable().optional(),
+	createdAt: z.date(),
+	updatedAt: z.date(),
+});
+
+export const CreateHolidaySchema = HolidaySchema.omit({
+	id: true,
+	createdAt: true,
+	updatedAt: true,
+});
+
+export const UpdateHolidaySchema = CreateHolidaySchema.partial();
+
+export type Holiday = z.infer<typeof HolidaySchema>;
+export type CreateHoliday = z.infer<typeof CreateHolidaySchema>;
+export type UpdateHoliday = z.infer<typeof UpdateHolidaySchema>;
+
+export const LoginSchema = z.object({
+	email: z.string().email("Email tidak valid"),
+	password: z.string().min(6, "Password minimal 6 karakter"),
+});
+
+export type Login = z.infer<typeof LoginSchema>;
+
+/**
+ * Schema untuk validasi record mentah dari mesin ADMS (key=value\tkey=value).
+ * Memastikan minimal USERID & CHECKTIME ada dan bertipe valid.
+ */
+export const ADMSRecordSchema = z.object({
+	USERID: z.string().min(1),
+	CHECKTIME: z.string().refine((v) => !Number.isNaN(new Date(v).getTime()), {
+		message: "CHECKTIME bukan tanggal valid",
+	}),
+	CHECKTYPE: z.string().optional(),
+	VERIFYCODE: z.string().optional(),
+	SN: z.string().optional(),
+});
+
+export type ADMSRecord = z.infer<typeof ADMSRecordSchema>;
+
+export const DashboardStatsSchema = z.object({
+	totalEmployees: z.number(),
+	presentToday: z.number(),
+	lateToday: z.number(),
+	devicesOnline: z.number(),
+	devicesTotal: z.number(),
+});
+
+export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
+
+export const DeviceCommandSchema = z.enum([
+	"REBOOT",
+	"SYNC_TIME",
+	"CLEAR_LOG",
+	"CLEAR_DATA",
+	"PUSH_USER",
+	"CHECK",
+	"INFO",
+	"RELOAD",
+	"SET_TIMEZONE",
+	"SET_VOLUME",
+	"USER_INFO",
+	"USER_EDIT",
+	"USER_DELETE",
+	"ATTENDANCE_DOWNLOAD",
+	"ATTENDANCE_CLEAR",
+]);
+
+export type DeviceCommand = z.infer<typeof DeviceCommandSchema>;
+
+export const SendCommandSchema = z.object({
+	deviceId: z.number(),
+	command: DeviceCommandSchema,
+	payload: z.record(z.string(), z.any()).optional(),
+});
+
+export type SendCommand = z.infer<typeof SendCommandSchema>;

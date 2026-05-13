@@ -1,0 +1,46 @@
+import {
+	Controller,
+	Get,
+	ParseIntPipe,
+	Query,
+	Res,
+	UseGuards,
+} from "@nestjs/common";
+import type { Response } from "express";
+import { JwtAuthGuard } from "../auth/jwt-auth.guard";
+import { ReportsService } from "./reports.service";
+
+@Controller("reports")
+@UseGuards(JwtAuthGuard)
+export class ReportsController {
+	constructor(private readonly reportsService: ReportsService) {}
+
+	@Get("summary")
+	getSummary(
+		@Query("month", ParseIntPipe) month: number,
+		@Query("year", ParseIntPipe) year: number,
+	) {
+		return this.reportsService.getMonthlySummary(month, year);
+	}
+
+	@Get("export")
+	async export(
+		@Query("month", ParseIntPipe) month: number,
+		@Query("year", ParseIntPipe) year: number,
+		@Res() res: Response,
+	) {
+		const workbook = await this.reportsService.generateExcel(month, year);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=Laporan-Absensi-${month}-${year}.xlsx`,
+		);
+
+		return workbook.xlsx.write(res).then(() => {
+			res.status(200).end();
+		});
+	}
+}
