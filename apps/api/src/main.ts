@@ -5,7 +5,7 @@ async function bootstrap() {
 	const app = await NestFactory.create(AppModule, { rawBody: true });
 
 	app.enableCors({
-		origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+		origin: process.env.CORS_ORIGIN || "http://localhost:8080",
 		credentials: true,
 	});
 
@@ -13,7 +13,7 @@ async function bootstrap() {
 		exclude: ["iclock/(.*)"],
 	});
 
-	const port = process.env.PORT || 3333;
+	const port = process.env.PORT || 8888;
 	await app.listen(port);
 
 	console.log(`API berjalan di http://localhost:${port}`);

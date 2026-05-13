@@ -37,9 +37,9 @@ services:
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       ADMS_SECRET_KEY: ${ADMS_SECRET_KEY:-}
-      PORT: 3333
+      PORT: 8888
     ports:
-      - "3333:3333"
+      - "8888:8888"
 
   web:
     build:
@@ -49,9 +49,9 @@ services:
     depends_on:
       - api
     environment:
-      NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:3333/api}
+      NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:8888/api}
     ports:
-      - "3000:3000"
+      - "8080:8080"
 
 volumes:
   postgres_data:

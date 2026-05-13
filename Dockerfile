@@ -19,7 +19,7 @@ COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json ./
 COPY --from=builder /app/node_modules ./node_modules
 
-EXPOSE 3333
+EXPOSE 8888
 CMD ["node", "dist/main.js"]
 
 # === WEB PRODUCTION ===
@@ -30,6 +30,7 @@ COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
 COPY --from=builder /app/apps/web/public ./public
 
-EXPOSE 3000
+EXPOSE 8080
 ENV HOSTNAME="0.0.0.0"
+ENV PORT=8080
 CMD ["node", "server.js"]
