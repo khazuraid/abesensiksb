@@ -180,8 +180,7 @@ volumes:
 **Environment Variables:**
 ```
 DATABASE_URL=postgres://absensi:rHHnr9QpPKSmaxgEffctxo35EvbEDMAhhgGqxgwq2kEbsqP5bSASK6YyCNMm3Cay@postgres-internal:5432/adms_db
-REDIS_HOST=redis-internal
-REDIS_PORT=6379
+REDIS_HOST=redis://default:wsprYOrXRxNUt1gOsAVzfoOjBlQ7DwypQ6OAvB3oYMrHLkKY4FPrsJZzKKIT56ps@r118q9iew08qs6oy5tptkzgr:6379/0
 JWT_SECRET=F6kYn6j5V7wS3p2r9m0t4h8q1s5u9e2o
 CORS_ORIGIN=https://absensi.domain.com
 TELEGRAM_TOKEN=8423654730:AAGzXJbN86kP4vXF78zR-0B49T72X50pWl4
