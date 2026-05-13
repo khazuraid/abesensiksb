@@ -10,16 +10,14 @@ COPY biome.json turbo.json ./
 RUN pnpm install --frozen-lockfile
 RUN pnpm turbo build --filter=api
 
+# Flatten node_modules: copy dengan dereference symlinks
+RUN mkdir -p /prod_modules && cp -rL /app/node_modules/* /prod_modules/ 2>/dev/null || true
+
 FROM node:20-alpine
-RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
 COPY --from=builder /app/apps/api/dist/ ./dist/
-COPY --from=builder /app/apps/api/package.json ./
-COPY --from=builder /app/pnpm-lock.yaml ./
-COPY --from=builder /app/pnpm-workspace.yaml ./
-
-RUN echo '{"packages":["."]}' > pnpm-workspace.yaml && pnpm install --prod --no-frozen-lockfile
+COPY --from=builder /prod_modules/ ./node_modules/
 
 ENV PORT=8888
 EXPOSE 8888
