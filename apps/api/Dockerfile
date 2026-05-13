@@ -2,6 +2,10 @@ FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
+# Force devDependencies ter-install meski Coolify kirim NODE_ENV=production
+# sebagai build arg/env. devDeps (turbo, nest-cli, tsc) wajib untuk build.
+ENV NODE_ENV=development
+
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/ ./packages/
 COPY apps/api/ ./apps/api/
@@ -13,6 +17,9 @@ RUN pnpm deploy --filter=api --prod /prod/api
 
 FROM node:20-alpine
 WORKDIR /app
+
+# Runtime: production
+ENV NODE_ENV=production
 
 COPY --from=builder /prod/api/node_modules/ ./node_modules/
 COPY --from=builder /app/apps/api/dist/ ./dist/

@@ -3,6 +3,10 @@ FROM node:20-alpine AS builder
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
+# Force devDependencies ter-install meski parent (Coolify) kirim
+# NODE_ENV=production sebagai build arg/env. devDeps wajib untuk build.
+ENV NODE_ENV=development
+
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/ ./packages/
 COPY apps/ ./apps/
@@ -14,6 +18,7 @@ RUN pnpm turbo build
 # === API PRODUCTION ===
 FROM node:20-alpine AS api
 WORKDIR /app
+ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/api/dist ./dist
 COPY --from=builder /app/apps/api/package.json ./
@@ -25,6 +30,7 @@ CMD ["node", "dist/main.js"]
 # === WEB PRODUCTION ===
 FROM node:20-alpine AS web
 WORKDIR /app
+ENV NODE_ENV=production
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
