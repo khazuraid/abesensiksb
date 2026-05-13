@@ -177,30 +177,41 @@ export const DashboardStatsSchema = z.object({
 
 export type DashboardStats = z.infer<typeof DashboardStatsSchema>;
 
-export const DeviceCommandSchema = z.enum([
-	"REBOOT",
-	"SYNC_TIME",
-	"CLEAR_LOG",
-	"CLEAR_DATA",
-	"PUSH_USER",
-	"CHECK",
-	"INFO",
-	"RELOAD",
-	"SET_TIMEZONE",
-	"SET_VOLUME",
-	"USER_INFO",
-	"USER_EDIT",
-	"USER_DELETE",
-	"ATTENDANCE_DOWNLOAD",
-	"ATTENDANCE_CLEAR",
+export const DeviceCommandTypeEnum = z.enum([
+	"check",
+	"reset",
+	"info",
+	"log",
+	"reboot",
+	"reload",
+	"set.timezone",
+	"set.volume",
+	"set.language",
+	"user.info",
+	"user.edit",
+	"user.delete",
+	"attendance.download",
+	"attendance.verify",
+	"attendance.clear",
+	"command.system",
 ]);
 
-export type DeviceCommand = z.infer<typeof DeviceCommandSchema>;
+export type DeviceCommandType = z.infer<typeof DeviceCommandTypeEnum>;
 
 export const SendCommandSchema = z.object({
 	deviceId: z.number(),
-	command: DeviceCommandSchema,
-	payload: z.record(z.string(), z.any()).optional(),
+	type: DeviceCommandTypeEnum,
+	// Optional payload fields depending on command type
+	timezone: z.number().optional(),
+	volume: z.number().min(0).max(100).optional(),
+	language: z.string().optional(),
+	user_id: z.string().optional(),
+	name: z.string().optional(),
+	privilege: z.number().optional(),
+	password: z.union([z.string(), z.number()]).optional(),
+	start_date: z.string().optional(),
+	end_date: z.string().optional(),
+	command: z.string().optional(),
 });
 
 export type SendCommand = z.infer<typeof SendCommandSchema>;

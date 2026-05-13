@@ -1,6 +1,8 @@
 import {
 	type CreateDevice,
 	CreateDeviceSchema,
+	type SendCommand,
+	SendCommandSchema,
 	type UpdateDevice,
 	UpdateDeviceSchema,
 } from "@adms/shared-types";
@@ -94,17 +96,17 @@ export class DevicesController {
 
 	@Post("command")
 	async sendCommand(
-		@Body() body: { deviceId: number; command: string },
+		@Body(new ZodValidationPipe(SendCommandSchema)) dto: SendCommand,
 		@Req() req: Request,
 	) {
-		const result = await this.devicesService.sendCommand(body.deviceId, body.command);
+		const result = await this.devicesService.sendCommand(dto);
 		const user = req.user as { id: number };
 
 		this.auditLogsService.record({
 			userId: user.id,
 			action: "COMMAND",
 			target: "devices",
-			details: { deviceId: body.deviceId, command: body.command },
+			details: { deviceId: dto.deviceId, type: dto.type },
 		});
 
 		return result;

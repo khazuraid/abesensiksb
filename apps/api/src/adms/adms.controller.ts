@@ -36,11 +36,13 @@ export class ADMSController {
 
 		return [
 			"GET OPTION FROM: " + sn,
+			`Stamp=0`,
+			`OpStamp=0`,
 			`Delay=${delay}`,
 			`ErrorDelay=${errorDelay}`,
 			"TransTimes=00:00;14:05",
 			"TransInterval=1",
-			"TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollUser\tEnrollFP\tFPImag",
+			"TransFlag=1111000000",
 			"TimeZone=7",
 			"Realtime=1",
 			"Encrypt=0",
