@@ -179,15 +179,15 @@ volumes:
 
 **Environment Variables:**
 ```
-DATABASE_URL=postgres://adms:PASSWORD@postgres-internal:5432/adms_db
+DATABASE_URL=postgres://absensi:rHHnr9QpPKSmaxgEffctxo35EvbEDMAhhgGqxgwq2kEbsqP5bSASK6YyCNMm3Cay@postgres-internal:5432/adms_db
 REDIS_HOST=redis-internal
 REDIS_PORT=6379
-JWT_SECRET=ganti-dengan-random-string-panjang
+JWT_SECRET=F6kYn6j5V7wS3p2r9m0t4h8q1s5u9e2o
 CORS_ORIGIN=https://absensi.domain.com
-TELEGRAM_TOKEN=bot-token-dari-botfather
-TELEGRAM_CHAT_ID=-100xxxxx
-ADMS_SECRET_KEY=secret-key-untuk-mesin
-PORT=3333
+TELEGRAM_TOKEN=8423654730:AAGzXJbN86kP4vXF78zR-0B49T72X50pWl4
+TELEGRAM_CHAT_ID=-1003025671345
+ADMS_SECRET_KEY=KPB6969
+PORT=8888
 ```
 
 ### 5.6 Deploy Web (Frontend)
