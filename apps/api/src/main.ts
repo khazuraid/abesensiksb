@@ -10,7 +10,7 @@ async function bootstrap() {
 	});
 
 	app.setGlobalPrefix("api", {
-		exclude: ["iclock/(.*)"],
+		exclude: ["iclock", "iclock/(.*)"],
 	});
 
 	const port = process.env.PORT || 8888;
