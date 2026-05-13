@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 RUN corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
@@ -12,16 +12,10 @@ COPY biome.json turbo.json ./
 RUN pnpm install --frozen-lockfile
 RUN pnpm turbo build --filter=api
 
-# Flatten node_modules: copy real files (dereference symlinks)
-RUN cp -rL node_modules /prod_modules
+# Cleanup devDeps & build artifacts to reduce image size
+RUN rm -rf apps/api/src packages/*/src .turbo biome.json turbo.json
 
-FROM node:20-alpine
-WORKDIR /app
 ENV NODE_ENV=production
-
-COPY --from=builder /prod_modules/ ./node_modules/
-COPY --from=builder /app/apps/api/dist/ ./dist/
-
 ENV PORT=8888
 EXPOSE 8888
-CMD ["node", "dist/main.js"]
+CMD ["node", "apps/api/dist/main.js"]
