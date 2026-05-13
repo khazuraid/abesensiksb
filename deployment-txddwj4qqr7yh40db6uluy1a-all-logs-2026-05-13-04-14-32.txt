@@ -1,0 +1,297 @@
+2026-May-13 04:11:59.527170 Docker 29.4.3 with BuildKit and Buildx detected on deployment server (localhost).
+2026-May-13 04:11:59.559862 Starting deployment of khazuraid/abesensiksb:main to localhost.
+2026-May-13 04:12:00.022238 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-May-13 04:12:00.221658 [DEBUG] [CMD]: docker stop -t 30 txddwj4qqr7yh40db6uluy1a
+2026-May-13 04:12:00.221658 [DEBUG] Error response from daemon: No such container: txddwj4qqr7yh40db6uluy1a
+2026-May-13 04:12:00.521511 [DEBUG] [CMD]: docker run -d --network 'coolify' --name txddwj4qqr7yh40db6uluy1a  --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-May-13 04:12:00.521511 [DEBUG] 869bbefa81273b4a27d313d0019fce1e7d780d0af8e4924c5d5cab836154a4f4
+2026-May-13 04:12:04.062584 [DEBUG] [CMD]: docker exec txddwj4qqr7yh40db6uluy1a bash -c 'GIT_SSH_COMMAND="ssh -o ConnectTimeout=30 -p 22 -o Port=22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git ls-remote https://x-access-token:<REDACTED>@github.com/khazuraid/abesensiksb.git refs/heads/main'
+2026-May-13 04:12:04.062584 [DEBUG] 5d00d6a13d4810884146171b69c635bacc661e07	refs/heads/main
+2026-May-13 04:12:04.519616 ----------------------------------------
+2026-May-13 04:12:04.538277 Importing khazuraid/abesensiksb:main (commit sha 5d00d6a13d4810884146171b69c635bacc661e07) to /artifacts/txddwj4qqr7yh40db6uluy1a.
+2026-May-13 04:12:04.973443 [DEBUG] [CMD]: docker exec txddwj4qqr7yh40db6uluy1a bash -c 'git clone --depth=1 --recurse-submodules --shallow-submodules -b '\''main'\'' '\''https://x-access-token:<REDACTED>@github.com/khazuraid/abesensiksb.git'\'' '\''/artifacts/txddwj4qqr7yh40db6uluy1a'\'' && cd '\''/artifacts/txddwj4qqr7yh40db6uluy1a'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git fetch --depth=1 origin '\''5d00d6a13d4810884146171b69c635bacc661e07'\'' && git -c advice.detachedHead=false checkout '\''5d00d6a13d4810884146171b69c635bacc661e07'\'' >/dev/null 2>&1 && cd '\''/artifacts/txddwj4qqr7yh40db6uluy1a'\'' && if [ -f .gitmodules ]; then git submodule sync && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git submodule update --init --recursive --depth=1; fi && cd '\''/artifacts/txddwj4qqr7yh40db6uluy1a'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git lfs pull'
+2026-May-13 04:12:04.973443 [DEBUG] Cloning into '/artifacts/txddwj4qqr7yh40db6uluy1a'...
+2026-May-13 04:12:06.780451 [DEBUG] From https://github.com/khazuraid/abesensiksb
+2026-May-13 04:<REDACTED>@9 --activate
+2026-May-13 04:12:08.969964 [DEBUG] WORKDIR /app
+2026-May-13 04:12:08.969964 [DEBUG] 
+2026-May-13 04:12:08.969964 [DEBUG] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-May-13 04:12:08.969964 [DEBUG] COPY packages/ ./packages/
+2026-May-13 04:12:08.969964 [DEBUG] COPY apps/api/ ./apps/api/
+2026-May-13 04:12:08.969964 [DEBUG] COPY biome.json turbo.json ./
+2026-May-13 04:12:08.969964 [DEBUG] 
+2026-May-13 04:12:08.969964 [DEBUG] RUN pnpm install --frozen-lockfile
+2026-May-13 04:12:08.969964 [DEBUG] RUN pnpm turbo build --filter=api
+2026-May-13 04:12:08.969964 [DEBUG] 
+2026-May-13 04:12:08.969964 [DEBUG] FROM node:20-alpine
+2026-May-13 04:12:08.969964 [DEBUG] WORKDIR /app
+2026-May-13 04:12:08.969964 [DEBUG] 
+2026-May-13 04:12:08.969964 [DEBUG] COPY --from=builder /app/apps/api/dist ./dist
+2026-May-13 04:12:08.969964 [DEBUG] COPY --from=builder /app/apps/api/package.json ./
+2026-May-13 04:12:08.969964 [DEBUG] COPY --from=builder /app/node_modules ./node_modules
+2026-May-13 04:12:08.969964 [DEBUG] 
+2026-May-13 04:12:08.969964 [DEBUG] EXPOSE 8888
+2026-May-13 04:12:08.969964 [DEBUG] CMD ["node", "dist/main.js"]
+2026-May-13 04:12:09.326594 [DEBUG] Creating build-time .env file in /artifacts (outside Docker context).
+2026-May-13 04:12:09.826763 [DEBUG] [CMD]: docker exec txddwj4qqr7yh40db6uluy1a bash -c 'cat /artifacts/txddwj4qqr7yh40db6uluy1a/apps/api/Dockerfile'
+2026-May-13 04:12:09.826763 [DEBUG] FROM node:20-alpine AS builder
+2026-May-13 04:12:09.826763 [DEBUG] RUN corepack enable && corepack prepare pnpm@9 --activate
+2026-May-13 04:12:09.826763 [DEBUG] WORKDIR /app
+2026-May-13 04:12:09.826763 [DEBUG] 
+2026-May-13 04:12:09.826763 [DEBUG] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-May-13 04:12:09.826763 [DEBUG] COPY packages/ ./packages/
+2026-May-13 04:12:09.826763 [DEBUG] COPY apps/api/ ./apps/api/
+2026-May-13 04:12:09.826763 [DEBUG] COPY biome.json turbo.json ./
+2026-May-13 04:12:09.826763 [DEBUG] 
+2026-May-13 04:12:09.826763 [DEBUG] RUN pnpm install --frozen-lockfile
+2026-May-13 04:12:09.826763 [DEBUG] RUN pnpm turbo build --filter=api
+2026-May-13 04:12:09.826763 [DEBUG] 
+2026-May-13 04:12:09.826763 [DEBUG] FROM node:20-alpine
+2026-May-13 04:12:09.826763 [DEBUG] WORKDIR /app
+2026-May-13 04:12:09.826763 [DEBUG] 
+2026-May-13 04:12:09.826763 [DEBUG] COPY --from=builder /app/apps/api/dist ./dist
+2026-May-13 04:12:09.826763 [DEBUG] COPY --from=builder /app/apps/api/package.json ./
+2026-May-13 04:12:09.826763 [DEBUG] COPY --from=builder /app/node_modules ./node_modules
+2026-May-13 04:12:09.826763 [DEBUG] 
+2026-May-13 04:12:09.826763 [DEBUG] EXPOSE 8888
+2026-May-13 04:12:09.826763 [DEBUG] CMD ["node", "dist/main.js"]
+2026-May-13 04:12:09.905988 [DEBUG] Final Dockerfile:
+2026-May-13 04:12:10.388960 [DEBUG] [CMD]: docker exec txddwj4qqr7yh40db6uluy1a bash -c 'cat /artifacts/txddwj4qqr7yh40db6uluy1a/apps/api/Dockerfile'
+2026-May-13 04:12:10.388960 [DEBUG] FROM node:20-alpine AS builder
+2026-May-13 04:12:10.388960 [DEBUG] ARG API_URL=https://api2.silapordbd.web.id
+2026-May-13 04:<REDACTED>@postgres-internal:5432/adms_db
+2026-May-13 04:12:10.388960 [DEBUG] ARG REDIS_HOST=redis://default:<REDACTED>@r118q9iew08qs6oy5tptkzgr:6379/0
+2026-May-13 04:12:10.388960 [DEBUG] ARG JWT_SECRET=F6kYn6j5V7wS3p2r9m0t4h8q1s5u9e2o
+2026-May-13 04:12:10.388960 [DEBUG] ARG TELEGRAM_TOKEN=8423654730:AAGzXJbN86kP4vXF78zR-0B49T72X50pWl4
+2026-May-13 04:12:10.388960 [DEBUG] ARG TELEGRAM_CHAT_ID=-1003025671345
+2026-May-13 04:12:10.388960 [DEBUG] ARG ADMS_SECRET_KEY=KPB6969
+2026-May-13 04:12:10.388960 [DEBUG] ARG COOLIFY_URL=https://api2.silapordbd.web.id
+2026-May-13 04:<REDACTED>@9 --activate
+2026-May-13 04:12:10.388960 [DEBUG] WORKDIR /app
+2026-May-13 04:12:10.388960 [DEBUG] 
+2026-May-13 04:12:10.388960 [DEBUG] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-May-13 04:12:10.388960 [DEBUG] COPY packages/ ./packages/
+2026-May-13 04:12:10.388960 [DEBUG] COPY apps/api/ ./apps/api/
+2026-May-13 04:12:10.388960 [DEBUG] COPY biome.json turbo.json ./
+2026-May-13 04:12:10.388960 [DEBUG] 
+2026-May-13 04:12:10.388960 [DEBUG] RUN pnpm install --frozen-lockfile
+2026-May-13 04:12:10.388960 [DEBUG] RUN pnpm turbo build --filter=api
+2026-May-13 04:12:10.388960 [DEBUG] 
+2026-May-13 04:12:10.388960 [DEBUG] FROM node:<REDACTED>@postgres-internal:5432/adms_db
+2026-May-13 04:12:10.388960 [DEBUG] ARG REDIS_HOST=redis://default:<REDACTED>@r118q9iew08qs6oy5tptkzgr:6379/0
+2026-May-13 04:12:10.388960 [DEBUG] ARG JWT_SECRET=F6kYn6j5V7wS3p2r9m0t4h8q1s5u9e2o
+2026-May-13 04:12:10.388960 [DEBUG] ARG TELEGRAM_TOKEN=8423654730:AAGzXJbN86kP4vXF78zR-0B49T72X50pWl4
+2026-May-13 04:12:10.388960 [DEBUG] ARG TELEGRAM_CHAT_ID=-1003025671345
+2026-May-13 04:12:10.388960 [DEBUG] ARG ADMS_SECRET_KEY=KPB6969
+2026-May-13 04:12:10.388960 [DEBUG] ARG COOLIFY_URL=https://api2.silapordbd.web.id
+2026-May-13 04:<REDACTED>@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-May-13 04:12:12.755004 [DEBUG] #4 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+2026-May-13 04:12:12.755004 [DEBUG] #4 DONE 0.0s
+2026-May-13 04:12:12.755004 [DEBUG] 
+2026-May-13 04:12:12.755004 [DEBUG] #5 [stage-1 2/5] WORKDIR /app
+2026-May-13 04:12:12.755004 [DEBUG] #5 CACHED
+2026-May-13 04:12:12.755004 [DEBUG] 
+2026-May-13 04:12:12.755004 [DEBUG] #6 [internal] load build context
+2026-May-13 04:12:12.755004 [DEBUG] #6 transferring context: 513.29kB 0.1s done
+2026-May-13 04:12:12.904135 [DEBUG] #6 DONE 0.1s
+2026-May-13 04:12:12.904135 [DEBUG] 
+2026-May-13 04:12:12.904135 [DEBUG] #7 [builder 2/9] RUN corepack enable && corepack prepare pnpm@9 --activate
+2026-May-13 04:12:12.904135 [DEBUG] #7 CACHED
+2026-May-13 04:12:12.904135 [DEBUG] 
+2026-May-13 04:12:12.904135 [DEBUG] #8 [builder 3/9] WORKDIR /app
+2026-May-13 04:12:12.904135 [DEBUG] #8 CACHED
+2026-May-13 04:12:12.904135 [DEBUG] 
+2026-May-13 04:12:12.904135 [DEBUG] #9 [builder 4/9] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-May-13 04:12:12.904135 [DEBUG] #9 CACHED
+2026-May-13 04:12:12.904135 [DEBUG] 
+2026-May-13 04:12:12.904135 [DEBUG] #10 [builder 5/9] COPY packages/ ./packages/
+2026-May-13 04:12:12.904135 [DEBUG] #10 CACHED
+2026-May-13 04:12:12.904135 [DEBUG] 
+2026-May-13 04:12:12.904135 [DEBUG] #11 [builder 6/9] COPY apps/api/ ./apps/api/
+2026-May-13 04:12:12.904135 [DEBUG] #11 DONE 0.1s
+2026-May-13 04:12:13.123655 [DEBUG] #12 [builder 7/9] COPY biome.json turbo.json ./
+2026-May-13 04:12:13.123655 [DEBUG] #12 DONE 0.1s
+2026-May-13 04:12:13.123655 [DEBUG] 
+2026-May-13 04:12:13.123655 [DEBUG] #13 [builder 8/9] RUN pnpm install --frozen-lockfile
+2026-May-13 04:12:13.219375 [DEBUG] #13 0.248 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-9.0.0.tgz
+2026-May-13 04:<REDACTED>@11.1.1 --activate" to update.     │
+2026-May-13 04:12:19.336963 [DEBUG] #13 6.360    │                                                                  │
+2026-May-13 04:12:19.336963 [DEBUG] #13 6.360    │      Follow @pnpmjs for updates: https://twitter.com/pnpmjs      │
+2026-May-13 04:<REDACTED>@0.19.12/node_modules/esbuild postinstall$ node install.js
+2026-May-13 04:12:51.538596 [DEBUG] #13 38.45 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+2026-May-13 04:12:51.538596 [DEBUG] #13 38.57 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+2026-May-13 04:12:51.694699 [DEBUG] #13 38.57 .../bcrypt@6.0.0/node_modules/bcrypt install$ node-gyp-build
+2026-May-13 04:12:52.404766 [DEBUG] #13 39.43 .../node_modules/unrs-resolver postinstall: Done
+2026-May-13 04:12:52.528648 [DEBUG] #13 39.47 .../esbuild@0.19.12/node_modules/esbuild postinstall: Done
+2026-May-13 04:12:52.528648 [DEBUG] #13 39.48 .../node_modules/msgpackr-extract install: Done
+2026-May-13 04:12:52.528648 [DEBUG] #13 39.52 .../bcrypt@6.0.0/node_modules/bcrypt install: Done
+2026-May-13 04:12:52.528648 [DEBUG] #13 39.55 .../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-May-13 04:12:53.077891 [DEBUG] #13 40.10 .../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-May-13 04:12:53.422987 [DEBUG] #13 40.45 .../node_modules/@nestjs/core postinstall:                            Thanks for installing nest
+2026-May-13 04:12:53.617648 [DEBUG] #13 40.45 .../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.45 .../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.46 .../node_modules/@nestjs/core postinstall:
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.46 .../node_modules/@nestjs/core postinstall:                             Number of contributors: 0
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.46 .../node_modules/@nestjs/core postinstall:                              Number of backers: 1197
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.54 .../node_modules/@nestjs/core postinstall:                              Annual budget: $136,642
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.54 .../node_modules/@nestjs/core postinstall:                              Current balance: $1,913
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.54 .../node_modules/@nestjs/core postinstall:
+2026-May-13 04:12:53.625800 [DEBUG] #13 40.54 .../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+2026-May-13 04:<REDACTED>@nestjs/core postinstall:<REDACTED>@nestjs/core postinstall: Done
+2026-May-13 04:12:54.524772 [DEBUG] #13 41.55
+2026-May-13 04:12:54.524772 [DEBUG] #13 41.55 devDependencies:
+2026-May-13 04:12:54.524772 [DEBUG] #13 41.55 + @biomejs/biome 2.4.15
+2026-May-13 04:12:54.524772 [DEBUG] #13 41.55 + turbo 2.9.12
+2026-May-13 04:12:54.524772 [DEBUG] #13 41.55
+2026-May-13 04:12:54.769475 [DEBUG] #13 41.65 Done in 39.4s
+2026-May-13 04:12:54.833512 [DEBUG] #13 DONE 41.9s
+2026-May-13 04:12:54.988669 [DEBUG] #14 [builder 9/9] RUN pnpm turbo build --filter=api
+2026-May-13 04:12:58.183181 [DEBUG] #14 3.343
+2026-May-13 04:12:58.183181 [DEBUG] #14 3.343 Attention:
+2026-May-13 04:12:58.183181 [DEBUG] #14 3.343 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-May-13 04:12:58.183181 [DEBUG] #14 3.343 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-May-13 04:12:58.183181 [DEBUG] #14 3.343 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-May-13 04:12:58.183181 [DEBUG] #14 3.343 https://turborepo.dev/docs/telemetry
+2026-May-13 04:<REDACTED>@adms/shared-types:build: cache miss, executing 2677b331c7aecd09
+2026-May-13 04:12:58.319172 [DEBUG] #14 3.475 @adms/database:build: cache miss, executing 414f9bfd119f5eac
+2026-May-13 04:12:59.888555 [DEBUG] #14 5.053 @adms/database:build:
+2026-May-13 04:13:00.042993 [DEBUG] #14 5.055 @adms/database:build: > @adms/database@0.0.1 build /app/packages/database
+2026-May-13 04:13:00.042993 [DEBUG] #14 5.055 @adms/database:build: > tsc
+2026-May-13 04:13:00.042993 [DEBUG] #14 5.055 @adms/database:build:
+2026-May-13 04:13:00.267737 [DEBUG] #14 5.432 @adms/shared-types:build:
+2026-May-13 04:13:00.433259 [DEBUG] #14 5.432 @adms/shared-types:build: > @adms/shared-types@0.0.1 build /app/packages/shared-types
+2026-May-13 04:13:00.433259 [DEBUG] #14 5.434 @adms/shared-types:build: > tsc
+2026-May-13 04:13:00.433259 [DEBUG] #14 5.434 @adms/shared-types:build:
+2026-May-13 04:13:17.806918 [DEBUG] #14 22.97 api:build: cache miss, executing 94af359ef11281ea
+2026-May-13 04:13:18.730833 [DEBUG] #14 23.89 api:build:
+2026-May-13 04:13:18.730833 [DEBUG] #14 23.89 api:build: > api@0.0.1 build /app/apps/api
+2026-May-13 04:13:18.730833 [DEBUG] #14 23.89 api:build: > node node_modules/@nestjs/cli/bin/nest.js build
+2026-May-13 04:13:18.730833 [DEBUG] #14 23.89 api:build:
+2026-May-13 04:13:51.014885 [DEBUG] #14 56.00 api:build: webpack 5.106.0 compiled successfully in 27306 ms
+2026-May-13 04:13:52.097624 [DEBUG] #14 57.26
+2026-May-13 04:13:52.251379 [DEBUG] #14 57.26  Tasks:    3 successful, 3 total
+2026-May-13 04:13:52.251379 [DEBUG] #14 57.26 Cached:    0 cached, 3 total
+2026-May-13 04:13:52.251379 [DEBUG] #14 57.26   Time:    53.896s
+2026-May-13 04:13:52.251379 [DEBUG] #14 57.26
+2026-May-13 04:13:52.797158 [DEBUG] #14 DONE 58.0s
+2026-May-13 04:14:16.750592 ========================================
+2026-May-13 04:14:16.776669 Deployment failed: Command execution failed (exit code 255): docker exec txddwj4qqr7yh40db6uluy1a bash -c 'bash /artifacts/build.sh'
+2026-May-13 04:14:16.776669 Error: #0 building with "default" instance using docker driver
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #1 [internal] load build definition from Dockerfile
+2026-May-13 04:14:16.776669 #1 transferring dockerfile: 1.96kB done
+2026-May-13 04:14:16.776669 #1 DONE 0.0s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #2 [internal] load metadata for docker.io/library/node:20-alpine
+2026-May-13 04:14:16.776669 #2 DONE 1.2s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #3 [internal] load .dockerignore
+2026-May-13 04:14:16.776669 #3 transferring context: 2B done
+2026-May-13 04:14:16.776669 #3 DONE 0.0s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #4 [builder 1/9] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-May-13 04:14:16.776669 #4 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.0s done
+2026-May-13 04:14:16.776669 #4 DONE 0.0s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #5 [stage-1 2/5] WORKDIR /app
+2026-May-13 04:14:16.776669 #5 CACHED
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #6 [internal] load build context
+2026-May-13 04:14:16.776669 #6 transferring context: 513.29kB 0.1s done
+2026-May-13 04:14:16.776669 #6 DONE 0.1s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #7 [builder 2/9] RUN corepack enable && corepack prepare pnpm@9 --activate
+2026-May-13 04:14:16.776669 #7 CACHED
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #8 [builder 3/9] WORKDIR /app
+2026-May-13 04:14:16.776669 #8 CACHED
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #9 [builder 4/9] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-May-13 04:14:16.776669 #9 CACHED
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #10 [builder 5/9] COPY packages/ ./packages/
+2026-May-13 04:14:16.776669 #10 CACHED
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #11 [builder 6/9] COPY apps/api/ ./apps/api/
+2026-May-13 04:14:16.776669 #11 DONE 0.1s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #12 [builder 7/9] COPY biome.json turbo.json ./
+2026-May-13 04:14:16.776669 #12 DONE 0.1s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #13 [builder 8/9] RUN pnpm install --frozen-lockfile
+2026-May-13 04:14:16.776669 #13 0.248 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-9.0.0.tgz
+2026-May-13 04:<REDACTED>@11.1.1 --activate" to update.     │
+2026-May-13 04:14:16.776669 #13 6.360    │                                                                  │
+2026-May-13 04:14:16.776669 #13 6.360    │      Follow @pnpmjs for updates: https://twitter.com/pnpmjs      │
+2026-May-13 04:<REDACTED>@0.19.12/node_modules/esbuild postinstall$ node install.js
+2026-May-13 04:14:16.776669 #13 38.45 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+2026-May-13 04:14:16.776669 #13 38.57 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+2026-May-13 04:14:16.776669 #13 38.57 .../bcrypt@6.0.0/node_modules/bcrypt install$ node-gyp-build
+2026-May-13 04:14:16.776669 #13 39.43 .../node_modules/unrs-resolver postinstall: Done
+2026-May-13 04:14:16.776669 #13 39.47 .../esbuild@0.19.12/node_modules/esbuild postinstall: Done
+2026-May-13 04:14:16.776669 #13 39.48 .../node_modules/msgpackr-extract install: Done
+2026-May-13 04:14:16.776669 #13 39.52 .../bcrypt@6.0.0/node_modules/bcrypt install: Done
+2026-May-13 04:14:16.776669 #13 39.55 .../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-May-13 04:14:16.776669 #13 40.10 .../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-May-13 04:14:16.776669 #13 40.45 .../node_modules/@nestjs/core postinstall:                            Thanks for installing nest
+2026-May-13 04:14:16.776669 #13 40.45 .../node_modules/@nestjs/core postinstall:                  Please consider donating to our open collective
+2026-May-13 04:14:16.776669 #13 40.45 .../node_modules/@nestjs/core postinstall:                         to help us maintain this package.
+2026-May-13 04:14:16.776669 #13 40.46 .../node_modules/@nestjs/core postinstall:
+2026-May-13 04:14:16.776669 #13 40.46 .../node_modules/@nestjs/core postinstall:                             Number of contributors: 0
+2026-May-13 04:14:16.776669 #13 40.46 .../node_modules/@nestjs/core postinstall:                              Number of backers: 1197
+2026-May-13 04:14:16.776669 #13 40.54 .../node_modules/@nestjs/core postinstall:                              Annual budget: $136,642
+2026-May-13 04:14:16.776669 #13 40.54 .../node_modules/@nestjs/core postinstall:                              Current balance: $1,913
+2026-May-13 04:14:16.776669 #13 40.54 .../node_modules/@nestjs/core postinstall:
+2026-May-13 04:14:16.776669 #13 40.54 .../node_modules/@nestjs/core postinstall:              Become a partner: https://opencollective.com/nest/donate
+2026-May-13 04:<REDACTED>@nestjs/core postinstall:<REDACTED>@nestjs/core postinstall: Done
+2026-May-13 04:14:16.776669 #13 41.55
+2026-May-13 04:14:16.776669 #13 41.55 devDependencies:
+2026-May-13 04:14:16.776669 #13 41.55 + @biomejs/biome 2.4.15
+2026-May-13 04:14:16.776669 #13 41.55 + turbo 2.9.12
+2026-May-13 04:14:16.776669 #13 41.55
+2026-May-13 04:14:16.776669 #13 41.65 Done in 39.4s
+2026-May-13 04:14:16.776669 #13 DONE 41.9s
+2026-May-13 04:14:16.776669 
+2026-May-13 04:14:16.776669 #14 [builder 9/9] RUN pnpm turbo build --filter=api
+2026-May-13 04:14:16.776669 #14 3.343
+2026-May-13 04:14:16.776669 #14 3.343 Attention:
+2026-May-13 04:14:16.776669 #14 3.343 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-May-13 04:14:16.776669 #14 3.343 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-May-13 04:14:16.776669 #14 3.343 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-May-13 04:14:16.776669 #14 3.343 https://turborepo.dev/docs/telemetry
+2026-May-13 04:<REDACTED>@adms/shared-types:build: cache miss, executing 2677b331c7aecd09
+2026-May-13 04:14:16.776669 #14 3.475 @adms/database:build: cache miss, executing 414f9bfd119f5eac
+2026-May-13 04:14:16.776669 #14 5.053 @adms/database:build:
+2026-May-13 04:14:16.776669 #14 5.055 @adms/database:build: > @adms/database@0.0.1 build /app/packages/database
+2026-May-13 04:14:16.776669 #14 5.055 @adms/database:build: > tsc
+2026-May-13 04:14:16.776669 #14 5.055 @adms/database:build:
+2026-May-13 04:14:16.776669 #14 5.432 @adms/shared-types:build:
+2026-May-13 04:14:16.776669 #14 5.432 @adms/shared-types:build: > @adms/shared-types@0.0.1 build /app/packages/shared-types
+2026-May-13 04:14:16.776669 #14 5.434 @adms/shared-types:build: > tsc
+2026-May-13 04:14:16.776669 #14 5.434 @adms/shared-types:build:
+2026-May-13 04:14:16.776669 #14 22.97 api:build: cache miss, executing 94af359ef11281ea
+2026-May-13 04:14:16.776669 #14 23.89 api:build:
+2026-May-13 04:14:16.776669 #14 23.89 api:build: > api@0.0.1 build /app/apps/api
+2026-May-13 04:14:16.776669 #14 23.89 api:build: > node node_modules/@nestjs/cli/bin/nest.js build
+2026-May-13 04:14:16.776669 #14 23.89 api:build:
+2026-May-13 04:14:16.776669 #14 56.00 api:build: webpack 5.106.0 compiled successfully in 27306 ms
+2026-May-13 04:14:16.776669 #14 57.26
+2026-May-13 04:14:16.776669 #14 57.26  Tasks:    3 successful, 3 total
+2026-May-13 04:14:16.776669 #14 57.26 Cached:    0 cached, 3 total
+2026-May-13 04:14:16.776669 #14 57.26   Time:    53.896s
+2026-May-13 04:14:16.776669 #14 57.26
+2026-May-13 04:14:16.776669 #14 DONE 58.0s
+2026-May-13 04:14:16.788516 [DEBUG] Error type: App\Exceptions\DeploymentException
+2026-May-13 04:14:16.802366 [DEBUG] Error code: 0
+2026-May-13 04:14:16.810303 [DEBUG] Location: /var/www/html/app/Traits/ExecuteRemoteCommand.php:242
+2026-May-13 04:14:16.819815 [DEBUG] Stack trace (first 5 lines):
+2026-May-13 04:14:16.828077 [DEBUG] #0 /var/www/html/app/Traits/ExecuteRemoteCommand.php(106): App\Jobs\ApplicationDeploymentJob->executeCommandWithProcess()
+2026-May-13 04:14:16.837442 [DEBUG] #1 /var/www/html/vendor/laravel/framework/src/Illuminate/Collections/Traits/EnumeratesValues.php(275): App\Jobs\ApplicationDeploymentJob->{closure:App\Traits\ExecuteRemoteCommand::execute_remote_command():72}()
+2026-May-13 04:14:16.845448 [DEBUG] #2 /var/www/html/app/Traits/ExecuteRemoteCommand.php(72): Illuminate\Support\Collection->each()
+2026-May-13 04:14:16.853629 [DEBUG] #3 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(3290): App\Jobs\ApplicationDeploymentJob->execute_remote_command()
+2026-May-13 04:14:16.861019 [DEBUG] #4 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(898): App\Jobs\ApplicationDeploymentJob->build_image()
+2026-May-13 04:14:16.869446 ========================================
+2026-May-13 04:14:16.876729 Deployment failed. Removing the new version of your application.
+2026-May-13 04:14:17.920290 Gracefully shutting down build container: txddwj4qqr7yh40db6uluy1a
+2026-May-13 04:14:18.655600 [DEBUG] [CMD]: docker stop -t 30 txddwj4qqr7yh40db6uluy1a
+2026-May-13 04:14:18.655600 [DEBUG] txddwj4qqr7yh40db6uluy1a

@@ -24,11 +24,23 @@ import { UsersModule } from "./users/users.module";
 			envFilePath: "../../.env",
 		}),
 		BullModule.forRoot({
-			connection: {
-				host: process.env.REDIS_HOST || "localhost",
-				port: Number.parseInt(process.env.REDIS_PORT || "6379", 10),
-				password: process.env.REDIS_PASSWORD || undefined,
-			},
+			connection: (() => {
+				const redisUrl = process.env.REDIS_HOST || "";
+				// Coolify passes full URL: redis://default:password@host:port/db
+				if (redisUrl.startsWith("redis://")) {
+					const url = new URL(redisUrl);
+					return {
+						host: url.hostname,
+						port: Number(url.port) || 6379,
+						password: url.password || undefined,
+					};
+				}
+				return {
+					host: redisUrl || "localhost",
+					port: Number.parseInt(process.env.REDIS_PORT || "6379", 10),
+					password: process.env.REDIS_PASSWORD || undefined,
+				};
+			})(),
 		}),
 		DatabaseModule,
 		UsersModule,
