@@ -250,12 +250,13 @@ Perintah tersedia:
 		const totalHadir = rows.reduce((s, r) => s + r.hadir, 0);
 		const totalTelat = rows.reduce((s, r) => s + r.telat, 0);
 
-		const maxName = Math.max(4, ...rows.map((r) => r.name.length));
-		const hdr = `No  ${"Nama".padEnd(maxName)}  H   T`;
-		const sep = `${"─".repeat(hdr.length)}`;
-		const lines = rows.map((r, i) =>
-			`${String(i + 1).padStart(2, "0")}  ${r.name.padEnd(maxName)}  ${String(r.hadir).padStart(2)}  ${String(r.telat).padStart(2)}`
-		);
+		const N = 10; // max nama length
+		const hdr = `No ${"Nama".padEnd(N)} H  T`;
+		const sep = `───${"─".repeat(N)}─────`;
+		const lines = rows.map((r, i) => {
+			const nm = r.name.length > N ? r.name.slice(0, N) : r.name.padEnd(N);
+			return `${String(i + 1).padStart(2, "0")} ${nm} ${String(r.hadir).padStart(2)} ${String(r.telat).padStart(2)}`;
+		});
 
 		let msg = `<b>📅 Rekap ${monthName}</b>\n━━━━━━━━━━━━━━━━━━\n`;
 		msg += `✅ Hadir: <b>${totalHadir}</b> | ⚠️ Telat: <b>${totalTelat}</b>\n\n`;
