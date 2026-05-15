@@ -104,12 +104,19 @@ export class ADMSService {
 						),
 					);
 
-				if (employeeResult.length === 0) {
-					errors.push(`Employee not found for USERID=${userId}`);
-					continue;
-				}
+				let employee = employeeResult[0];
 
-				const employee = employeeResult[0];
+				if (!employee) {
+					// Auto-create employee dari PIN mesin
+					const [created] = await this.db.insert(schema.employees).values({
+						employeeCode: userId,
+						name: `Pegawai ${userId}`,
+						biometricId: userId,
+						isActive: true,
+					}).returning();
+					employee = created;
+					this.logger.log(`Auto-created employee: PIN=${userId}`);
+				}
 
 				// Fix timezone: mesin kirim waktu lokal (WIB), parse sebagai lokal
 				const timestamp = new Date(checktime);
