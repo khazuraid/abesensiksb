@@ -225,45 +225,74 @@ export class ReportsService {
 
 	async generateDailyRecapExcel(month: number, year: number) {
 		const data = await this.getDailyRecap(month, year);
-		const daysInMonth = new Date(year, month, 0).getDate();
 		const workbook = new Workbook();
-		const ws = workbook.addWorksheet("Rekap Harian");
-
-		// Header
-		const headers = ["Nama", "Shift", ...Array.from({ length: daysInMonth }, (_, i) => String(i + 1)), "Hadir", "Telat", "PC", "Alpa"];
-		const headerRow = ws.addRow(headers);
-		headerRow.font = { bold: true };
-		headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } };
-		headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-
-		// Set column widths
-		ws.getColumn(1).width = 25;
-		ws.getColumn(2).width = 12;
-		for (let i = 3; i <= daysInMonth + 2; i++) ws.getColumn(i).width = 4;
+		const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 		for (const emp of data) {
-			const row = ws.addRow([
-				emp.name,
-				emp.shiftName,
-				...emp.days.map((d) => {
-					if (d.isHoliday) return "L";
-					if (!d.isWorkDay) return "O";
-					switch (d.status) {
-						case "PRESENT": return "H";
-						case "LATE": return "T";
-						case "EARLY_OUT": return "PC";
-						case "ABSENT": return "A";
-						default: return "-";
+			const sheetName = emp.name.substring(0, 31).replace(/[*?:/\\[\]]/g, "");
+			const ws = workbook.addWorksheet(sheetName);
+
+			ws.columns = [
+				{ header: "Tanggal", key: "date", width: 15 },
+				{ header: "Masuk", key: "clockIn", width: 10 },
+				{ header: "Pulang", key: "clockOut", width: 10 },
+				{ header: "Status", key: "status", width: 12 },
+				{ header: "Telat (mnt)", key: "late", width: 12 },
+				{ header: "Pulang Cepat (mnt)", key: "early", width: 18 },
+				{ header: "Keterangan", key: "note", width: 25 },
+			];
+
+			// Title
+			ws.insertRow(1, [`${emp.name} - ${months[month - 1]} ${year} (${emp.shiftName})`]);
+			ws.mergeCells("A1:G1");
+			ws.getRow(1).font = { bold: true, size: 14 };
+			ws.insertRow(2, []);
+
+			// Header row is now row 3
+			const headerRow = ws.getRow(3);
+			headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+			headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } };
+
+			for (const day of emp.days) {
+				const d = new Date(day.date + "T00:00:00");
+				const dayName = d.toLocaleDateString("id-ID", { weekday: "short" });
+				const dayNum = d.getDate();
+
+				let statusLabel = "-";
+				if (day.isHoliday) statusLabel = "LIBUR";
+				else if (!day.isWorkDay) statusLabel = "OFF";
+				else {
+					switch (day.status) {
+						case "PRESENT": statusLabel = "HADIR"; break;
+						case "LATE": statusLabel = "TELAT"; break;
+						case "EARLY_OUT": statusLabel = "PULANG CEPAT"; break;
+						case "ABSENT": statusLabel = "ALPA"; break;
 					}
-				}),
-				emp.totalPresent,
-				emp.totalLate,
-				emp.totalEarlyOut,
-				emp.totalAbsent,
-			]);
-			row.alignment = { horizontal: "center" };
-			row.getCell(1).alignment = { horizontal: "left" };
-			row.getCell(2).alignment = { horizontal: "left" };
+				}
+
+				let note = "";
+				if (day.isWorkDay && !day.isHoliday) {
+					if (!day.clockIn && !day.clockOut) note = "Tidak absen";
+					else if (!day.clockIn) note = "Tidak absen masuk";
+					else if (!day.clockOut) note = "Tidak absen pulang";
+				}
+
+				ws.addRow({
+					date: `${dayName}, ${dayNum}`,
+					clockIn: day.clockIn || "-",
+					clockOut: day.clockOut || "-",
+					status: statusLabel,
+					late: day.lateMinutes > 0 ? day.lateMinutes : "-",
+					early: day.earlyOutMinutes > 0 ? day.earlyOutMinutes : "-",
+					note,
+				});
+			}
+
+			// Summary row
+			ws.addRow([]);
+			ws.addRow(["TOTAL", "", "", "", "", "", ""]);
+			ws.addRow(["Hadir", emp.totalPresent, "", "Telat", emp.totalLate, "Pulang Cepat", emp.totalEarlyOut]);
+			ws.addRow(["Alpa", emp.totalAbsent]);
 		}
 
 		return workbook;
