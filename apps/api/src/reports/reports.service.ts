@@ -93,23 +93,44 @@ export class ReportsService {
 				if (!isWorkDay) {
 					status = "-";
 				} else if (inLog) {
-					status = inLog.status;
-					if (shift && inLog.status === "LATE") {
+					// Hitung ulang status berdasarkan shift saat ini
+					if (shift) {
 						const startMinutes = parseTime(shift.startTime);
-						const scanMinutes = getWIBMinutes(inLog.timestamp);
-						lateMinutes = Math.max(0, scanMinutes - startMinutes);
-					}
-					if (shift && outLog) {
-						if (outLog.status === "EARLY_OUT") {
-							const endMinutes = parseTime(shift.endTime);
-							const scanMinutes = getWIBMinutes(outLog.timestamp);
-							earlyOutMinutes = Math.max(0, endMinutes - scanMinutes);
-							status = "EARLY_OUT";
+						const scanInMinutes = getWIBMinutes(inLog.timestamp);
+						const cutoff = startMinutes + (shift.toleranceMinutes ?? 0);
+
+						if (shift.maxLateTime) {
+							const maxMinutes = parseTime(shift.maxLateTime);
+							if (scanInMinutes > maxMinutes) {
+								status = "ABSENT";
+							} else if (scanInMinutes > cutoff) {
+								status = "LATE";
+								lateMinutes = scanInMinutes - startMinutes;
+							} else {
+								status = "PRESENT";
+							}
+						} else {
+							status = scanInMinutes > cutoff ? "LATE" : "PRESENT";
+							if (status === "LATE") lateMinutes = scanInMinutes - startMinutes;
 						}
+
+						// Cek pulang cepat
+						if (outLog) {
+							const endMinutes = parseTime(shift.endTime);
+							const scanOutMinutes = getWIBMinutes(outLog.timestamp);
+							const earlyLimit = endMinutes - (shift.earlyOutTolerance ?? 0);
+							if (scanOutMinutes < earlyLimit) {
+								earlyOutMinutes = endMinutes - scanOutMinutes;
+								if (status !== "ABSENT") status = "EARLY_OUT";
+							}
+						}
+					} else {
+						status = "PRESENT";
 					}
+
 					if (status === "PRESENT" || status === "LATE") totalPresent++;
 					if (status === "LATE") totalLate++;
-					if (status === "EARLY_OUT") totalEarlyOut++;
+					if (status === "EARLY_OUT") { totalEarlyOut++; totalPresent++; }
 				} else {
 					// Hari kerja tapi tidak ada log — cek apakah hari sudah lewat
 					if (date <= new Date()) totalAbsent++;
