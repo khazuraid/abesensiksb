@@ -26,6 +26,7 @@ const navItems = [
 	{ icon: CalendarOff, label: "Cuti", href: "/leaves" },
 	{ icon: Calendar, label: "Hari Libur", href: "/holidays" },
 	{ icon: FileText, label: "Laporan", href: "/reports" },
+	{ icon: Calendar, label: "Rekap Harian", href: "/daily-recap" },
 	{ icon: Settings, label: "Pengaturan", href: "/settings" },
 ];
 

@@ -23,6 +23,14 @@ export class ReportsController {
 		return this.reportsService.getMonthlySummary(month, year);
 	}
 
+	@Get("daily-recap")
+	getDailyRecap(
+		@Query("month", ParseIntPipe) month: number,
+		@Query("year", ParseIntPipe) year: number,
+	) {
+		return this.reportsService.getDailyRecap(month, year);
+	}
+
 	@Get("export")
 	async export(
 		@Query("month", ParseIntPipe) month: number,
