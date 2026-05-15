@@ -2,7 +2,6 @@ process.env.TZ = "Asia/Jakarta";
 
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
-import { json, raw, text } from "express";
 import { join } from "path";
 import { AppModule } from "./app.module";
 
@@ -11,11 +10,34 @@ async function bootstrap() {
 		bodyParser: false,
 	});
 
-	// /iclock: mesin kirim plain text
-	app.use("/iclock", raw({ type: "*/*", limit: "10mb" }));
+	const httpAdapter = app.getHttpAdapter();
+	const expressApp = httpAdapter.getInstance();
+
+	// /iclock: mesin kirim plain text - parse sebagai raw buffer
+	expressApp.use("/iclock", (req: any, res: any, next: () => void) => {
+		if (req.method !== "POST") return next();
+		const chunks: Buffer[] = [];
+		req.on("data", (chunk: Buffer) => chunks.push(chunk));
+		req.on("end", () => {
+			req.body = Buffer.concat(chunks);
+			next();
+		});
+	});
 
 	// /api: JSON body parser
-	app.use("/api", json({ limit: "10mb" }));
+	expressApp.use("/api", (req: any, res: any, next: () => void) => {
+		if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") return next();
+		const chunks: Buffer[] = [];
+		req.on("data", (chunk: Buffer) => chunks.push(chunk));
+		req.on("end", () => {
+			try {
+				req.body = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+			} catch {
+				req.body = {};
+			}
+			next();
+		});
+	});
 
 	// Serve foto absensi
 	app.useStaticAssets(join(process.cwd(), "uploads"), { prefix: "/uploads" });
