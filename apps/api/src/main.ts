@@ -1,5 +1,4 @@
 import { NestFactory } from "@nestjs/core";
-import express from "express";
 import type { IncomingMessage, ServerResponse } from "http";
 import { AppModule } from "./app.module";
 
@@ -25,7 +24,24 @@ async function bootstrap() {
 	httpAdapter.use("/iclock", rawBodyMiddleware);
 
 	// JSON parser untuk route /api (re-enable body parser untuk non-iclock)
-	httpAdapter.use("/api", express.json());
+	httpAdapter.use("/api", (req: any, res: any, next: () => void) => {
+		if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") {
+			return next();
+		}
+		if (req.body && typeof req.body === "object" && !Buffer.isBuffer(req.body)) {
+			return next();
+		}
+		const chunks: Buffer[] = [];
+		req.on("data", (chunk: Buffer) => chunks.push(chunk));
+		req.on("end", () => {
+			try {
+				req.body = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
+			} catch {
+				req.body = {};
+			}
+			next();
+		});
+	});
 
 	app.enableCors({
 		origin: process.env.CORS_ORIGIN || "http://localhost:8080",
