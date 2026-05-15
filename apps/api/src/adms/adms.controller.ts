@@ -114,6 +114,7 @@ export class ADMSController {
 	@Post("devicecmd")
 	@HttpCode(200)
 	async deviceCmd(@Query("SN") _sn: string, @Body() body: string) {
+		if (!body) return "OK";
 		// Format body: "ID:123&Return=0" (0=success)
 		const idMatch = body.match(/ID[=:](\d+)/);
 		const successMatch = body.match(/Return[=:](\d+)/);
