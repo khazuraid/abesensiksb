@@ -4,6 +4,7 @@ import {
 	Get,
 	Header,
 	HttpCode,
+	Logger,
 	Post,
 	Query,
 	Req,
@@ -16,6 +17,7 @@ import { ADMSService } from "./adms.service";
 @Controller("iclock")
 @UseGuards(AdmsGuard)
 export class ADMSController {
+	private readonly logger = new Logger(ADMSController.name);
 	constructor(private readonly admsService: ADMSService) {}
 
 	/**
@@ -66,6 +68,9 @@ export class ADMSController {
 		@Req() req: Request,
 	) {
 		if (!sn) return "ERROR: Missing SN";
+
+		this.logger.log(`POST /iclock/cdata SN=${sn} table=${table} bodyType=${typeof rawData} bodyLength=${rawData?.length ?? 0}`);
+		this.logger.log(`Body: ${JSON.stringify(rawData)?.slice(0, 500)}`);
 
 		await this.admsService.updateDeviceStatus(sn, req.ip || "");
 
