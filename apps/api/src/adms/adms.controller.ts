@@ -68,8 +68,8 @@ export class ADMSController {
 	) {
 		if (!sn) return "ERROR: Missing SN";
 
-		const rawData = (req as any).rawBody
-			? Buffer.from((req as any).rawBody).toString("utf-8").trim()
+		const rawData = Buffer.isBuffer(req.body)
+			? req.body.toString("utf-8").trim()
 			: (typeof req.body === "string" ? req.body.trim() : "");
 
 		this.logger.log(`POST /iclock/cdata SN=${sn} table=${table} bodyLength=${rawData.length}`);
@@ -130,8 +130,8 @@ export class ADMSController {
 	@Post("devicecmd")
 	@HttpCode(200)
 	async deviceCmd(@Query("SN") _sn: string, @Req() req: Request) {
-		const body = (req as any).rawBody
-			? Buffer.from((req as any).rawBody).toString("utf-8").trim()
+		const body = Buffer.isBuffer(req.body)
+			? req.body.toString("utf-8").trim()
 			: (typeof req.body === "string" ? req.body.trim() : "");
 		if (!body) return "OK";
 		// Format body: "ID:123&Return=0" (0=success)
