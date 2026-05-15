@@ -226,14 +226,20 @@ Perintah tersedia:
 			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
 			const inLogs = empLogs.filter((l) => l.type === "IN");
-			let hadir = 0;
-			let telat = 0;
 
+			// Group by date, ambil log IN pertama per hari
+			const dayMap = new Map<string, Date>();
 			for (const log of inLogs) {
-				hadir++;
-				if (shift) {
-					const scanMin = log.timestamp.getHours() * 60 + log.timestamp.getMinutes();
-					const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
+				const key = `${log.timestamp.getFullYear()}-${log.timestamp.getMonth()}-${log.timestamp.getDate()}`;
+				if (!dayMap.has(key)) dayMap.set(key, log.timestamp);
+			}
+
+			let hadir = dayMap.size;
+			let telat = 0;
+			if (shift) {
+				const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
+				for (const ts of dayMap.values()) {
+					const scanMin = ts.getHours() * 60 + ts.getMinutes();
 					if (scanMin > cutoff) telat++;
 				}
 			}
