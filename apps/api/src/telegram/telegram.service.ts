@@ -206,35 +206,55 @@ Perintah tersedia:
 
 	private async cmdRekap(chatId: number) {
 		const now = new Date();
-		const { start, end } = this.todayRange();
+		const startMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1) - 7 * 60 * 60 * 1000);
+		const endMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59) - 7 * 60 * 60 * 1000);
 
-		const employees = await this.db.select({ id: schema.employees.id, name: schema.employees.name })
+		const employees = await this.db.select({ id: schema.employees.id, name: schema.employees.name, shiftId: schema.employees.shiftId })
 			.from(schema.employees).where(eq(schema.employees.isActive, true));
 
-		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, type: schema.attendanceLogs.type })
+		const shifts = await this.db.select().from(schema.shifts);
+		const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+
+		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, timestamp: schema.attendanceLogs.timestamp, type: schema.attendanceLogs.type })
 			.from(schema.attendanceLogs)
-			.where(between(schema.attendanceLogs.timestamp, start, end));
+			.where(between(schema.attendanceLogs.timestamp, startMonth, endMonth));
 
-		const inSet = new Set(logs.filter((l) => l.type === "IN").map((l) => l.employeeId));
-		const outSet = new Set(logs.filter((l) => l.type === "OUT").map((l) => l.employeeId));
+		const parseTime = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
+		const toWIB = (d: Date) => new Date(d.getTime() + 7 * 60 * 60 * 1000);
 
-		const hadir = employees.filter((e) => inSet.has(e.id) && outSet.has(e.id));
-		const tidakPagi = employees.filter((e) => !inSet.has(e.id));
-		const tidakPulang = employees.filter((e) => inSet.has(e.id) && !outSet.has(e.id));
+		const rows = employees.map((emp) => {
+			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : null;
+			const empLogs = logs.filter((l) => l.employeeId === emp.id);
+			const inLogs = empLogs.filter((l) => l.type === "IN");
+			let hadir = 0;
+			let telat = 0;
 
-		const fmt = (list: typeof employees) => list.map((e) => this.shortName(e.name)).join(", ");
+			for (const log of inLogs) {
+				hadir++;
+				if (shift) {
+					const w = toWIB(log.timestamp);
+					const scanMin = w.getUTCHours() * 60 + w.getUTCMinutes();
+					const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
+					if (scanMin > cutoff) telat++;
+				}
+			}
+			return { name: this.shortName(emp.name), hadir, telat };
+		}).sort((a, b) => b.hadir - a.hadir);
 
-		let msg = `<b>📅 Rekap Hari Ini</b>\n━━━━━━━━━━━━━━━━━━\n`;
-		msg += `✅ Hadir (IN+OUT): <b>${hadir.length}</b>\n`;
-		msg += `❌ Tidak Absen Pagi: <b>${tidakPagi.length}</b>\n`;
-		msg += `🚪 Tidak Absen Pulang: <b>${tidakPulang.length}</b>\n`;
+		const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+		const totalHadir = rows.reduce((s, r) => s + r.hadir, 0);
+		const totalTelat = rows.reduce((s, r) => s + r.telat, 0);
 
-		if (tidakPagi.length) {
-			msg += `\n<b>❌ Tidak Absen Pagi:</b>\n<code>${fmt(tidakPagi)}</code>\n`;
-		}
-		if (tidakPulang.length) {
-			msg += `\n<b>🚪 Tidak Absen Pulang:</b>\n<code>${fmt(tidakPulang)}</code>\n`;
-		}
+		const maxName = Math.max(4, ...rows.map((r) => r.name.length));
+		const hdr = `No  ${"Nama".padEnd(maxName)}  H   T`;
+		const sep = `${"─".repeat(hdr.length)}`;
+		const lines = rows.map((r, i) =>
+			`${String(i + 1).padStart(2, "0")}  ${r.name.padEnd(maxName)}  ${String(r.hadir).padStart(2)}  ${String(r.telat).padStart(2)}`
+		);
+
+		let msg = `<b>📅 Rekap ${monthName}</b>\n━━━━━━━━━━━━━━━━━━\n`;
+		msg += `✅ Hadir: <b>${totalHadir}</b> | ⚠️ Telat: <b>${totalTelat}</b>\n\n`;
+		msg += `<code>${hdr}\n${sep}\n${lines.join("\n")}</code>`;
 
 		await this.send(chatId, msg);
 	}
