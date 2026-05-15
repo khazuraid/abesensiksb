@@ -197,11 +197,13 @@ Perintah tersedia:
 	}
 
 	private shortName(name: string): string {
-		const titles = ["dr.", "dr", "drg.", "drg", "ir.", "ir", "prof.", "prof", "hj.", "hj", "h."];
-		const parts = name.split(" ").filter(Boolean);
-		const first = parts[0]?.toLowerCase() || "";
-		if (titles.includes(first) && parts.length > 1) return parts[1];
-		return parts[0] || name;
+		const titles = ["dr.", "dr", "drg.", "drg", "ir.", "ir", "prof.", "prof", "hj.", "hj", "h.", "s.kep."];
+		const parts = name.replace(/,/g, "").split(" ").filter((p) => p.length > 0);
+		// Skip semua title di depan
+		let i = 0;
+		while (i < parts.length - 1 && titles.includes(parts[i].toLowerCase())) i++;
+		const result = parts[i] || name;
+		return result.length === 1 && parts.length > 1 ? parts.slice(i).join("") : result;
 	}
 
 	private async cmdRekap(chatId: number) {
