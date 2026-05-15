@@ -1,7 +1,7 @@
 import * as schema from "@adms/database";
 import type { CreateDevice, SendCommand, UpdateDevice } from "@adms/shared-types";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
@@ -59,6 +59,15 @@ export class DevicesService {
 		}
 
 		return { message: "Device deleted successfully" };
+	}
+
+	async getCommands(deviceId: number) {
+		return this.db
+			.select()
+			.from(schema.deviceCommands)
+			.where(eq(schema.deviceCommands.deviceId, deviceId))
+			.orderBy(desc(schema.deviceCommands.createdAt))
+			.limit(50);
 	}
 
 	async sendCommand(dto: SendCommand) {

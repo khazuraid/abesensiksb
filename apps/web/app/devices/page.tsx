@@ -4,6 +4,7 @@ import type { CreateDevice, Device, DeviceCommandType, UpdateDevice } from "@adm
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
+	Clock,
 	Download,
 	Info,
 	Monitor,
@@ -36,6 +37,13 @@ function CommandPanel({ device, onClose }: { device: Device; onClose: () => void
 	const [startDate, setStartDate] = useState("");
 	const [endDate, setEndDate] = useState("");
 	const [selectedCmd, setSelectedCmd] = useState<DeviceCommandType | null>(null);
+	const queryClient = useQueryClient();
+
+	const { data: commands } = useQuery<{ id: number; command: string; status: string; createdAt: string; updatedAt: string }[]>({
+		queryKey: ["device-commands", device.id],
+		queryFn: async () => (await api.get(`/devices/${device.id}/commands`)).data,
+		refetchInterval: 3000,
+	});
 
 	const cmdMutation = useMutation({
 		mutationFn: async (payload: Record<string, unknown>) => {
@@ -45,6 +53,7 @@ function CommandPanel({ device, onClose }: { device: Device; onClose: () => void
 		onSuccess: (data) => {
 			setResult(`✅ Command berhasil dikirim (${Array.isArray(data) ? data.length : 1} perintah)`);
 			setSelectedCmd(null);
+			queryClient.invalidateQueries({ queryKey: ["device-commands", device.id] });
 		},
 		onError: (err: any) => {
 			setResult(`❌ Error: ${err.response?.data?.message || err.message}`);
@@ -111,6 +120,22 @@ function CommandPanel({ device, onClose }: { device: Device; onClose: () => void
 					{result && (
 						<div className="p-3 rounded-lg bg-white/5 border border-white/10 text-sm font-mono">
 							{result}
+						</div>
+					)}
+
+					{commands && commands.length > 0 && (
+						<div className="space-y-2">
+							<h4 className="text-sm font-semibold flex items-center gap-2"><Clock size={14} /> Riwayat Command</h4>
+							<div className="max-h-48 overflow-y-auto space-y-1">
+								{commands.map((cmd) => (
+									<div key={cmd.id} className="flex items-center justify-between p-2 rounded-lg bg-white/5 text-xs">
+										<span className="font-mono truncate flex-1">{cmd.command}</span>
+										<span className={`ml-2 px-2 py-0.5 rounded-full font-medium ${cmd.status === "COMPLETED" ? "bg-emerald-500/10 text-emerald-500" : cmd.status === "ERROR" ? "bg-red-500/10 text-red-500" : cmd.status === "SENT" ? "bg-blue-500/10 text-blue-500" : "bg-amber-500/10 text-amber-500"}`}>
+											{cmd.status}
+										</span>
+									</div>
+								))}
+							</div>
 						</div>
 					)}
 				</div>

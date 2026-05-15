@@ -94,6 +94,11 @@ export class DevicesController {
 		return result;
 	}
 
+	@Get(":id/commands")
+	getCommands(@Param("id", ParseIntPipe) id: number) {
+		return this.devicesService.getCommands(id);
+	}
+
 	@Post("command")
 	async sendCommand(
 		@Body(new ZodValidationPipe(SendCommandSchema)) dto: SendCommand,
