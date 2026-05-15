@@ -255,7 +255,7 @@ export default function DailyRecapPage() {
 											<td className="py-2 text-center">{day.lateMinutes > 0 ? `${day.lateMinutes} mnt` : "-"}</td>
 											<td className="py-2 text-center">{day.earlyOutMinutes > 0 ? `${day.earlyOutMinutes} mnt` : "-"}</td>
 											<td className="py-2 text-left text-xs text-foreground/50">
-												{day.isWorkDay && !day.isHoliday && !day.clockIn && !day.clockOut ? "Tidak absen" : day.isWorkDay && !day.isHoliday && !day.clockIn ? "Tidak absen masuk" : day.isWorkDay && !day.isHoliday && !day.clockOut ? "Tidak absen pulang" : ""}
+												{day.isHoliday ? "" : !day.isWorkDay ? "" : day.status === "LEAVE" ? "Cuti/Izin" : day.status === "LATE" ? "Terlambat" : day.status === "EARLY_OUT" ? "Pulang cepat" : !day.clockIn && !day.clockOut ? "Tidak absen" : !day.clockOut ? "Tidak absen pulang" : ""}
 											</td>
 										</tr>
 									))}
