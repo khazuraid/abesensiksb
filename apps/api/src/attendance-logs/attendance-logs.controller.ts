@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Query, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AttendanceLogsService } from "./attendance-logs.service";
 
@@ -10,6 +10,14 @@ export class AttendanceLogsController {
 	@Get("stats")
 	getStats() {
 		return this.attendanceLogsService.getStats();
+	}
+
+	@Patch(":id")
+	updateLog(
+		@Param("id", ParseIntPipe) id: number,
+		@Body() body: { timestamp: string },
+	) {
+		return this.attendanceLogsService.updateTimestamp(id, new Date(body.timestamp));
 	}
 
 	@Get()

@@ -76,6 +76,15 @@ export class AttendanceLogsService {
 		return await query;
 	}
 
+	async updateTimestamp(id: number, timestamp: Date) {
+		const result = await this.db
+			.update(schema.attendanceLogs)
+			.set({ timestamp })
+			.where(eq(schema.attendanceLogs.id, id))
+			.returning();
+		return result[0];
+	}
+
 	async getStats() {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);

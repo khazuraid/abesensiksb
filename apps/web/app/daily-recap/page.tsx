@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 import { useState } from "react";
@@ -12,6 +12,8 @@ interface DayData {
 	isHoliday: boolean;
 	clockIn: string | null;
 	clockOut: string | null;
+	inLogId: number | null;
+	outLogId: number | null;
 	status: string;
 	lateMinutes: number;
 	earlyOutMinutes: number;
@@ -34,6 +36,8 @@ export default function DailyRecapPage() {
 	const [year, setYear] = useState(new Date().getFullYear());
 	const [search, setSearch] = useState("");
 	const [selectedEmployee, setSelectedEmployee] = useState<EmployeeRecap | null>(null);
+	const [editingDay, setEditingDay] = useState<{ date: string; field: "in" | "out"; value: string } | null>(null);
+	const queryClient = useQueryClient();
 
 	const { data, isLoading } = useQuery<EmployeeRecap[]>({
 		queryKey: ["daily-recap", month, year],
@@ -41,6 +45,24 @@ export default function DailyRecapPage() {
 	});
 
 	const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+	const updateMutation = useMutation({
+		mutationFn: async ({ id, timestamp }: { id: number; timestamp: string }) => {
+			await api.patch(`/attendance-logs/${id}`, { timestamp });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
+			setEditingDay(null);
+		},
+	});
+
+	const handleSaveEdit = (day: DayData) => {
+		if (!editingDay) return;
+		const logId = editingDay.field === "in" ? day.inLogId : day.outLogId;
+		if (!logId) return;
+		const timestamp = `${day.date}T${editingDay.value}:00`;
+		updateMutation.mutate({ id: logId, timestamp });
+	};
 	const prevMonth = () => { if (month === 1) { setMonth(12); setYear(year - 1); } else setMonth(month - 1); };
 	const nextMonth = () => { if (month === 12) { setMonth(1); setYear(year + 1); } else setMonth(month + 1); };
 
@@ -185,8 +207,28 @@ export default function DailyRecapPage() {
 									{selectedEmployee.days.filter((d) => d.isWorkDay || d.isHoliday).map((day) => (
 										<tr key={day.date} className={`hover:bg-white/5 ${day.isHoliday ? "opacity-60" : ""}`}>
 											<td className="py-2">{new Date(day.date + "T00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric" })}</td>
-											<td className="py-2 text-center font-mono">{day.clockIn || "-"}</td>
-											<td className="py-2 text-center font-mono">{day.clockOut || "-"}</td>
+											<td className="py-2 text-center font-mono">
+												{editingDay?.date === day.date && editingDay.field === "in" ? (
+													<span className="flex items-center gap-1 justify-center">
+														<input type="time" value={editingDay.value} onChange={(e) => setEditingDay({ ...editingDay, value: e.target.value })} className="bg-white/10 border border-white/20 rounded px-1 py-0.5 text-xs w-20" />
+														<button type="button" onClick={() => handleSaveEdit(day)} className="text-emerald-500 text-xs">✓</button>
+														<button type="button" onClick={() => setEditingDay(null)} className="text-red-500 text-xs">✕</button>
+													</span>
+												) : (
+													<span onClick={(e) => { e.stopPropagation(); if (day.inLogId) setEditingDay({ date: day.date, field: "in", value: day.clockIn || "07:00" }); }} className={day.inLogId ? "cursor-pointer hover:text-primary" : ""}>{day.clockIn || "-"}</span>
+												)}
+											</td>
+											<td className="py-2 text-center font-mono">
+												{editingDay?.date === day.date && editingDay.field === "out" ? (
+													<span className="flex items-center gap-1 justify-center">
+														<input type="time" value={editingDay.value} onChange={(e) => setEditingDay({ ...editingDay, value: e.target.value })} className="bg-white/10 border border-white/20 rounded px-1 py-0.5 text-xs w-20" />
+														<button type="button" onClick={() => handleSaveEdit(day)} className="text-emerald-500 text-xs">✓</button>
+														<button type="button" onClick={() => setEditingDay(null)} className="text-red-500 text-xs">✕</button>
+													</span>
+												) : (
+													<span onClick={(e) => { e.stopPropagation(); if (day.outLogId) setEditingDay({ date: day.date, field: "out", value: day.clockOut || "16:00" }); }} className={day.outLogId ? "cursor-pointer hover:text-primary" : ""}>{day.clockOut || "-"}</span>
+												)}
+											</td>
 											<td className="py-2 text-center">
 												<span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusColor(day.status, day.isHoliday, day.isWorkDay)}`}>
 													{statusLabel(day.status, day.isHoliday, day.isWorkDay)}

@@ -122,6 +122,8 @@ export class ReportsService {
 					isHoliday,
 					clockIn: inLog ? formatTime(inLog.timestamp) : null,
 					clockOut: outLog ? formatTime(outLog.timestamp) : null,
+					inLogId: inLog?.id ?? null,
+					outLogId: outLog?.id ?? null,
 					status,
 					lateMinutes,
 					earlyOutMinutes,
