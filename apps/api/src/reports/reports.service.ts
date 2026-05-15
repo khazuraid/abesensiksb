@@ -10,12 +10,18 @@ function parseTime(t: string): number {
 	return Number.parseInt(h, 10) * 60 + Number.parseInt(m, 10);
 }
 
+function toWIB(d: Date): Date {
+	return new Date(d.getTime() + 7 * 60 * 60 * 1000);
+}
+
 function formatTime(d: Date): string {
-	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+	const w = toWIB(d);
+	return `${String(w.getUTCHours()).padStart(2, "0")}:${String(w.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 function getWIBMinutes(d: Date): number {
-	return d.getHours() * 60 + d.getMinutes();
+	const w = toWIB(d);
+	return w.getUTCHours() * 60 + w.getUTCMinutes();
 }
 
 @Injectable()
@@ -82,7 +88,8 @@ export class ReportsService {
 				const isWorkDay = workDays.includes(dow) && !isHoliday;
 
 				const dayLogs = empLogs.filter((l) => {
-					return l.timestamp.getFullYear() === year && l.timestamp.getMonth() === month - 1 && l.timestamp.getDate() === d;
+					const w = toWIB(l.timestamp);
+					return w.getUTCFullYear() === year && w.getUTCMonth() === month - 1 && w.getUTCDate() === d;
 				});
 
 				const inLog = dayLogs.find((l) => l.type === "IN");
@@ -168,45 +175,16 @@ export class ReportsService {
 	}
 
 	async getMonthlySummary(month: number, year: number) {
-		const startDate = new Date(year, month - 1, 1);
-		const endDate = new Date(year, month, 0, 23, 59, 59);
-
-		// Ambil semua pegawai
-		const allEmployees = await this.db
-			.select({
-				id: schema.employees.id,
-				name: schema.employees.name,
-				employeeCode: schema.employees.employeeCode,
-				department: schema.employees.department,
-			})
-			.from(schema.employees)
-			.where(eq(schema.employees.isActive, true));
-
-		// Ambil log absensi untuk rentang waktu tersebut
-		const logs = await this.db
-			.select()
-			.from(schema.attendanceLogs)
-			.where(between(schema.attendanceLogs.timestamp, startDate, endDate));
-
-		// Agregasi data per pegawai
-		const summary = allEmployees.map((emp) => {
-			const empLogs = logs.filter((log) => log.employeeId === emp.id);
-			const present = new Set(
-				empLogs.map((log) => log.timestamp.toDateString()),
-			).size;
-			const late = empLogs.filter((log) => log.status === "LATE").length;
-
-			return {
-				...emp,
-				totalPresent: present,
-				totalLate: late,
-				// Logika absensi: (jumlah hari kerja - hadir)
-				// Untuk sementara kita asumsikan 20 hari kerja
-				totalAbsent: Math.max(0, 20 - present),
-			};
-		});
-
-		return summary;
+		const recap = await this.getDailyRecap(month, year);
+		return recap.map((emp) => ({
+			id: emp.id,
+			name: emp.name,
+			employeeCode: emp.employeeCode,
+			department: "",
+			totalPresent: emp.totalPresent,
+			totalLate: emp.totalLate,
+			totalAbsent: emp.totalAbsent,
+		}));
 	}
 
 	async generateExcel(month: number, year: number) {
