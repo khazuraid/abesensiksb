@@ -32,12 +32,15 @@ export default function HolidaysPage() {
 
 	const createMutation = useMutation({
 		mutationFn: async (data: typeof form) => {
-			return (await api.post("/holidays", data)).data;
+			return (await api.post("/holidays", { ...data, description: data.description || null })).data;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["holidays"] });
 			setShowForm(false);
 			setForm({ date: "", name: "", description: "" });
+		},
+		onError: (err: any) => {
+			alert("Gagal simpan: " + (err?.response?.data?.message || err?.message || "Unknown error"));
 		},
 	});
 
@@ -104,10 +107,10 @@ export default function HolidaysPage() {
 						<button
 							type="button"
 							onClick={() => createMutation.mutate(form)}
-							disabled={!form.date || !form.name}
+							disabled={!form.date || !form.name || createMutation.isPending}
 							className="bg-primary text-primary-foreground rounded-lg px-4 py-2 font-semibold disabled:opacity-50"
 						>
-							Simpan
+							{createMutation.isPending ? "Menyimpan..." : "Simpan"}
 						</button>
 					</div>
 				</div>
