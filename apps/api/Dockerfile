@@ -17,5 +17,6 @@ RUN rm -rf apps/api/src packages/*/src .turbo biome.json turbo.json
 
 ENV NODE_ENV=production
 ENV PORT=8888
+ENV TZ=Asia/Jakarta
 EXPOSE 8888
 CMD ["node", "apps/api/dist/main.js"]

@@ -1,3 +1,5 @@
+process.env.TZ = "Asia/Jakarta";
+
 import { NestFactory } from "@nestjs/core";
 import type { IncomingMessage, ServerResponse } from "http";
 import { AppModule } from "./app.module";
