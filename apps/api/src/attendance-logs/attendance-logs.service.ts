@@ -85,6 +85,14 @@ export class AttendanceLogsService {
 		return result[0];
 	}
 
+	async createManualLog(employeeId: number, timestamp: Date, type: "IN" | "OUT") {
+		const result = await this.db
+			.insert(schema.attendanceLogs)
+			.values({ employeeId, timestamp, type, status: "PRESENT", verified: false })
+			.returning();
+		return result[0];
+	}
+
 	async getStats() {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);

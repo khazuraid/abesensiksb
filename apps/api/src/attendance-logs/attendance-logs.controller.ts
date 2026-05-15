@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { AttendanceLogsService } from "./attendance-logs.service";
 
@@ -18,6 +18,11 @@ export class AttendanceLogsController {
 		@Body() body: { timestamp: string },
 	) {
 		return this.attendanceLogsService.updateTimestamp(id, new Date(body.timestamp));
+	}
+
+	@Post()
+	createLog(@Body() body: { employeeId: number; timestamp: string; type: "IN" | "OUT" }) {
+		return this.attendanceLogsService.createManualLog(body.employeeId, new Date(body.timestamp), body.type);
 	}
 
 	@Get()

@@ -56,12 +56,25 @@ export default function DailyRecapPage() {
 		},
 	});
 
+	const createMutation = useMutation({
+		mutationFn: async ({ employeeId, timestamp, type }: { employeeId: number; timestamp: string; type: "IN" | "OUT" }) => {
+			await api.post("/attendance-logs", { employeeId, timestamp, type });
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
+			setEditingDay(null);
+		},
+	});
+
 	const handleSaveEdit = (day: DayData) => {
-		if (!editingDay) return;
+		if (!editingDay || !selectedEmployee) return;
 		const logId = editingDay.field === "in" ? day.inLogId : day.outLogId;
-		if (!logId) return;
 		const timestamp = `${day.date}T${editingDay.value}:00`;
-		updateMutation.mutate({ id: logId, timestamp });
+		if (logId) {
+			updateMutation.mutate({ id: logId, timestamp });
+		} else {
+			createMutation.mutate({ employeeId: selectedEmployee.id, timestamp, type: editingDay.field === "in" ? "IN" : "OUT" });
+		}
 	};
 	const prevMonth = () => { if (month === 1) { setMonth(12); setYear(year - 1); } else setMonth(month - 1); };
 	const nextMonth = () => { if (month === 12) { setMonth(1); setYear(year + 1); } else setMonth(month + 1); };
@@ -215,7 +228,7 @@ export default function DailyRecapPage() {
 														<button type="button" onClick={() => setEditingDay(null)} className="text-red-500 text-xs">✕</button>
 													</span>
 												) : (
-													<span onClick={(e) => { e.stopPropagation(); if (day.inLogId) setEditingDay({ date: day.date, field: "in", value: day.clockIn || "07:00" }); }} className={day.inLogId ? "cursor-pointer hover:text-primary" : ""}>{day.clockIn || "-"}</span>
+													<span onClick={(e) => { e.stopPropagation(); if (day.isWorkDay && !day.isHoliday) setEditingDay({ date: day.date, field: "in", value: day.clockIn || "07:00" }); }} className={day.isWorkDay && !day.isHoliday ? "cursor-pointer hover:text-primary" : ""}>{day.clockIn || "-"}</span>
 												)}
 											</td>
 											<td className="py-2 text-center font-mono">
@@ -226,7 +239,7 @@ export default function DailyRecapPage() {
 														<button type="button" onClick={() => setEditingDay(null)} className="text-red-500 text-xs">✕</button>
 													</span>
 												) : (
-													<span onClick={(e) => { e.stopPropagation(); if (day.outLogId) setEditingDay({ date: day.date, field: "out", value: day.clockOut || "16:00" }); }} className={day.outLogId ? "cursor-pointer hover:text-primary" : ""}>{day.clockOut || "-"}</span>
+													<span onClick={(e) => { e.stopPropagation(); if (day.isWorkDay && !day.isHoliday) setEditingDay({ date: day.date, field: "out", value: day.clockOut || "16:00" }); }} className={day.isWorkDay && !day.isHoliday ? "cursor-pointer hover:text-primary" : ""}>{day.clockOut || "-"}</span>
 												)}
 											</td>
 											<td className="py-2 text-center">
