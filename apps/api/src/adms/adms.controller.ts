@@ -85,7 +85,12 @@ export class ADMSController {
 			return await this.admsService.handleUserData(sn, rawData);
 		}
 
-		// Default: log absensi
+		// OPERLOG = fingerprint templates, operation logs — skip untuk sekarang
+		if (table === "OPERLOG") {
+			return "OK";
+		}
+
+		// Default: log absensi (ATTLOG)
 		return await this.admsService.handleLogData(sn, rawData);
 	}
 

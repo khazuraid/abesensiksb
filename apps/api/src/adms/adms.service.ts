@@ -1,5 +1,4 @@
 import * as schema from "@adms/database";
-import { ADMSRecordSchema } from "@adms/shared-types";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { Queue } from "bullmq";
@@ -60,8 +59,9 @@ export class ADMSService {
 	}
 
 	/**
-	 * Parsing data log dari mesin ADMS dan masukkan ke queue.
-	 * Format umum: USERID=1\tCHECKTIME=2024-05-12 08:00:00\tCHECKTYPE=0\tVERIFYCODE=1
+	 * Parsing data log dari mesin ADMS.
+	 * Format: USERID\tTIMESTAMP\tSTATUS\tVERIFY\tWORKCODE\t...
+	 * Contoh: 16\t2026-04-14 14:00:26\t1\t1\t0\t0\t0\t0\t0\t0
 	 */
 	async handleLogData(sn: string, rawData: string) {
 		const lines = rawData.split("\n").filter((line) => line.trim());
@@ -77,24 +77,21 @@ export class ADMSService {
 
 		for (const line of lines) {
 			try {
-				// Parsing string mentah ke key-value
-				const raw = line.split("\t").reduce(
-					(acc, part) => {
-						const [key, value] = part.split("=");
-						if (key) acc[key] = value;
-						return acc;
-					},
-					{} as Record<string, string>,
-				);
-
-				// Validasi via Zod (gagal → record di-skip, dicatat untuk Sentry)
-				const parseResult = ADMSRecordSchema.safeParse(raw);
-				if (!parseResult.success) {
-					errors.push(`Invalid record: ${line} — ${parseResult.error.message}`);
+				const parts = line.split("\t");
+				if (parts.length < 5) {
+					errors.push(`Too few fields: ${line}`);
 					continue;
 				}
 
-				const record = parseResult.data;
+				const userId = parts[0].trim();
+				const checktime = parts[1].trim();
+				const checkStatus = parts[2].trim(); // 0=IN, 1=OUT
+				// parts[3] = verify method, parts[4] = workcode
+
+				if (!userId || !checktime) {
+					errors.push(`Missing userId or checktime: ${line}`);
+					continue;
+				}
 
 				// Resolve employee by biometricId atau employeeCode
 				const employeeResult = await this.db
@@ -102,21 +99,21 @@ export class ADMSService {
 					.from(schema.employees)
 					.where(
 						or(
-							eq(schema.employees.biometricId, record.USERID),
-							eq(schema.employees.employeeCode, record.USERID),
+							eq(schema.employees.biometricId, userId),
+							eq(schema.employees.employeeCode, userId),
 						),
 					);
 
 				if (employeeResult.length === 0) {
-					errors.push(`Employee not found for USERID=${record.USERID}`);
+					errors.push(`Employee not found for USERID=${userId}`);
 					continue;
 				}
 
 				const employee = employeeResult[0];
 
 				// Fix timezone: mesin kirim waktu lokal (WIB), parse sebagai lokal
-				const timestamp = new Date(record.CHECKTIME);
-				const type = record.CHECKTYPE === "0" ? "IN" : "OUT";
+				const timestamp = new Date(checktime);
+				const type = checkStatus === "0" ? "IN" : "OUT";
 
 				// Dedup: cek apakah log dengan employee+timestamp+type sudah ada
 				const existing = await this.db
