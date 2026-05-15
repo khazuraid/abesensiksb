@@ -11,12 +11,11 @@ function parseTime(t: string): number {
 }
 
 function formatTime(d: Date): string {
-	return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" });
+	return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 function getWIBMinutes(d: Date): number {
-	const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-	return wib.getUTCHours() * 60 + wib.getUTCMinutes();
+	return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
 
 @Injectable()
