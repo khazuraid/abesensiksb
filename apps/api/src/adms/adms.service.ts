@@ -192,7 +192,7 @@ export class ADMSService {
 					{} as Record<string, string>,
 				);
 
-				const pin = fields.PIN || fields.UserId;
+				const pin = fields.PIN || fields["USER PIN"] || fields.UserId;
 				const name = fields.Name || fields.name;
 				if (!pin) continue;
 

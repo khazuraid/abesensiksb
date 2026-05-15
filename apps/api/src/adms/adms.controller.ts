@@ -85,8 +85,11 @@ export class ADMSController {
 			return await this.admsService.handleUserData(sn, rawData);
 		}
 
-		// OPERLOG = fingerprint templates, operation logs — skip untuk sekarang
+		// OPERLOG: bisa berisi data user (USER PIN=...) atau fingerprint (FP PIN=...)
 		if (table === "OPERLOG") {
+			if (rawData.startsWith("USER")) {
+				return await this.admsService.handleUserData(sn, rawData);
+			}
 			return "OK";
 		}
 
