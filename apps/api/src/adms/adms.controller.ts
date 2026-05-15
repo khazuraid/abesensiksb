@@ -81,13 +81,13 @@ export class ADMSController {
 		if (!rawData) return "OK";
 
 		// Jika mesin push data user
-		if (table === "user") {
+		if (table === "user" || table === "USERINFO") {
 			return await this.admsService.handleUserData(sn, rawData);
 		}
 
 		// OPERLOG: bisa berisi data user (USER PIN=...) atau fingerprint (FP PIN=...)
 		if (table === "OPERLOG") {
-			if (rawData.startsWith("USER")) {
+			if (rawData.includes("PIN=")) {
 				return await this.admsService.handleUserData(sn, rawData);
 			}
 			return "OK";

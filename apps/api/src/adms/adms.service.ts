@@ -186,8 +186,10 @@ export class ADMSService {
 		const lines = rawData.split("\n").filter((line) => line.trim());
 		let synced = 0;
 
-		for (const line of lines) {
+		for (const rawLine of lines) {
 			try {
+				// Strip prefix "USER " jika ada (format OPERLOG)
+				const line = rawLine.replace(/^USER\s+/i, "");
 				const fields = line.split("\t").reduce(
 					(acc, part) => {
 						const idx = part.indexOf("=");

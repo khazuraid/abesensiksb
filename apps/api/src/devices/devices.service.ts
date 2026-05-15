@@ -124,7 +124,7 @@ export class DevicesService {
 			}
 
 			case "user.sync": {
-				commands.push("DATA UPDATE USERINFO");
+				commands.push("DATA QUERY USERINFO");
 				break;
 			}
 
