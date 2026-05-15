@@ -44,6 +44,7 @@ async function bootstrap() {
 	app.enableCors({
 		origin: process.env.CORS_ORIGIN || "http://localhost:8080",
 		credentials: true,
+		exposedHeaders: ["Content-Disposition"],
 	});
 
 	app.setGlobalPrefix("api", {

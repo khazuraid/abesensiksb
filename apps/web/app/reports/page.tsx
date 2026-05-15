@@ -54,8 +54,13 @@ export default function ReportsPage() {
 			const a = document.createElement("a");
 			a.href = url;
 			a.download = `Laporan-${months[month - 1]}-${year}.xlsx`;
+			document.body.appendChild(a);
 			a.click();
-		} catch { /* ignore */ }
+			a.remove();
+			window.URL.revokeObjectURL(url);
+		} catch (e: any) {
+			alert("Gagal download laporan: " + (e?.response?.status || e?.message || "Unknown error"));
+		}
 	};
 
 	return (
