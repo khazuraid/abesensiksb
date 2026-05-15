@@ -11,13 +11,11 @@ function parseTime(t: string): number {
 }
 
 function formatTime(d: Date): string {
-	const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-	return `${String(wib.getUTCHours()).padStart(2, "0")}:${String(wib.getUTCMinutes()).padStart(2, "0")}`;
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function getWIBMinutes(d: Date): number {
-	const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
-	return wib.getUTCHours() * 60 + wib.getUTCMinutes();
+	return d.getHours() * 60 + d.getMinutes();
 }
 
 @Injectable()
@@ -82,8 +80,7 @@ export class ReportsService {
 				const isWorkDay = workDays.includes(dow) && !isHoliday;
 
 				const dayLogs = empLogs.filter((l) => {
-					const wib = new Date(l.timestamp.getTime() + 7 * 60 * 60 * 1000);
-					return wib.getUTCFullYear() === year && wib.getUTCMonth() === month - 1 && wib.getUTCDate() === d;
+					return l.timestamp.getFullYear() === year && l.timestamp.getMonth() === month - 1 && l.timestamp.getDate() === d;
 				});
 
 				const inLog = dayLogs.find((l) => l.type === "IN");
