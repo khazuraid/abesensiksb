@@ -200,7 +200,7 @@ export default function DailyRecapPage() {
 
 			{selectedEmployee && (
 				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm" onClick={() => setSelectedEmployee(null)}>
-					<div className="glass-card w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+					<div className="glass-card w-full max-w-2xl h-[95vh] flex flex-col shadow-2xl" onClick={(e) => e.stopPropagation()}>
 						<div className="p-6 border-b border-white/5 flex justify-between items-center">
 							<div>
 								<h3 className="text-xl font-bold">{selectedEmployee.name}</h3>
@@ -208,7 +208,7 @@ export default function DailyRecapPage() {
 							</div>
 							<button type="button" onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-white/5 rounded-lg text-foreground/50">✕</button>
 						</div>
-						<div className="p-4">
+						<div className="p-4 overflow-y-auto flex-1">
 							<table className="w-full text-sm">
 								<thead>
 									<tr className="text-foreground/60 border-b border-white/10">

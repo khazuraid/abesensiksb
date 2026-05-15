@@ -249,7 +249,8 @@ Perintah tersedia:
 			for (const [key, ts] of dayMap.entries()) {
 				const dow = ts.getDay();
 				const dateStr = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, "0")}-${String(ts.getDate()).padStart(2, "0")}`;
-				const shift = shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && (!s.effectiveFrom || dateStr >= s.effectiveFrom) && (!s.effectiveTo || dateStr <= s.effectiveTo));
+				const shift = shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && s.effectiveFrom && s.effectiveTo && dateStr >= s.effectiveFrom && dateStr <= s.effectiveTo)
+					|| shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && !s.effectiveFrom && !s.effectiveTo);
 				if (shift) {
 					const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
 					const scanMin = ts.getHours() * 60 + ts.getMinutes();
@@ -262,7 +263,9 @@ Perintah tersedia:
 				const date = new Date(now.getFullYear(), now.getMonth(), d);
 				const dow = date.getDay();
 				const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-				if (!shifts.some((s) => s.isActive && (s.workDays as number[])?.includes(dow) && (!s.effectiveFrom || dateStr >= s.effectiveFrom) && (!s.effectiveTo || dateStr <= s.effectiveTo))) continue;
+				const hasShift = shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && s.effectiveFrom && s.effectiveTo && dateStr >= s.effectiveFrom && dateStr <= s.effectiveTo)
+					|| shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && !s.effectiveFrom && !s.effectiveTo);
+				if (!hasShift) continue;
 				if (empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate)) cuti++;
 			}
 
