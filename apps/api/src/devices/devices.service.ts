@@ -118,6 +118,17 @@ export class DevicesService {
 				break;
 			}
 
+			case "camera.enable": {
+				commands.push("SET OPTION CapturePhoto=1");
+				commands.push("SET OPTION PhotoStamp=1");
+				break;
+			}
+
+			case "camera.disable": {
+				commands.push("SET OPTION CapturePhoto=0");
+				break;
+			}
+
 			case "set.volume": {
 				const vol = dto.volume ?? 50;
 				commands.push(`SET OPTION VOLUME=${vol}`);

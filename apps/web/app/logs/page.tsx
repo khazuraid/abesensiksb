@@ -11,6 +11,9 @@ export default function AttendanceLogsPage() {
 	const [search, setSearch] = useState("");
 	const [filterStatus, setFilterStatus] = useState("");
 	const [filterDate, setFilterDate] = useState("");
+	const [photoModal, setPhotoModal] = useState<string | null>(null);
+
+	const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:8888";
 
 	const { data: logs, isLoading } = useQuery<AttendanceLog[]>({
 		queryKey: ["attendance-logs", filterStatus, filterDate],
@@ -116,7 +119,11 @@ export default function AttendanceLogsPage() {
 										</td>
 										<td className="px-6 py-4 text-sm text-foreground/60"><Monitor size={14} className="inline mr-1" />{log.device?.name || "-"}</td>
 										<td className="px-6 py-4 text-right">
-											{log.photoUrl ? <span className="text-xs text-primary"><CheckCircle2 size={14} className="inline" /> Ada</span> : <span className="text-xs text-foreground/30"><XCircle size={14} className="inline" /></span>}
+											{log.photoUrl ? (
+												<button type="button" onClick={() => setPhotoModal(`${apiBase}${log.photoUrl}`)} className="text-xs text-primary hover:underline">
+													<CheckCircle2 size={14} className="inline mr-1" />Lihat
+												</button>
+											) : <span className="text-xs text-foreground/30"><XCircle size={14} className="inline" /></span>}
 										</td>
 									</tr>
 								))
@@ -125,6 +132,15 @@ export default function AttendanceLogsPage() {
 					</table>
 				</div>
 			</div>
+
+			{photoModal && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm" onClick={() => setPhotoModal(null)}>
+					<div className="glass-card p-2 max-w-lg shadow-2xl" onClick={(e) => e.stopPropagation()}>
+						<img src={photoModal} alt="Foto Absensi" className="rounded-lg max-h-[70vh] w-auto" />
+						<button type="button" onClick={() => setPhotoModal(null)} className="mt-2 w-full py-2 text-center text-sm text-foreground/60 hover:text-foreground">Tutup</button>
+					</div>
+				</div>
+			)}
 		</motion.div>
 	);
 }

@@ -1,5 +1,5 @@
 FROM node:20-alpine
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN apk add --no-cache tzdata && corepack enable && corepack prepare pnpm@9 --activate
 WORKDIR /app
 
 ENV NODE_ENV=development

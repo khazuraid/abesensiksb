@@ -4,6 +4,8 @@ import type { CreateDevice, Device, DeviceCommandType, UpdateDevice } from "@adm
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
+	Camera,
+	CameraOff,
 	Clock,
 	Download,
 	Info,
@@ -25,6 +27,8 @@ const COMMANDS: { type: DeviceCommandType; label: string; icon: typeof Info; col
 	{ type: "check", label: "Check", icon: Wifi, color: "text-emerald-500" },
 	{ type: "info", label: "Info", icon: Info, color: "text-blue-500" },
 	{ type: "set.time", label: "Sync Waktu", icon: Clock, color: "text-cyan-500" },
+	{ type: "camera.enable", label: "Kamera ON", icon: Camera, color: "text-green-500" },
+	{ type: "camera.disable", label: "Kamera OFF", icon: CameraOff, color: "text-gray-500" },
 	{ type: "reboot", label: "Reboot", icon: Power, color: "text-red-500" },
 	{ type: "reload", label: "Reload", icon: RefreshCcw, color: "text-yellow-500" },
 	{ type: "log", label: "Tarik Log", icon: Download, color: "text-purple-500" },
