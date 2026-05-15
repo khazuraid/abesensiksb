@@ -33,6 +33,7 @@ export class ADMSProcessor extends WorkerHost {
 		}>,
 	): Promise<{ success: boolean }> {
 		const { sn, log } = job.data;
+		log.timestamp = new Date(log.timestamp);
 
 		try {
 			// 1. Simpan ke database
