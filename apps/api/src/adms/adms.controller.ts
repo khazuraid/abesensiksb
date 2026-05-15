@@ -69,6 +69,9 @@ export class ADMSController {
 
 		await this.admsService.updateDeviceStatus(sn, req.ip || "");
 
+		// Mesin kadang kirim POST tanpa body (heartbeat/ping)
+		if (!rawData) return "OK";
+
 		// Jika mesin push data user
 		if (table === "user") {
 			return await this.admsService.handleUserData(sn, rawData);
