@@ -222,11 +222,21 @@ Perintah tersedia:
 			.from(schema.attendanceLogs)
 			.where(between(schema.attendanceLogs.timestamp, startMonth, endMonth));
 
+		const leaves = await this.db.select({ employeeId: schema.leaves.employeeId, startDate: schema.leaves.startDate, endDate: schema.leaves.endDate })
+			.from(schema.leaves)
+			.where(eq(schema.leaves.status, "APPROVED"));
+
 		const parseTime = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
+
+		// Hitung hari kerja yang sudah lewat bulan ini
+		const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+		const today = now.getDate();
 
 		const rows = employees.map((emp) => {
 			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
+			const workDays = (shift?.workDays as number[]) || [1, 2, 3, 4, 5];
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
+			const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
 			const inLogs = empLogs.filter((l) => l.type === "IN");
 
 			// Group by date, ambil log IN pertama per hari
@@ -238,6 +248,7 @@ Perintah tersedia:
 
 			let hadir = dayMap.size;
 			let telat = 0;
+			let cuti = 0;
 			if (shift) {
 				const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
 				for (const ts of dayMap.values()) {
@@ -245,19 +256,29 @@ Perintah tersedia:
 					if (scanMin > cutoff) telat++;
 				}
 			}
-			return { name: this.shortName(emp.name), hadir, telat };
+
+			// Hitung cuti/izin pada hari kerja
+			for (let d = 1; d <= Math.min(today, daysInMonth); d++) {
+				const date = new Date(now.getFullYear(), now.getMonth(), d);
+				if (!workDays.includes(date.getDay())) continue;
+				const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+				if (empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate)) cuti++;
+			}
+
+			return { name: this.shortName(emp.name), hadir, telat, cuti };
 		}).sort((a, b) => b.hadir - a.hadir);
 
 		const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
 		const totalHadir = rows.reduce((s, r) => s + r.hadir, 0);
 		const totalTelat = rows.reduce((s, r) => s + r.telat, 0);
+		const totalCuti = rows.reduce((s, r) => s + r.cuti, 0);
 
 		const lines = rows.map((r, i) =>
-			`${String(i + 1).padStart(2)}. ${r.name} - H:${r.hadir} T:${r.telat}`
+			`${String(i + 1).padStart(2)}. ${r.name} - H:${r.hadir} T:${r.telat}${r.cuti ? ` C:${r.cuti}` : ""}`
 		);
 
 		let msg = `<b>📅 Rekap ${monthName}</b>\n━━━━━━━━━━━━━━━━━━\n`;
-		msg += `✅ Hadir: <b>${totalHadir}</b> | ⚠️ Telat: <b>${totalTelat}</b>\n\n`;
+		msg += `✅ Hadir: <b>${totalHadir}</b> | ⚠️ Telat: <b>${totalTelat}</b> | 📋 Cuti: <b>${totalCuti}</b>\n\n`;
 		msg += `<code>${lines.join("\n")}</code>`;
 
 		await this.send(chatId, msg);

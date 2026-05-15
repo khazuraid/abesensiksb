@@ -51,12 +51,20 @@ export class ReportsService {
 			.where(between(schema.holidays.date, `${year}-${String(month).padStart(2, "0")}-01`, `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`));
 		const holidayDates = new Set(holidays.map((h) => h.date));
 
+		const leaves = await this.db
+			.select({ employeeId: schema.leaves.employeeId, startDate: schema.leaves.startDate, endDate: schema.leaves.endDate })
+			.from(schema.leaves)
+			.where(eq(schema.leaves.status, "APPROVED"));
+
 		const defaultShift = shifts.find((s) => s.isActive) || null;
 
 		return allEmployees.map((emp) => {
 			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
 			const workDays = (shift?.workDays as number[]) || [1, 2, 3, 4, 5];
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
+			const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
+
+			const isOnLeave = (dateStr: string) => empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate);
 
 			const days: {
 				date: string;
@@ -75,6 +83,7 @@ export class ReportsService {
 			let totalEarlyOut = 0;
 			let totalPresent = 0;
 			let totalAbsent = 0;
+			let totalLeave = 0;
 
 			for (let d = 1; d <= daysInMonth; d++) {
 				const date = new Date(year, month - 1, d);
@@ -136,9 +145,15 @@ export class ReportsService {
 					if (status === "LATE") totalLate++;
 					if (status === "EARLY_OUT") { totalEarlyOut++; totalPresent++; }
 				} else {
-					// Hari kerja tapi tidak ada log — cek apakah hari sudah lewat
-					if (date <= new Date()) totalAbsent++;
-					else status = "-";
+					// Hari kerja tapi tidak ada log — cek cuti/izin atau absen
+					if (date <= new Date()) {
+						if (isOnLeave(dateStr)) {
+							status = "LEAVE";
+							totalLeave++;
+						} else {
+							totalAbsent++;
+						}
+					} else status = "-";
 				}
 
 				days.push({
@@ -165,6 +180,7 @@ export class ReportsService {
 				totalLate,
 				totalEarlyOut,
 				totalAbsent,
+				totalLeave,
 			};
 		});
 	}
@@ -179,6 +195,7 @@ export class ReportsService {
 			totalPresent: emp.totalPresent,
 			totalLate: emp.totalLate,
 			totalAbsent: emp.totalAbsent,
+			totalLeave: emp.totalLeave,
 		}));
 	}
 

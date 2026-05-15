@@ -29,6 +29,7 @@ interface EmployeeRecap {
 	totalLate: number;
 	totalEarlyOut: number;
 	totalAbsent: number;
+	totalLeave: number;
 }
 
 export default function DailyRecapPage() {
@@ -91,6 +92,7 @@ export default function DailyRecapPage() {
 			case "LATE": return "bg-amber-500/10 text-amber-500";
 			case "EARLY_OUT": return "bg-orange-500/10 text-orange-500";
 			case "ABSENT": return "bg-red-500/10 text-red-500";
+			case "LEAVE": return "bg-cyan-500/10 text-cyan-500";
 			default: return "bg-white/5 text-foreground/30";
 		}
 	};
@@ -103,6 +105,7 @@ export default function DailyRecapPage() {
 			case "LATE": return "T";
 			case "EARLY_OUT": return "PC";
 			case "ABSENT": return "A";
+			case "LEAVE": return "C";
 			default: return "-";
 		}
 	};
@@ -128,7 +131,7 @@ export default function DailyRecapPage() {
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 				<div>
 					<h2 className="text-3xl font-bold tracking-tight">Rekap Harian</h2>
-					<p className="text-foreground/60">Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat, PC=Pulang Cepat, A=Alpa, L=Libur, O=Off</p>
+					<p className="text-foreground/60">Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat, PC=Pulang Cepat, A=Alpa, C=Cuti/Izin, L=Libur, O=Off</p>
 				</div>
 				<div className="flex items-center gap-3">
 					<div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
@@ -164,6 +167,7 @@ export default function DailyRecapPage() {
 									<th className="px-2 py-3 text-center font-medium">H</th>
 									<th className="px-2 py-3 text-center font-medium">T</th>
 									<th className="px-2 py-3 text-center font-medium">PC</th>
+									<th className="px-2 py-3 text-center font-medium">C</th>
 									<th className="px-2 py-3 text-center font-medium">A</th>
 								</tr>
 							</thead>
@@ -184,6 +188,7 @@ export default function DailyRecapPage() {
 										<td className="px-2 py-2 text-center font-bold text-emerald-500">{emp.totalPresent}</td>
 										<td className="px-2 py-2 text-center font-bold text-amber-500">{emp.totalLate}</td>
 										<td className="px-2 py-2 text-center font-bold text-orange-500">{emp.totalEarlyOut}</td>
+										<td className="px-2 py-2 text-center font-bold text-cyan-500">{emp.totalLeave}</td>
 										<td className="px-2 py-2 text-center font-bold text-red-500">{emp.totalAbsent}</td>
 									</tr>
 								))}

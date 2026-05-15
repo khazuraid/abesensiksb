@@ -13,6 +13,7 @@ interface ReportItem {
 	totalPresent: number;
 	totalLate: number;
 	totalAbsent: number;
+	totalLeave: number;
 }
 
 export default function ReportsPage() {
@@ -26,15 +27,17 @@ export default function ReportsPage() {
 	});
 
 	const summary = useMemo(() => {
-		if (!reportData || reportData.length === 0) return { attendance: 0, late: 0, absent: 0 };
+		if (!reportData || reportData.length === 0) return { attendance: 0, late: 0, absent: 0, leave: 0 };
 		const totalPresent = reportData.reduce((s, i) => s + i.totalPresent, 0);
 		const totalLate = reportData.reduce((s, i) => s + i.totalLate, 0);
 		const totalAbsent = reportData.reduce((s, i) => s + i.totalAbsent, 0);
+		const totalLeave = reportData.reduce((s, i) => s + (i.totalLeave || 0), 0);
 		const totalDays = totalPresent + totalAbsent;
 		return {
 			attendance: totalDays > 0 ? Math.round((totalPresent / totalDays) * 100) : 0,
 			late: totalLate,
 			absent: totalAbsent,
+			leave: totalLeave,
 		};
 	}, [reportData]);
 
@@ -82,7 +85,7 @@ export default function ReportsPage() {
 				</div>
 			</div>
 
-			<div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+			<div className="grid grid-cols-1 md:grid-cols-4 gap-6">
 				<div className="glass-card p-6 border-l-4 border-l-emerald-500">
 					<div className="text-foreground/60 text-sm font-medium mb-1">Kehadiran</div>
 					<div className="text-3xl font-bold">{isLoading ? "-" : `${summary.attendance}%`}</div>
@@ -90,6 +93,10 @@ export default function ReportsPage() {
 				<div className="glass-card p-6 border-l-4 border-l-amber-500">
 					<div className="text-foreground/60 text-sm font-medium mb-1">Total Terlambat</div>
 					<div className="text-3xl font-bold">{isLoading ? "-" : summary.late}</div>
+				</div>
+				<div className="glass-card p-6 border-l-4 border-l-cyan-500">
+					<div className="text-foreground/60 text-sm font-medium mb-1">Total Cuti/Izin</div>
+					<div className="text-3xl font-bold">{isLoading ? "-" : summary.leave}</div>
 				</div>
 				<div className="glass-card p-6 border-l-4 border-l-destructive">
 					<div className="text-foreground/60 text-sm font-medium mb-1">Total Absen</div>
@@ -111,15 +118,16 @@ export default function ReportsPage() {
 								<th className="px-6 py-4 font-medium">Pegawai</th>
 								<th className="px-6 py-4 font-medium text-center">Hadir</th>
 								<th className="px-6 py-4 font-medium text-center">Terlambat</th>
+								<th className="px-6 py-4 font-medium text-center">Cuti/Izin</th>
 								<th className="px-6 py-4 font-medium text-center">Absen</th>
 								<th className="px-6 py-4 font-medium text-right">%</th>
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-white/5">
 							{isLoading ? (
-								[1,2,3,4,5].map((k) => <tr key={k} className="animate-pulse"><td colSpan={5} className="px-6 py-6 h-14 bg-white/5" /></tr>)
+								[1,2,3,4,5].map((k) => <tr key={k} className="animate-pulse"><td colSpan={6} className="px-6 py-6 h-14 bg-white/5" /></tr>)
 							) : filtered?.length === 0 ? (
-								<tr><td colSpan={5} className="px-6 py-20 text-center text-foreground/40">Tidak ada data untuk periode ini.</td></tr>
+								<tr><td colSpan={6} className="px-6 py-20 text-center text-foreground/40">Tidak ada data untuk periode ini.</td></tr>
 							) : (
 								filtered?.map((item) => {
 									const total = item.totalPresent + item.totalAbsent;
@@ -137,6 +145,7 @@ export default function ReportsPage() {
 											</td>
 											<td className="px-6 py-4 text-center"><span className="font-bold text-emerald-500">{item.totalPresent}</span></td>
 											<td className="px-6 py-4 text-center"><span className="font-bold text-amber-500">{item.totalLate}</span></td>
+											<td className="px-6 py-4 text-center"><span className="font-bold text-cyan-500">{item.totalLeave || 0}</span></td>
 											<td className="px-6 py-4 text-center"><span className="font-bold text-destructive">{item.totalAbsent}</span></td>
 											<td className="px-6 py-4 text-right font-mono font-bold text-primary">{pct}%</td>
 										</tr>
