@@ -31,6 +31,24 @@ export class ReportsController {
 		return this.reportsService.getDailyRecap(month, year);
 	}
 
+	@Get("daily-recap/export")
+	async exportDailyRecap(
+		@Query("month", ParseIntPipe) month: number,
+		@Query("year", ParseIntPipe) year: number,
+		@Res() res: Response,
+	) {
+		const workbook = await this.reportsService.generateDailyRecapExcel(month, year);
+		res.setHeader(
+			"Content-Type",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+		);
+		res.setHeader(
+			"Content-Disposition",
+			`attachment; filename=Rekap-Harian-${month}-${year}.xlsx`,
+		);
+		return workbook.xlsx.write(res).then(() => res.status(200).end());
+	}
+
 	@Get("export")
 	async export(
 		@Query("month", ParseIntPipe) month: number,

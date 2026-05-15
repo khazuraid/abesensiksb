@@ -223,4 +223,50 @@ export class ReportsService {
 
 		return workbook;
 	}
+
+	async generateDailyRecapExcel(month: number, year: number) {
+		const data = await this.getDailyRecap(month, year);
+		const daysInMonth = new Date(year, month, 0).getDate();
+		const workbook = new Workbook();
+		const ws = workbook.addWorksheet("Rekap Harian");
+
+		// Header
+		const headers = ["Nama", "Shift", ...Array.from({ length: daysInMonth }, (_, i) => String(i + 1)), "Hadir", "Telat", "PC", "Alpa"];
+		const headerRow = ws.addRow(headers);
+		headerRow.font = { bold: true };
+		headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } };
+		headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+
+		// Set column widths
+		ws.getColumn(1).width = 25;
+		ws.getColumn(2).width = 12;
+		for (let i = 3; i <= daysInMonth + 2; i++) ws.getColumn(i).width = 4;
+
+		for (const emp of data) {
+			const row = ws.addRow([
+				emp.name,
+				emp.shiftName,
+				...emp.days.map((d) => {
+					if (d.isHoliday) return "L";
+					if (!d.isWorkDay) return "O";
+					switch (d.status) {
+						case "PRESENT": return "H";
+						case "LATE": return "T";
+						case "EARLY_OUT": return "PC";
+						case "ABSENT": return "A";
+						default: return "-";
+					}
+				}),
+				emp.totalPresent,
+				emp.totalLate,
+				emp.totalEarlyOut,
+				emp.totalAbsent,
+			]);
+			row.alignment = { horizontal: "center" };
+			row.getCell(1).alignment = { horizontal: "left" };
+			row.getCell(2).alignment = { horizontal: "left" };
+		}
+
+		return workbook;
+	}
 }

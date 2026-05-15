@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Search } from "lucide-react";
 import { useState } from "react";
 import api from "@/lib/api";
 
@@ -72,6 +72,22 @@ export default function DailyRecapPage() {
 		}
 	};
 
+	const handleExport = async () => {
+		try {
+			const res = await api.get(`/reports/daily-recap/export?month=${month}&year=${year}`, { responseType: "blob" });
+			const url = window.URL.createObjectURL(new Blob([res.data]));
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `Rekap-Harian-${months[month - 1]}-${year}.xlsx`;
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			window.URL.revokeObjectURL(url);
+		} catch (e: any) {
+			alert("Gagal export: " + (e?.response?.status || e?.message));
+		}
+	};
+
 	return (
 		<motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -79,10 +95,15 @@ export default function DailyRecapPage() {
 					<h2 className="text-3xl font-bold tracking-tight">Rekap Harian</h2>
 					<p className="text-foreground/60">Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat, PC=Pulang Cepat, A=Alpa, L=Libur, O=Off</p>
 				</div>
-				<div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
-					<button type="button" onClick={prevMonth} className="p-1 hover:bg-white/10 rounded-lg"><ChevronLeft size={18} /></button>
-					<span className="font-bold min-w-[140px] text-center">{months[month - 1]} {year}</span>
-					<button type="button" onClick={nextMonth} className="p-1 hover:bg-white/10 rounded-lg"><ChevronRight size={18} /></button>
+				<div className="flex items-center gap-3">
+					<div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
+						<button type="button" onClick={prevMonth} className="p-1 hover:bg-white/10 rounded-lg"><ChevronLeft size={18} /></button>
+						<span className="font-bold min-w-[140px] text-center">{months[month - 1]} {year}</span>
+						<button type="button" onClick={nextMonth} className="p-1 hover:bg-white/10 rounded-lg"><ChevronRight size={18} /></button>
+					</div>
+					<button type="button" onClick={handleExport} className="flex items-center gap-2 bg-emerald-500 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-emerald-500/20 hover:scale-105 transition-all">
+						<Download size={18} /> Export
+					</button>
 				</div>
 			</div>
 
