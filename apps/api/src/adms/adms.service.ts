@@ -226,11 +226,16 @@ export class ADMSService {
 					synced++;
 					this.logger.log(`Auto-created employee from device: PIN=${pin}, Name=${name}`);
 				} else if (existing.length > 0) {
-					// Update biometric sync timestamp
+					// Update nama (jika masih placeholder) dan biometric sync timestamp
+					const updateData: Record<string, unknown> = { biometricSyncedAt: new Date(), updatedAt: new Date() };
+					if (name && existing[0].name.startsWith("Pegawai ")) {
+						updateData.name = name;
+					}
 					await this.db
 						.update(schema.employees)
-						.set({ biometricSyncedAt: new Date(), updatedAt: new Date() })
+						.set(updateData)
 						.where(eq(schema.employees.id, existing[0].id));
+					synced++;
 				}
 			} catch (error) {
 				this.logger.warn(`Failed to sync user from device ${sn}: ${(error as Error).message}`);
