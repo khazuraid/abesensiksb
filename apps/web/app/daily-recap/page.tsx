@@ -122,7 +122,7 @@ export default function DailyRecapPage() {
 						<table className="w-full text-xs border-collapse">
 							<thead>
 								<tr className="bg-white/5 text-foreground/60">
-									<th className="px-3 py-3 text-left font-medium sticky left-0 bg-[var(--background)] z-10 min-w-[180px]">Pegawai</th>
+									<th className="px-3 py-3 text-left font-medium sticky left-0 z-20 bg-[#0f1117] min-w-[180px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-white/10">Pegawai</th>
 									{Array.from({ length: new Date(year, month, 0).getDate() }, (_, i) => (
 										<th key={i} className="px-1 py-3 text-center font-medium min-w-[32px]">{i + 1}</th>
 									))}
@@ -135,7 +135,7 @@ export default function DailyRecapPage() {
 							<tbody className="divide-y divide-white/5">
 								{filtered?.map((emp) => (
 									<tr key={emp.id} className="hover:bg-white/5 cursor-pointer" onClick={() => setSelectedEmployee(emp)}>
-										<td className="px-3 py-2 sticky left-0 bg-[var(--background)] z-10">
+										<td className="px-3 py-2 sticky left-0 z-20 bg-[#0f1117] min-w-[180px] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-px after:bg-white/10 relative">
 											<div className="font-semibold truncate">{emp.name}</div>
 											<div className="text-foreground/40 text-[10px]">{emp.shiftName}</div>
 										</td>
