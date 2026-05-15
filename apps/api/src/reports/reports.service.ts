@@ -11,7 +11,12 @@ function parseTime(t: string): number {
 }
 
 function formatTime(d: Date): string {
-	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+	return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Asia/Jakarta" });
+}
+
+function getWIBMinutes(d: Date): number {
+	const wib = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+	return wib.getUTCHours() * 60 + wib.getUTCMinutes();
 }
 
 @Injectable()
@@ -93,13 +98,13 @@ export class ReportsService {
 					status = inLog.status;
 					if (shift && inLog.status === "LATE") {
 						const startMinutes = parseTime(shift.startTime);
-						const scanMinutes = inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
+						const scanMinutes = getWIBMinutes(inLog.timestamp);
 						lateMinutes = Math.max(0, scanMinutes - startMinutes);
 					}
 					if (shift && outLog) {
 						if (outLog.status === "EARLY_OUT") {
 							const endMinutes = parseTime(shift.endTime);
-							const scanMinutes = outLog.timestamp.getHours() * 60 + outLog.timestamp.getMinutes();
+							const scanMinutes = getWIBMinutes(outLog.timestamp);
 							earlyOutMinutes = Math.max(0, endMinutes - scanMinutes);
 							status = "EARLY_OUT";
 						}
