@@ -252,17 +252,13 @@ Perintah tersedia:
 		const totalHadir = rows.reduce((s, r) => s + r.hadir, 0);
 		const totalTelat = rows.reduce((s, r) => s + r.telat, 0);
 
-		const lines = rows.map((r, i) => {
-			const no = String(i + 1).padStart(2, "0");
-			const nm = r.name.slice(0, 8).padEnd(8, ".");
-			return `${no}|${nm}|${String(r.hadir).padStart(2)}|${String(r.telat).padStart(2)}`;
-		});
+		const lines = rows.map((r, i) =>
+			`${String(i + 1).padStart(2)}. ${r.name} - H:${r.hadir} T:${r.telat}`
+		);
 
 		let msg = `<b>📅 Rekap ${monthName}</b>\n━━━━━━━━━━━━━━━━━━\n`;
 		msg += `✅ Hadir: <b>${totalHadir}</b> | ⚠️ Telat: <b>${totalTelat}</b>\n\n`;
-		msg += `<code>No|Nama....|.H|.T\n`;
-		msg += `──┼────────┼──┼──\n`;
-		msg += `${lines.join("\n")}</code>`;
+		msg += `<code>${lines.join("\n")}</code>`;
 
 		await this.send(chatId, msg);
 	}
