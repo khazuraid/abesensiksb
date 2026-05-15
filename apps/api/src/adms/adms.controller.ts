@@ -64,13 +64,16 @@ export class ADMSController {
 	async receiveData(
 		@Query("SN") sn: string,
 		@Query("table") table: string,
-		@Body() rawData: string,
 		@Req() req: Request,
 	) {
 		if (!sn) return "ERROR: Missing SN";
 
-		this.logger.log(`POST /iclock/cdata SN=${sn} table=${table} bodyType=${typeof rawData} bodyLength=${rawData?.length ?? 0}`);
-		this.logger.log(`Body: ${JSON.stringify(rawData)?.slice(0, 500)}`);
+		const rawData = (req as any).rawBody
+			? Buffer.from((req as any).rawBody).toString("utf-8").trim()
+			: typeof req.body === "string" ? req.body.trim() : "";
+
+		this.logger.log(`POST /iclock/cdata SN=${sn} table=${table} bodyLength=${rawData.length}`);
+		this.logger.log(`Body: ${rawData.slice(0, 500)}`);
 
 		await this.admsService.updateDeviceStatus(sn, req.ip || "");
 
@@ -118,7 +121,10 @@ export class ADMSController {
 	 */
 	@Post("devicecmd")
 	@HttpCode(200)
-	async deviceCmd(@Query("SN") _sn: string, @Body() body: string) {
+	async deviceCmd(@Query("SN") _sn: string, @Req() req: Request) {
+		const body = (req as any).rawBody
+			? Buffer.from((req as any).rawBody).toString("utf-8").trim()
+			: typeof req.body === "string" ? req.body.trim() : "";
 		if (!body) return "OK";
 		// Format body: "ID:123&Return=0" (0=success)
 		const idMatch = body.match(/ID[=:](\d+)/);
