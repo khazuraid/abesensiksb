@@ -185,6 +185,7 @@ export const DeviceCommandTypeEnum = z.enum([
 	"reboot",
 	"reload",
 	"set.timezone",
+	"set.time",
 	"set.volume",
 	"set.language",
 	"user.info",

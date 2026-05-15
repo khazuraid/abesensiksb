@@ -24,6 +24,7 @@ import api from "@/lib/api";
 const COMMANDS: { type: DeviceCommandType; label: string; icon: typeof Info; color: string; needsPayload?: boolean }[] = [
 	{ type: "check", label: "Check", icon: Wifi, color: "text-emerald-500" },
 	{ type: "info", label: "Info", icon: Info, color: "text-blue-500" },
+	{ type: "set.time", label: "Sync Waktu", icon: Clock, color: "text-cyan-500" },
 	{ type: "reboot", label: "Reboot", icon: Power, color: "text-red-500" },
 	{ type: "reload", label: "Reload", icon: RefreshCcw, color: "text-yellow-500" },
 	{ type: "log", label: "Tarik Log", icon: Download, color: "text-purple-500" },
