@@ -107,13 +107,13 @@ export class ReportsService {
 								status = "ABSENT";
 							} else if (scanInMinutes > cutoff) {
 								status = "LATE";
-								lateMinutes = scanInMinutes - startMinutes;
+								lateMinutes = scanInMinutes - cutoff;
 							} else {
 								status = "PRESENT";
 							}
 						} else {
 							status = scanInMinutes > cutoff ? "LATE" : "PRESENT";
-							if (status === "LATE") lateMinutes = scanInMinutes - startMinutes;
+							if (status === "LATE") lateMinutes = scanInMinutes - cutoff;
 						}
 
 						// Cek pulang cepat

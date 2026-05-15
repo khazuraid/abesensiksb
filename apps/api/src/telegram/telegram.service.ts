@@ -196,42 +196,47 @@ Perintah tersedia:
 		await this.send(chatId, `<b>⚠️ Terlambat Hari Ini (${logs.length})</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
 	}
 
+	private shortName(name: string): string {
+		const titles = ["dr.", "dr", "drg.", "drg", "ir.", "ir", "prof.", "prof", "hj.", "hj", "h."];
+		const parts = name.split(" ").filter(Boolean);
+		const first = parts[0]?.toLowerCase() || "";
+		if (titles.includes(first) && parts.length > 1) return parts[1];
+		return parts[0] || name;
+	}
+
 	private async cmdRekap(chatId: number) {
 		const now = new Date();
-		const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-		const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+		const { start, end } = this.todayRange();
 
 		const employees = await this.db.select({ id: schema.employees.id, name: schema.employees.name })
 			.from(schema.employees).where(eq(schema.employees.isActive, true));
 
-		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, status: schema.attendanceLogs.status })
+		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, type: schema.attendanceLogs.type })
 			.from(schema.attendanceLogs)
-			.where(and(eq(schema.attendanceLogs.type, "IN"), between(schema.attendanceLogs.timestamp, startMonth, endMonth)));
+			.where(between(schema.attendanceLogs.timestamp, start, end));
 
-		const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+		const inSet = new Set(logs.filter((l) => l.type === "IN").map((l) => l.employeeId));
+		const outSet = new Set(logs.filter((l) => l.type === "OUT").map((l) => l.employeeId));
 
-		// Per-employee stats
-		const empStats = employees.map((emp) => {
-			const empLogs = logs.filter((l) => l.employeeId === emp.id);
-			const hadir = empLogs.filter((l) => l.status === "PRESENT").length;
-			const telat = empLogs.filter((l) => l.status === "LATE").length;
-			return { name: emp.name, hadir, telat, total: empLogs.length };
-		}).sort((a, b) => b.total - a.total);
+		const hadir = employees.filter((e) => inSet.has(e.id) && outSet.has(e.id));
+		const tidakPagi = employees.filter((e) => !inSet.has(e.id));
+		const tidakPulang = employees.filter((e) => inSet.has(e.id) && !outSet.has(e.id));
 
-		const totalPresent = logs.filter((l) => l.status === "PRESENT").length;
-		const totalLate = logs.filter((l) => l.status === "LATE").length;
+		const fmt = (list: typeof employees) => list.map((e) => this.shortName(e.name)).join(", ");
 
-		const list = empStats.map((e) =>
-			`${e.name}: ✅${e.hadir} ⚠️${e.telat}`
-		).join("\n");
+		let msg = `<b>📅 Rekap Hari Ini</b>\n━━━━━━━━━━━━━━━━━━\n`;
+		msg += `✅ Hadir (IN+OUT): <b>${hadir.length}</b>\n`;
+		msg += `❌ Tidak Absen Pagi: <b>${tidakPagi.length}</b>\n`;
+		msg += `🚪 Tidak Absen Pulang: <b>${tidakPulang.length}</b>\n`;
 
-		await this.send(chatId, `<b>📅 Rekap ${monthName}</b>
-━━━━━━━━━━━━━━━━━━
-👥 Pegawai: <b>${employees.length}</b>
-✅ Hadir: <b>${totalPresent}</b> | ⚠️ Telat: <b>${totalLate}</b>
+		if (tidakPagi.length) {
+			msg += `\n<b>❌ Tidak Absen Pagi:</b>\n<code>${fmt(tidakPagi)}</code>\n`;
+		}
+		if (tidakPulang.length) {
+			msg += `\n<b>🚪 Tidak Absen Pulang:</b>\n<code>${fmt(tidakPulang)}</code>\n`;
+		}
 
-<b>Detail per Pegawai:</b>
-${list}`);
+		await this.send(chatId, msg);
 	}
 
 	private async cmdCari(chatId: number, nama: string) {
