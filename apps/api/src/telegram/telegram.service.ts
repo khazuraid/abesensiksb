@@ -214,6 +214,7 @@ Perintah tersedia:
 
 		const shifts = await this.db.select().from(schema.shifts);
 		const shiftMap = new Map(shifts.map((s) => [s.id, s]));
+		const defaultShift = shifts.find((s) => s.isActive) || null;
 
 		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, timestamp: schema.attendanceLogs.timestamp, type: schema.attendanceLogs.type })
 			.from(schema.attendanceLogs)
@@ -222,7 +223,7 @@ Perintah tersedia:
 		const parseTime = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
 
 		const rows = employees.map((emp) => {
-			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : null;
+			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
 			const inLogs = empLogs.filter((l) => l.type === "IN");
 			let hadir = 0;
@@ -231,7 +232,7 @@ Perintah tersedia:
 			for (const log of inLogs) {
 				hadir++;
 				if (shift) {
-					const scanMin = log.timestamp.getUTCHours() * 60 + log.timestamp.getUTCMinutes();
+					const scanMin = log.timestamp.getHours() * 60 + log.timestamp.getMinutes();
 					const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
 					if (scanMin > cutoff) telat++;
 				}

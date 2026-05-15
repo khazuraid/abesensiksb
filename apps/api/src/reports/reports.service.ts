@@ -11,11 +11,11 @@ function parseTime(t: string): number {
 }
 
 function formatTime(d: Date): string {
-	return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
+	return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 function getWIBMinutes(d: Date): number {
-	return d.getUTCHours() * 60 + d.getUTCMinutes();
+	return d.getHours() * 60 + d.getMinutes();
 }
 
 @Injectable()
@@ -51,8 +51,10 @@ export class ReportsService {
 			.where(between(schema.holidays.date, `${year}-${String(month).padStart(2, "0")}-01`, `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`));
 		const holidayDates = new Set(holidays.map((h) => h.date));
 
+		const defaultShift = shifts.find((s) => s.isActive) || null;
+
 		return allEmployees.map((emp) => {
-			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : null;
+			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
 			const workDays = (shift?.workDays as number[]) || [1, 2, 3, 4, 5];
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
 
@@ -82,7 +84,7 @@ export class ReportsService {
 				const isWorkDay = workDays.includes(dow) && !isHoliday;
 
 				const dayLogs = empLogs.filter((l) => {
-					return l.timestamp.getUTCFullYear() === year && l.timestamp.getUTCMonth() === month - 1 && l.timestamp.getUTCDate() === d;
+					return l.timestamp.getFullYear() === year && l.timestamp.getMonth() === month - 1 && l.timestamp.getDate() === d;
 				});
 
 				const inLog = dayLogs.find((l) => l.type === "IN");
