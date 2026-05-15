@@ -201,21 +201,37 @@ Perintah tersedia:
 		const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 		const endMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 
-		const [total] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.employees).where(eq(schema.employees.isActive, true));
-		const logs = await this.db.select({ status: schema.attendanceLogs.status, id: schema.attendanceLogs.id })
+		const employees = await this.db.select({ id: schema.employees.id, name: schema.employees.name })
+			.from(schema.employees).where(eq(schema.employees.isActive, true));
+
+		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, status: schema.attendanceLogs.status })
 			.from(schema.attendanceLogs)
 			.where(and(eq(schema.attendanceLogs.type, "IN"), between(schema.attendanceLogs.timestamp, startMonth, endMonth)));
 
-		const present = logs.filter((l) => l.status === "PRESENT").length;
-		const late = logs.filter((l) => l.status === "LATE").length;
 		const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
+
+		// Per-employee stats
+		const empStats = employees.map((emp) => {
+			const empLogs = logs.filter((l) => l.employeeId === emp.id);
+			const hadir = empLogs.filter((l) => l.status === "PRESENT").length;
+			const telat = empLogs.filter((l) => l.status === "LATE").length;
+			return { name: emp.name, hadir, telat, total: empLogs.length };
+		}).sort((a, b) => b.total - a.total);
+
+		const totalPresent = logs.filter((l) => l.status === "PRESENT").length;
+		const totalLate = logs.filter((l) => l.status === "LATE").length;
+
+		const list = empStats.map((e) =>
+			`${e.name}: ✅${e.hadir} ⚠️${e.telat}`
+		).join("\n");
 
 		await this.send(chatId, `<b>📅 Rekap ${monthName}</b>
 ━━━━━━━━━━━━━━━━━━
-👥 Total Pegawai: <b>${Number(total.count)}</b>
-✅ Total Hadir: <b>${present}</b>
-⚠️ Total Terlambat: <b>${late}</b>
-📊 Total Log Masuk: <b>${logs.length}</b>`);
+👥 Pegawai: <b>${employees.length}</b>
+✅ Hadir: <b>${totalPresent}</b> | ⚠️ Telat: <b>${totalLate}</b>
+
+<b>Detail per Pegawai:</b>
+${list}`);
 	}
 
 	private async cmdCari(chatId: number, nama: string) {
