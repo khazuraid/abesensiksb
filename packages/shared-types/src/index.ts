@@ -106,8 +106,8 @@ export const ShiftSchema = z.object({
 		.nullable()
 		.optional(),
 	workDays: z.array(z.number().min(0).max(6)).default([1, 2, 3, 4, 5]),
-	effectiveFrom: z.string().nullable().optional(),
-	effectiveTo: z.string().nullable().optional(),
+	effectiveFrom: z.string().optional().transform((v) => v || null).nullable(),
+	effectiveTo: z.string().optional().transform((v) => v || null).nullable(),
 	isActive: z.boolean().default(true),
 	createdAt: z.date(),
 	updatedAt: z.date(),
