@@ -87,6 +87,9 @@ export class ADMSController {
 
 		// OPERLOG: bisa berisi data user (USER PIN=...) atau fingerprint (FP PIN=...)
 		if (table === "OPERLOG") {
+			if (rawData.includes("FP PIN") || rawData.includes("FP\tPIN")) {
+				return await this.admsService.handleFingerprintData(sn, rawData);
+			}
 			if (rawData.includes("PIN=")) {
 				return await this.admsService.handleUserData(sn, rawData);
 			}

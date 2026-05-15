@@ -178,6 +178,74 @@ export class ADMSService {
 	}
 
 	/**
+	 * Menerima dan menyimpan template sidik jari dari mesin.
+	 * Format: FP PIN=1\tFID=0\tSize=1024\tValid=1\tTMP=base64data
+	 */
+	async handleFingerprintData(sn: string, rawData: string) {
+		const lines = rawData.split("\n").filter((line) => line.trim());
+		let saved = 0;
+
+		const deviceResult = await this.db
+			.select()
+			.from(schema.devices)
+			.where(eq(schema.devices.serialNumber, sn));
+		if (deviceResult.length === 0) return "OK";
+		const deviceId = deviceResult[0].id;
+
+		for (const rawLine of lines) {
+			try {
+				const line = rawLine.replace(/^FP\s+/i, "");
+				const fields: Record<string, string> = {};
+				for (const part of line.split("\t")) {
+					const idx = part.indexOf("=");
+					if (idx > 0) {
+						fields[part.substring(0, idx).trim()] = part.substring(idx + 1).trim();
+					}
+				}
+
+				const pin = fields.PIN;
+				const fid = fields.FID;
+				if (!pin || !fid) continue;
+
+				// Upsert template
+				const existing = await this.db
+					.select()
+					.from(schema.fingerprintTemplates)
+					.where(
+						and(
+							eq(schema.fingerprintTemplates.deviceId, deviceId),
+							eq(schema.fingerprintTemplates.userId, pin),
+							eq(schema.fingerprintTemplates.fid, fid),
+						),
+					);
+
+				const data = {
+					deviceId,
+					userId: pin,
+					fid,
+					size: fields.Size ? Number.parseInt(fields.Size, 10) : null,
+					valid: fields.Valid ? fields.Valid !== "0" : true,
+					template: fields.TMP || null,
+				};
+
+				if (existing.length > 0) {
+					await this.db.update(schema.fingerprintTemplates)
+						.set({ ...data, updatedAt: new Date() })
+						.where(eq(schema.fingerprintTemplates.id, existing[0].id));
+				} else {
+					await this.db.insert(schema.fingerprintTemplates).values(data);
+				}
+				saved++;
+			} catch (error) {
+				this.logger.warn(`Failed to save FP template from ${sn}: ${(error as Error).message}`);
+			}
+		}
+
+		this.logger.log(`Device ${sn}: saved ${saved} fingerprint templates`);
+		return `OK: ${saved}`;
+	}
+
+	/**
 	 * Menerima data user/pegawai dari mesin ADMS.
 	 * Format: PIN=1\tName=John Doe\tPri=0\tPasswd=\tCard=\tGrp=1
 	 * Auto-create employee jika belum ada (by biometricId/PIN).

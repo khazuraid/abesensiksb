@@ -1,7 +1,7 @@
 import * as schema from "@adms/database";
 import type { CreateDevice, SendCommand, UpdateDevice } from "@adms/shared-types";
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
@@ -73,6 +73,7 @@ export class DevicesService {
 	async sendCommand(dto: SendCommand) {
 		const device = await this.findOne(dto.deviceId);
 		const commands: string[] = [];
+		const results: (typeof schema.deviceCommands.$inferSelect)[] = [];
 
 		switch (dto.type) {
 			case "check":
@@ -168,6 +169,53 @@ export class DevicesService {
 				break;
 			}
 
+			case "user.clone": {
+				if (!dto.user_id) throw new BadRequestException("user_id is required");
+				if (!dto.device_target?.length) throw new BadRequestException("device_target is required");
+
+				// Get user info from source employee
+				const employee = await this.db.select().from(schema.employees).where(
+					or(
+						eq(schema.employees.biometricId, dto.user_id),
+						eq(schema.employees.employeeCode, dto.user_id),
+					),
+				);
+
+				// Get fingerprint templates from source device
+				const templates = await this.db.select().from(schema.fingerprintTemplates).where(
+					and(
+						eq(schema.fingerprintTemplates.deviceId, dto.deviceId),
+						eq(schema.fingerprintTemplates.userId, dto.user_id),
+					),
+				);
+
+				const userName = employee[0]?.name || dto.user_id;
+				const userPayload = `PIN=${dto.user_id}\tName=${userName}\tPri=0\tPasswd=\tCard=\tGrp=`;
+
+				// Push user + templates to each target device
+				for (const targetId of dto.device_target) {
+					if (targetId === dto.deviceId) continue;
+
+					// Push user info
+					const userCmd = await this.db.insert(schema.deviceCommands)
+						.values({ deviceId: targetId, command: `DATA UPDATE USERINFO ${userPayload}` })
+						.returning();
+					results.push(userCmd[0]!);
+
+					// Push each fingerprint template
+					for (const t of templates) {
+						if (!t.template) continue;
+						const fpPayload = `PIN=${t.userId}\tFID=${t.fid}\tSize=${t.size || 0}\tValid=${t.valid ? 1 : 0}\tTMP=${t.template}`;
+						const fpCmd = await this.db.insert(schema.deviceCommands)
+							.values({ deviceId: targetId, command: `DATA UPDATE FINGERTMP ${fpPayload}` })
+							.returning();
+						results.push(fpCmd[0]!);
+					}
+				}
+
+				return results;
+			}
+
 			case "attendance.download": {
 				if (!dto.start_date || !dto.end_date)
 					throw new BadRequestException("start_date and end_date required");
@@ -200,7 +248,6 @@ export class DevicesService {
 				throw new BadRequestException(`Unsupported command type: ${dto.type}`);
 		}
 
-		const results: (typeof schema.deviceCommands.$inferSelect)[] = [];
 		for (const cmd of commands) {
 			const result = await this.db
 				.insert(schema.deviceCommands)

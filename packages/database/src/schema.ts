@@ -253,6 +253,21 @@ export const settings = pgTable("settings", {
 });
 
 /**
+ * Template sidik jari dari mesin (untuk clone antar device)
+ */
+export const fingerprintTemplates = pgTable("fingerprint_templates", {
+	id: serial("id").primaryKey(),
+	deviceId: integer("device_id").notNull().references(() => devices.id, { onDelete: "cascade" }),
+	userId: varchar("user_id", { length: 50 }).notNull(),
+	fid: varchar("fid", { length: 10 }).notNull(),
+	size: integer("size"),
+	valid: boolean("valid").default(true),
+	template: text("template"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+/**
  * RELATIONS
  */
 

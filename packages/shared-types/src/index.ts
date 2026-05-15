@@ -194,6 +194,7 @@ export const DeviceCommandTypeEnum = z.enum([
 	"user.sync",
 	"user.edit",
 	"user.delete",
+	"user.clone",
 	"attendance.download",
 	"attendance.verify",
 	"attendance.clear",
@@ -216,6 +217,7 @@ export const SendCommandSchema = z.object({
 	start_date: z.string().optional(),
 	end_date: z.string().optional(),
 	command: z.string().optional(),
+	device_target: z.array(z.number()).optional(),
 });
 
 export type SendCommand = z.infer<typeof SendCommandSchema>;

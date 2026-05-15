@@ -163,6 +163,7 @@ export default function EmployeesPage() {
 								<th className="px-6 py-4 font-medium">Pegawai</th>
 								<th className="px-6 py-4 font-medium">NIP / Kode</th>
 								<th className="px-6 py-4 font-medium">Departemen</th>
+								<th className="px-6 py-4 font-medium">Sidik Jari</th>
 								<th className="px-6 py-4 font-medium">Status</th>
 								<th className="px-6 py-4 font-medium text-right">Aksi</th>
 							</tr>
@@ -171,13 +172,13 @@ export default function EmployeesPage() {
 							{isLoading ? (
 								["s1", "s2", "s3", "s4", "s5"].map((key) => (
 									<tr key={key} className="animate-pulse">
-										<td colSpan={5} className="px-6 py-6 h-16 bg-white/5"></td>
+										<td colSpan={6} className="px-6 py-6 h-16 bg-white/5"></td>
 									</tr>
 								))
 							) : filteredEmployees?.length === 0 ? (
 								<tr>
 									<td
-										colSpan={5}
+										colSpan={6}
 										className="px-6 py-20 text-center text-foreground/40"
 									>
 										Tidak ada data pegawai ditemukan.
@@ -202,6 +203,17 @@ export default function EmployeesPage() {
 										</td>
 										<td className="px-6 py-4 text-foreground/80">
 											{emp.department || "-"}
+										</td>
+										<td className="px-6 py-4">
+											<span
+												className={`px-3 py-1 rounded-full text-xs font-medium ${
+													emp.biometricId
+														? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+														: "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+												}`}
+											>
+												{emp.biometricId ? "Terdaftar" : "Belum"}
+											</span>
 										</td>
 										<td className="px-6 py-4">
 											<span
