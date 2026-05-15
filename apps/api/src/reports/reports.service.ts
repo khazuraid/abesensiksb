@@ -62,6 +62,8 @@ export class ReportsService {
 				isHoliday: boolean;
 				clockIn: string | null;
 				clockOut: string | null;
+				inLogId: number | null;
+				outLogId: number | null;
 				status: string;
 				lateMinutes: number;
 				earlyOutMinutes: number;
