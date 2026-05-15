@@ -220,7 +220,6 @@ Perintah tersedia:
 			.where(between(schema.attendanceLogs.timestamp, startMonth, endMonth));
 
 		const parseTime = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
-		const toWIB = (d: Date) => new Date(d.getTime() + 7 * 60 * 60 * 1000);
 
 		const rows = employees.map((emp) => {
 			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : null;
@@ -232,8 +231,7 @@ Perintah tersedia:
 			for (const log of inLogs) {
 				hadir++;
 				if (shift) {
-					const w = toWIB(log.timestamp);
-					const scanMin = w.getUTCHours() * 60 + w.getUTCMinutes();
+					const scanMin = log.timestamp.getUTCHours() * 60 + log.timestamp.getUTCMinutes();
 					const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
 					if (scanMin > cutoff) telat++;
 				}

@@ -10,18 +10,12 @@ function parseTime(t: string): number {
 	return Number.parseInt(h, 10) * 60 + Number.parseInt(m, 10);
 }
 
-function toWIB(d: Date): Date {
-	return new Date(d.getTime() + 7 * 60 * 60 * 1000);
-}
-
 function formatTime(d: Date): string {
-	const w = toWIB(d);
-	return `${String(w.getUTCHours()).padStart(2, "0")}:${String(w.getUTCMinutes()).padStart(2, "0")}`;
+	return `${String(d.getUTCHours()).padStart(2, "0")}:${String(d.getUTCMinutes()).padStart(2, "0")}`;
 }
 
 function getWIBMinutes(d: Date): number {
-	const w = toWIB(d);
-	return w.getUTCHours() * 60 + w.getUTCMinutes();
+	return d.getUTCHours() * 60 + d.getUTCMinutes();
 }
 
 @Injectable()
@@ -88,8 +82,7 @@ export class ReportsService {
 				const isWorkDay = workDays.includes(dow) && !isHoliday;
 
 				const dayLogs = empLogs.filter((l) => {
-					const w = toWIB(l.timestamp);
-					return w.getUTCFullYear() === year && w.getUTCMonth() === month - 1 && w.getUTCDate() === d;
+					return l.timestamp.getUTCFullYear() === year && l.timestamp.getUTCMonth() === month - 1 && l.timestamp.getUTCDate() === d;
 				});
 
 				const inLog = dayLogs.find((l) => l.type === "IN");
