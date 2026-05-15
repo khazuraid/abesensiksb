@@ -59,12 +59,18 @@ export class ReportsService {
 		const defaultShift = shifts.find((s) => s.isActive) || null;
 
 		return allEmployees.map((emp) => {
-			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
-			const workDays = (shift?.workDays as number[]) || [1, 2, 3, 4, 5];
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
 			const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
 
 			const isOnLeave = (dateStr: string) => empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate);
+
+			// Cari shift berdasarkan hari dan tanggal berlaku
+			const getShiftForDay = (dow: number, dateStr: string) => shifts.find((s) =>
+				s.isActive &&
+				(s.workDays as number[])?.includes(dow) &&
+				(!s.effectiveFrom || dateStr >= s.effectiveFrom) &&
+				(!s.effectiveTo || dateStr <= s.effectiveTo)
+			) || defaultShift;
 
 			const days: {
 				date: string;
@@ -90,7 +96,8 @@ export class ReportsService {
 				const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 				const dow = date.getDay();
 				const isHoliday = holidayDates.has(dateStr);
-				const isWorkDay = workDays.includes(dow) && !isHoliday;
+				const shift = getShiftForDay(dow, dateStr);
+				const isWorkDay = shift !== null && !isHoliday;
 
 				const dayLogs = empLogs.filter((l) => {
 					return l.timestamp.getFullYear() === year && l.timestamp.getMonth() === month - 1 && l.timestamp.getDate() === d;
@@ -174,7 +181,7 @@ export class ReportsService {
 				id: emp.id,
 				name: emp.name,
 				employeeCode: emp.employeeCode,
-				shiftName: shift?.name || "-",
+				shiftName: shifts.filter((s) => s.isActive).map((s) => s.name).join(", ") || "-",
 				days,
 				totalPresent,
 				totalLate,

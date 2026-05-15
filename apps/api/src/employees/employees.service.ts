@@ -1,7 +1,7 @@
 import * as schema from "@adms/database";
 import type { CreateEmployee, UpdateEmployee } from "@adms/shared-types";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
@@ -59,5 +59,13 @@ export class EmployeesService {
 		}
 
 		return { message: "Employee deleted successfully" };
+	}
+
+	async bulkAssignShift(employeeIds: number[], shiftId: number) {
+		await this.db
+			.update(schema.employees)
+			.set({ shiftId, updatedAt: new Date() })
+			.where(inArray(schema.employees.id, employeeIds));
+		return { message: `Shift assigned to ${employeeIds.length} employees` };
 	}
 }

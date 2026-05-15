@@ -95,6 +95,25 @@ export class EmployeesController {
 	}
 
 	/**
+	 * Bulk assign shift ke banyak pegawai sekaligus
+	 */
+	@Patch("bulk/shift")
+	async bulkAssignShift(
+		@Body() body: { employeeIds: number[]; shiftId: number },
+		@Req() req: Request,
+	) {
+		const result = await this.employeesService.bulkAssignShift(body.employeeIds, body.shiftId);
+		const user = req.user as { id: number };
+		this.auditLogsService.record({
+			userId: user.id,
+			action: "UPDATE",
+			target: "employees",
+			details: { bulk: true, employeeIds: body.employeeIds, shiftId: body.shiftId },
+		});
+		return result;
+	}
+
+	/**
 	 * Kirim perintah ke mesin untuk upload data user.
 	 * Mesin akan push data user ke POST /iclock/cdata?table=user
 	 */

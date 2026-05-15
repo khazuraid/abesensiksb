@@ -36,9 +36,6 @@ export class ShiftEngineService {
 	async evaluateAttendance(
 		input: EvaluateAttendanceInput,
 	): Promise<AttendanceStatus> {
-		// Tidak ada shift → tidak bisa hitung → PRESENT
-		if (!input.shiftId) return "PRESENT";
-
 		// Cek hari libur
 		const dateStr = this.formatDate(input.timestamp);
 		const holiday = await this.db
@@ -47,19 +44,28 @@ export class ShiftEngineService {
 			.where(eq(sql`${schema.holidays.date}::text`, dateStr));
 		if (holiday.length > 0) return "PRESENT";
 
-		// Ambil definisi shift
-		const shift = await this.db
-			.select()
-			.from(schema.shifts)
-			.where(eq(schema.shifts.id, input.shiftId));
-		if (shift.length === 0 || !shift[0].isActive) return "PRESENT";
+		// Ambil shift: jika ada shiftId gunakan itu, jika tidak cari berdasarkan hari
+		const dayOfWeek = input.timestamp.getDay();
+		let shift: typeof schema.shifts.$inferSelect | undefined;
+
+		if (input.shiftId) {
+			const result = await this.db.select().from(schema.shifts).where(eq(schema.shifts.id, input.shiftId));
+			shift = result[0];
+		}
+
+		if (!shift || !shift.isActive) {
+			// Auto-match berdasarkan workDays
+			const allShifts = await this.db.select().from(schema.shifts).where(eq(schema.shifts.isActive, true));
+			shift = allShifts.find((s) => (s.workDays as number[])?.includes(dayOfWeek));
+		}
+
+		if (!shift) return "PRESENT";
 
 		// Cek apakah hari ini termasuk hari kerja shift
-		const dayOfWeek = input.timestamp.getDay(); // 0=Minggu, 1=Senin, ...
-		const workDays = (shift[0].workDays as number[]) || [1, 2, 3, 4, 5];
-		if (!workDays.includes(dayOfWeek)) return "PRESENT"; // Bukan hari kerja shift ini
+		const workDays = (shift.workDays as number[]) || [1, 2, 3, 4, 5];
+		if (!workDays.includes(dayOfWeek)) return "PRESENT";
 
-		const { startTime, endTime, toleranceMinutes, earlyOutTolerance, maxLateTime, minOutTime } = shift[0];
+		const { startTime, endTime, toleranceMinutes, earlyOutTolerance, maxLateTime, minOutTime } = shift;
 		const scanMinutes = input.timestamp.getHours() * 60 + input.timestamp.getMinutes();
 
 		// === SCAN MASUK ===

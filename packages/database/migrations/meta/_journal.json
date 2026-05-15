@@ -22,6 +22,13 @@
       "when": 1778635776849,
       "tag": "0002_absurd_alice",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1778856434678,
+      "tag": "0003_ambitious_rhodey",
+      "breakpoints": true
     }
   ]
 }

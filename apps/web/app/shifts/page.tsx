@@ -27,6 +27,8 @@ function ShiftForm({
 		maxLateTime: initialData?.maxLateTime || "",
 		minOutTime: initialData?.minOutTime || "",
 		workDays: initialData?.workDays ?? [1, 2, 3, 4, 5],
+		effectiveFrom: initialData?.effectiveFrom || "",
+		effectiveTo: initialData?.effectiveTo || "",
 		isActive: initialData?.isActive ?? true,
 	});
 
@@ -95,6 +97,17 @@ function ShiftForm({
 						<input id="active" type="checkbox" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 rounded accent-primary" />
 						<span className="text-sm">Aktif</span>
 					</label>
+					<div className="grid grid-cols-2 gap-4">
+						<div>
+							<label htmlFor="effFrom" className="block text-sm font-medium text-foreground/70 mb-1">Berlaku Dari</label>
+							<input id="effFrom" type="date" value={form.effectiveFrom || ""} onChange={(e) => setForm({ ...form, effectiveFrom: e.target.value || null })} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary" />
+						</div>
+						<div>
+							<label htmlFor="effTo" className="block text-sm font-medium text-foreground/70 mb-1">Berlaku Sampai</label>
+							<input id="effTo" type="date" value={form.effectiveTo || ""} onChange={(e) => setForm({ ...form, effectiveTo: e.target.value || null })} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary" />
+						</div>
+					</div>
+					<p className="text-xs text-foreground/40">Kosongkan jika berlaku selamanya</p>
 					<div className="flex gap-3 pt-4">
 						<button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-white/10 hover:bg-white/5">Batal</button>
 						<button type="submit" disabled={isLoading} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold disabled:opacity-50">

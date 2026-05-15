@@ -215,8 +215,6 @@ Perintah tersedia:
 			.from(schema.employees).where(eq(schema.employees.isActive, true));
 
 		const shifts = await this.db.select().from(schema.shifts);
-		const shiftMap = new Map(shifts.map((s) => [s.id, s]));
-		const defaultShift = shifts.find((s) => s.isActive) || null;
 
 		const logs = await this.db.select({ employeeId: schema.attendanceLogs.employeeId, timestamp: schema.attendanceLogs.timestamp, type: schema.attendanceLogs.type })
 			.from(schema.attendanceLogs)
@@ -233,8 +231,6 @@ Perintah tersedia:
 		const today = now.getDate();
 
 		const rows = employees.map((emp) => {
-			const shift = emp.shiftId ? shiftMap.get(emp.shiftId) : defaultShift;
-			const workDays = (shift?.workDays as number[]) || [1, 2, 3, 4, 5];
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
 			const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
 			const inLogs = empLogs.filter((l) => l.type === "IN");
@@ -249,9 +245,13 @@ Perintah tersedia:
 			let hadir = dayMap.size;
 			let telat = 0;
 			let cuti = 0;
-			if (shift) {
-				const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
-				for (const ts of dayMap.values()) {
+
+			for (const [key, ts] of dayMap.entries()) {
+				const dow = ts.getDay();
+				const dateStr = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, "0")}-${String(ts.getDate()).padStart(2, "0")}`;
+				const shift = shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && (!s.effectiveFrom || dateStr >= s.effectiveFrom) && (!s.effectiveTo || dateStr <= s.effectiveTo));
+				if (shift) {
+					const cutoff = parseTime(shift.startTime) + (shift.toleranceMinutes ?? 0);
 					const scanMin = ts.getHours() * 60 + ts.getMinutes();
 					if (scanMin > cutoff) telat++;
 				}
@@ -260,8 +260,9 @@ Perintah tersedia:
 			// Hitung cuti/izin pada hari kerja
 			for (let d = 1; d <= Math.min(today, daysInMonth); d++) {
 				const date = new Date(now.getFullYear(), now.getMonth(), d);
-				if (!workDays.includes(date.getDay())) continue;
+				const dow = date.getDay();
 				const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+				if (!shifts.some((s) => s.isActive && (s.workDays as number[])?.includes(dow) && (!s.effectiveFrom || dateStr >= s.effectiveFrom) && (!s.effectiveTo || dateStr <= s.effectiveTo))) continue;
 				if (empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate)) cuti++;
 			}
 

@@ -97,6 +97,10 @@ export const shifts = pgTable("shifts", {
 	// Contoh: [1,2,3,4,5] = Senin-Jumat
 	workDays: jsonb("work_days").$type<number[]>().default([1, 2, 3, 4, 5]).notNull(),
 
+	// Tanggal berlaku shift (opsional, jika null = berlaku selamanya)
+	effectiveFrom: date("effective_from"),
+	effectiveTo: date("effective_to"),
+
 	isActive: boolean("is_active").default(true).notNull(),
 
 	createdAt: timestamp("created_at").defaultNow().notNull(),
