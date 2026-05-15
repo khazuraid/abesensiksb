@@ -48,7 +48,9 @@ export default function DailyRecapPage() {
 		(i) => i.name.toLowerCase().includes(search.toLowerCase()) || i.employeeCode.toLowerCase().includes(search.toLowerCase()),
 	);
 
-	const statusColor = (s: string) => {
+	const statusColor = (s: string, isHoliday?: boolean, isWorkDay?: boolean) => {
+		if (isHoliday) return "bg-purple-500/10 text-purple-500";
+		if (!isWorkDay) return "bg-blue-500/10 text-blue-500";
 		switch (s) {
 			case "PRESENT": return "bg-emerald-500/10 text-emerald-500";
 			case "LATE": return "bg-amber-500/10 text-amber-500";
@@ -58,7 +60,9 @@ export default function DailyRecapPage() {
 		}
 	};
 
-	const statusLabel = (s: string) => {
+	const statusLabel = (s: string, isHoliday?: boolean, isWorkDay?: boolean) => {
+		if (isHoliday) return "L";
+		if (!isWorkDay) return "O";
 		switch (s) {
 			case "PRESENT": return "H";
 			case "LATE": return "T";
@@ -73,7 +77,7 @@ export default function DailyRecapPage() {
 			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
 				<div>
 					<h2 className="text-3xl font-bold tracking-tight">Rekap Harian</h2>
-					<p className="text-foreground/60">Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat, PC=Pulang Cepat, A=Alpa</p>
+					<p className="text-foreground/60">Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat, PC=Pulang Cepat, A=Alpa, L=Libur, O=Off</p>
 				</div>
 				<div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-4 py-2">
 					<button type="button" onClick={prevMonth} className="p-1 hover:bg-white/10 rounded-lg"><ChevronLeft size={18} /></button>
@@ -116,8 +120,8 @@ export default function DailyRecapPage() {
 										</td>
 										{emp.days.map((day) => (
 											<td key={day.date} className="px-0.5 py-2 text-center">
-												<span className={`inline-block w-6 h-6 leading-6 rounded text-[10px] font-bold ${statusColor(day.status)}`}>
-													{statusLabel(day.status)}
+												<span className={`inline-block w-6 h-6 leading-6 rounded text-[10px] font-bold ${statusColor(day.status, day.isHoliday, day.isWorkDay)}`}>
+													{statusLabel(day.status, day.isHoliday, day.isWorkDay)}
 												</span>
 											</td>
 										))}
@@ -156,14 +160,14 @@ export default function DailyRecapPage() {
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-white/5">
-									{selectedEmployee.days.filter((d) => d.isWorkDay).map((day) => (
-										<tr key={day.date} className="hover:bg-white/5">
+									{selectedEmployee.days.filter((d) => d.isWorkDay || d.isHoliday).map((day) => (
+										<tr key={day.date} className={`hover:bg-white/5 ${day.isHoliday ? "opacity-60" : ""}`}>
 											<td className="py-2">{new Date(day.date + "T00:00").toLocaleDateString("id-ID", { weekday: "short", day: "numeric" })}</td>
 											<td className="py-2 text-center font-mono">{day.clockIn || "-"}</td>
 											<td className="py-2 text-center font-mono">{day.clockOut || "-"}</td>
 											<td className="py-2 text-center">
-												<span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusColor(day.status)}`}>
-													{statusLabel(day.status)}
+												<span className={`px-2 py-0.5 rounded-full text-xs font-bold ${statusColor(day.status, day.isHoliday, day.isWorkDay)}`}>
+													{statusLabel(day.status, day.isHoliday, day.isWorkDay)}
 												</span>
 											</td>
 											<td className="py-2 text-center">{day.lateMinutes > 0 ? `${day.lateMinutes} mnt` : "-"}</td>
