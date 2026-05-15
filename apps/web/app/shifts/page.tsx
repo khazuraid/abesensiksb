@@ -48,7 +48,7 @@ function ShiftForm({
 					<h3 className="text-xl font-bold">{initialData ? "Edit Shift" : "Tambah Shift"}</h3>
 					<button type="button" onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg"><X size={20} /></button>
 				</div>
-				<form onSubmit={(e) => { e.preventDefault(); onSubmit(form); }} className="p-6 space-y-4">
+				<form onSubmit={(e) => { e.preventDefault(); onSubmit({ ...form, maxLateTime: form.maxLateTime || null, minOutTime: form.minOutTime || null, effectiveFrom: form.effectiveFrom || null, effectiveTo: form.effectiveTo || null }); }} className="p-6 space-y-4">
 					<div>
 						<label htmlFor="sname" className="block text-sm font-medium text-foreground/70 mb-1">Nama Shift</label>
 						<input id="sname" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Shift Pagi" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary" />
