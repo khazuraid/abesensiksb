@@ -87,27 +87,15 @@ export type UpdateDevice = z.infer<typeof UpdateDeviceSchema>;
 export const ShiftSchema = z.object({
 	id: z.number(),
 	name: z.string().min(1, "Nama Shift wajib diisi"),
-	startTime: z
-		.string()
-		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm"),
-	endTime: z
-		.string()
-		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm"),
+	startTime: z.string().min(1),
+	endTime: z.string().min(1),
 	toleranceMinutes: z.number().min(0).default(0),
 	earlyOutTolerance: z.number().min(0).default(0),
-	maxLateTime: z
-		.string()
-		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm")
-		.nullable()
-		.optional(),
-	minOutTime: z
-		.string()
-		.regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Format jam harus HH:mm")
-		.nullable()
-		.optional(),
+	maxLateTime: z.string().nullable().optional(),
+	minOutTime: z.string().nullable().optional(),
 	workDays: z.array(z.number().min(0).max(6)).default([1, 2, 3, 4, 5]),
-	effectiveFrom: z.string().optional().transform((v) => v || null).nullable(),
-	effectiveTo: z.string().optional().transform((v) => v || null).nullable(),
+	effectiveFrom: z.string().nullable().optional(),
+	effectiveTo: z.string().nullable().optional(),
 	isActive: z.boolean().default(true),
 	createdAt: z.date(),
 	updatedAt: z.date(),
