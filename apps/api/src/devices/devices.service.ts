@@ -123,6 +123,11 @@ export class DevicesService {
 				break;
 			}
 
+			case "user.sync": {
+				commands.push("DATA UPDATE USERINFO");
+				break;
+			}
+
 			case "user.edit": {
 				if (!dto.user_id) throw new BadRequestException("user_id is required");
 				const parts = [`PIN=${dto.user_id}`];

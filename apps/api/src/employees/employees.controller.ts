@@ -103,7 +103,7 @@ export class EmployeesController {
 		@Body() body: { deviceId: number },
 		@Req() req: Request,
 	) {
-		await this.devicesService.sendCommand({ deviceId: body.deviceId, type: "check" });
+		await this.devicesService.sendCommand({ deviceId: body.deviceId, type: "user.sync" });
 		const user = req.user as { id: number };
 
 		this.auditLogsService.record({

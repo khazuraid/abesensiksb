@@ -188,6 +188,7 @@ export const DeviceCommandTypeEnum = z.enum([
 	"set.volume",
 	"set.language",
 	"user.info",
+	"user.sync",
 	"user.edit",
 	"user.delete",
 	"attendance.download",
