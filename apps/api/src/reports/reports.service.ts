@@ -65,12 +65,22 @@ export class ReportsService {
 			const isOnLeave = (dateStr: string) => empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate);
 
 			// Cari shift berdasarkan hari dan tanggal berlaku
-			const getShiftForDay = (dow: number, dateStr: string) => shifts.find((s) =>
-				s.isActive &&
-				(s.workDays as number[])?.includes(dow) &&
-				(!s.effectiveFrom || dateStr >= s.effectiveFrom) &&
-				(!s.effectiveTo || dateStr <= s.effectiveTo)
-			) || defaultShift;
+			const getShiftForDay = (dow: number, dateStr: string) => {
+				// Prioritas: shift dengan tanggal berlaku yang cocok
+				const dated = shifts.find((s) =>
+					s.isActive &&
+					(s.workDays as number[])?.includes(dow) &&
+					s.effectiveFrom && s.effectiveTo &&
+					dateStr >= s.effectiveFrom && dateStr <= s.effectiveTo
+				);
+				if (dated) return dated;
+				// Fallback: shift tanpa tanggal yang cocok hari-nya
+				return shifts.find((s) =>
+					s.isActive &&
+					(s.workDays as number[])?.includes(dow) &&
+					!s.effectiveFrom && !s.effectiveTo
+				) || null;
+			};
 
 			const days: {
 				date: string;
