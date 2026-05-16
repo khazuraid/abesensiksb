@@ -5,6 +5,9 @@ import { and, between, eq, gte, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
+type InlineButton = { text: string; callback_data: string };
+type InlineKeyboard = { inline_keyboard: InlineButton[][] };
+
 @Injectable()
 export class TelegramService implements OnModuleInit {
 	private readonly logger = new Logger(TelegramService.name);
@@ -37,15 +40,6 @@ export class TelegramService implements OnModuleInit {
 		const commands = [
 			{ command: "start", description: "Menu utama" },
 			{ command: "dashboard", description: "Ringkasan hari ini" },
-			{ command: "hadir", description: "Pegawai yang sudah absen" },
-			{ command: "belum", description: "Pegawai yang belum absen" },
-			{ command: "terlambat", description: "Pegawai terlambat hari ini" },
-			{ command: "rekap", description: "Rekap kehadiran bulan ini" },
-			{ command: "cari", description: "Cari status pegawai" },
-			{ command: "pegawai", description: "Info pegawai aktif" },
-			{ command: "perangkat", description: "Status perangkat" },
-			{ command: "shift", description: "Info shift aktif" },
-			{ command: "libur", description: "Hari libur bulan ini" },
 		];
 		await this.apiCall("setMyCommands", { commands });
 		this.logger.log("Bot commands registered");
@@ -67,6 +61,9 @@ export class TelegramService implements OnModuleInit {
 						if (update.message?.text) {
 							await this.handleMessage(update.message);
 						}
+						if (update.callback_query) {
+							await this.handleCallback(update.callback_query);
+						}
 					}
 				}
 			} catch (e) {
@@ -76,25 +73,151 @@ export class TelegramService implements OnModuleInit {
 		}
 	}
 
+	// ─── Message Handler ───────────────────────────────────────
+
 	private async handleMessage(msg: { chat: { id: number }; text: string }) {
 		const chatId = msg.chat.id;
-		const [cmd, ...args] = msg.text.split(" ");
-		const command = cmd.replace("@Absensiksb_bot", "").toLowerCase();
+		const command = msg.text.split(" ")[0].replace(/@\w+/g, "").toLowerCase();
 
 		switch (command) {
-			case "/start": return this.cmdStart(chatId);
-			case "/dashboard": return this.cmdDashboard(chatId);
-			case "/hadir": return this.cmdHadir(chatId);
-			case "/belum": return this.cmdBelum(chatId);
-			case "/terlambat": return this.cmdTerlambat(chatId);
-			case "/rekap": return this.cmdRekap(chatId);
-			case "/cari": return this.cmdCari(chatId, args.join(" "));
-			case "/pegawai": return this.cmdPegawai(chatId);
-			case "/perangkat": return this.cmdPerangkat(chatId);
-			case "/shift": return this.cmdShift(chatId);
-			case "/libur": return this.cmdLibur(chatId);
+			case "/start":
+			case "/menu":
+				return this.sendMainMenu(chatId);
+			case "/dashboard":
+				return this.cmdDashboard(chatId);
 		}
 	}
+
+	// ─── Callback Handler ──────────────────────────────────────
+
+	private async handleCallback(cb: { id: string; message: { chat: { id: number }; message_id: number }; data: string }) {
+		const chatId = cb.message.chat.id;
+		const msgId = cb.message.message_id;
+		const data = cb.data;
+
+		await this.answerCallback(cb.id);
+
+		switch (data) {
+			case "menu_main": return this.editMainMenu(chatId, msgId);
+			case "menu_kehadiran": return this.editKehadiranMenu(chatId, msgId);
+			case "menu_kepegawaian": return this.editKepegawaianMenu(chatId, msgId);
+			case "menu_sistem": return this.editSistemMenu(chatId, msgId);
+			case "act_dashboard": return this.editWithData(chatId, msgId, () => this.getDashboardText(), this.backButton("menu_main"));
+			case "act_hadir": return this.editWithData(chatId, msgId, () => this.getHadirText(), this.backButton("menu_kehadiran"));
+			case "act_belum": return this.editWithData(chatId, msgId, () => this.getBelumText(), this.backButton("menu_kehadiran"));
+			case "act_terlambat": return this.editWithData(chatId, msgId, () => this.getTerlambatText(), this.backButton("menu_kehadiran"));
+			case "act_rekap": return this.editWithData(chatId, msgId, () => this.getRekapText(), this.backButton("menu_kehadiran"));
+			case "act_pegawai": return this.editWithData(chatId, msgId, () => this.getPegawaiText(), this.backButton("menu_kepegawaian"));
+			case "act_shift": return this.editWithData(chatId, msgId, () => this.getShiftText(), this.backButton("menu_kepegawaian"));
+			case "act_libur": return this.editWithData(chatId, msgId, () => this.getLiburText(), this.backButton("menu_kepegawaian"));
+			case "act_perangkat": return this.editWithData(chatId, msgId, () => this.getPerangkatText(), this.backButton("menu_sistem"));
+			case "act_refresh": return this.editWithData(chatId, msgId, () => this.getDashboardText(), this.backButton("menu_main"));
+		}
+	}
+
+	// ─── Menu Layouts ──────────────────────────────────────────
+
+	private mainMenuText(): string {
+		return `<b>🏢 ADMS Attendance Bot</b>
+━━━━━━━━━━━━━━━━━━━━━
+Selamat datang! Pilih menu di bawah untuk melihat informasi kehadiran dan kepegawaian.
+
+<i>Pilih kategori:</i>`;
+	}
+
+	private mainMenuKeyboard(): InlineKeyboard {
+		return { inline_keyboard: [
+			[{ text: "📊 Dashboard", callback_data: "act_dashboard" }],
+			[{ text: "📋 Kehadiran", callback_data: "menu_kehadiran" }, { text: "👥 Kepegawaian", callback_data: "menu_kepegawaian" }],
+			[{ text: "⚙️ Sistem", callback_data: "menu_sistem" }],
+		]};
+	}
+
+	private kehadiranMenuKeyboard(): InlineKeyboard {
+		return { inline_keyboard: [
+			[{ text: "✅ Hadir", callback_data: "act_hadir" }, { text: "❌ Belum Absen", callback_data: "act_belum" }],
+			[{ text: "⚠️ Terlambat", callback_data: "act_terlambat" }, { text: "📅 Rekap Bulan", callback_data: "act_rekap" }],
+			[{ text: "⬅️ Kembali", callback_data: "menu_main" }],
+		]};
+	}
+
+	private kepegawaianMenuKeyboard(): InlineKeyboard {
+		return { inline_keyboard: [
+			[{ text: "👤 Info Pegawai", callback_data: "act_pegawai" }, { text: "⏰ Shift", callback_data: "act_shift" }],
+			[{ text: "🎉 Hari Libur", callback_data: "act_libur" }],
+			[{ text: "⬅️ Kembali", callback_data: "menu_main" }],
+		]};
+	}
+
+	private sistemMenuKeyboard(): InlineKeyboard {
+		return { inline_keyboard: [
+			[{ text: "📡 Status Perangkat", callback_data: "act_perangkat" }],
+			[{ text: "⬅️ Kembali", callback_data: "menu_main" }],
+		]};
+	}
+
+	private backButton(target: string): InlineKeyboard {
+		return { inline_keyboard: [[{ text: "⬅️ Kembali", callback_data: target }]] };
+	}
+
+	// ─── Send / Edit Helpers ───────────────────────────────────
+
+	private async sendMainMenu(chatId: number) {
+		await this.apiCall("sendMessage", {
+			chat_id: chatId,
+			text: this.mainMenuText(),
+			parse_mode: "HTML",
+			reply_markup: this.mainMenuKeyboard(),
+		});
+	}
+
+	private async editMainMenu(chatId: number, msgId: number) {
+		await this.editMessage(chatId, msgId, this.mainMenuText(), this.mainMenuKeyboard());
+	}
+
+	private async editKehadiranMenu(chatId: number, msgId: number) {
+		const text = `<b>📋 Menu Kehadiran</b>
+━━━━━━━━━━━━━━━━━━━━━
+Lihat data kehadiran pegawai hari ini atau rekap bulanan.
+
+<i>Pilih informasi:</i>`;
+		await this.editMessage(chatId, msgId, text, this.kehadiranMenuKeyboard());
+	}
+
+	private async editKepegawaianMenu(chatId: number, msgId: number) {
+		const text = `<b>👥 Menu Kepegawaian</b>
+━━━━━━━━━━━━━━━━━━━━━
+Informasi pegawai, shift kerja, dan hari libur.
+
+<i>Pilih informasi:</i>`;
+		await this.editMessage(chatId, msgId, text, this.kepegawaianMenuKeyboard());
+	}
+
+	private async editSistemMenu(chatId: number, msgId: number) {
+		const text = `<b>⚙️ Menu Sistem</b>
+━━━━━━━━━━━━━━━━━━━━━
+Monitoring perangkat dan status sistem.
+
+<i>Pilih informasi:</i>`;
+		await this.editMessage(chatId, msgId, text, this.sistemMenuKeyboard());
+	}
+
+	private async editWithData(chatId: number, msgId: number, getData: () => Promise<string>, keyboard: InlineKeyboard) {
+		const text = await getData();
+		await this.editMessage(chatId, msgId, text, keyboard);
+	}
+
+	private async editMessage(chatId: number, msgId: number, text: string, keyboard: InlineKeyboard) {
+		await this.apiCall("editMessageText", {
+			chat_id: chatId,
+			message_id: msgId,
+			text,
+			parse_mode: "HTML",
+			reply_markup: keyboard,
+		});
+	}
+
+	// ─── Data Fetchers ─────────────────────────────────────────
 
 	private todayRange() {
 		const now = new Date();
@@ -103,24 +226,7 @@ export class TelegramService implements OnModuleInit {
 		return { start, end };
 	}
 
-	private async cmdStart(chatId: number) {
-		await this.send(chatId, `<b>🏢 ADMS Attendance Bot</b>
-━━━━━━━━━━━━━━━━━━
-Perintah tersedia:
-
-/dashboard - Ringkasan hari ini
-/hadir - Sudah absen hari ini
-/belum - Belum absen hari ini
-/terlambat - Terlambat hari ini
-/rekap - Rekap bulan ini
-/cari [nama] - Cari pegawai
-/pegawai - Info pegawai
-/perangkat - Status mesin
-/shift - Info shift
-/libur - Hari libur`);
-	}
-
-	private async cmdDashboard(chatId: number) {
+	private async getDashboardText(): Promise<string> {
 		const { start, end } = this.todayRange();
 		const [employees] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.employees).where(eq(schema.employees.isActive, true));
 		const totalEmp = Number(employees.count);
@@ -135,23 +241,41 @@ Perintah tersedia:
 		const [devicesOnline] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.devices).where(eq(schema.devices.isOnline, true));
 		const [devicesTotal] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.devices);
 
-		await this.send(chatId, `<b>📊 Dashboard Hari Ini</b>
-━━━━━━━━━━━━━━━━━━
+		const now = new Date();
+		const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+
+		return `<b>📊 Dashboard Hari Ini</b>
+━━━━━━━━━━━━━━━━━━━━━
+🕒 Update: ${timeStr}
+
 👥 Total Pegawai: <b>${totalEmp}</b>
-✅ Hadir: <b>${present}</b>
+✅ Hadir: <b>${present}</b> (${totalEmp ? Math.round((present / totalEmp) * 100) : 0}%)
 ⚠️ Terlambat: <b>${late}</b>
 ❌ Belum Absen: <b>${totalEmp - present}</b>
-📡 Perangkat: <b>${Number(devicesOnline.count)}/${Number(devicesTotal.count)}</b> online`);
+📡 Perangkat: <b>${Number(devicesOnline.count)}/${Number(devicesTotal.count)}</b> online`;
 	}
 
-	private async cmdHadir(chatId: number) {
+	private async cmdDashboard(chatId: number) {
+		const text = await this.getDashboardText();
+		await this.apiCall("sendMessage", {
+			chat_id: chatId,
+			text,
+			parse_mode: "HTML",
+			reply_markup: { inline_keyboard: [
+				[{ text: "🔄 Refresh", callback_data: "act_refresh" }],
+				[{ text: "📋 Kehadiran", callback_data: "menu_kehadiran" }, { text: "🏠 Menu", callback_data: "menu_main" }],
+			]},
+		});
+	}
+
+	private async getHadirText(): Promise<string> {
 		const { start, end } = this.todayRange();
 		const logs = await this.db.select({ name: schema.employees.name, timestamp: schema.attendanceLogs.timestamp, status: schema.attendanceLogs.status })
 			.from(schema.attendanceLogs)
 			.innerJoin(schema.employees, eq(schema.attendanceLogs.employeeId, schema.employees.id))
 			.where(and(eq(schema.attendanceLogs.type, "IN"), between(schema.attendanceLogs.timestamp, start, end)));
 
-		if (!logs.length) return this.send(chatId, "📋 Belum ada yang absen hari ini.");
+		if (!logs.length) return "📋 Belum ada yang absen hari ini.";
 
 		const list = logs.map((l) => {
 			const time = new Date(l.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
@@ -159,10 +283,10 @@ Perintah tersedia:
 			return `${icon} ${l.name} (${time})`;
 		}).join("\n");
 
-		await this.send(chatId, `<b>✅ Hadir Hari Ini (${logs.length})</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
+		return `<b>✅ Hadir Hari Ini (${logs.length})</b>\n━━━━━━━━━━━━━━━━━━━━━\n${list}`;
 	}
 
-	private async cmdBelum(chatId: number) {
+	private async getBelumText(): Promise<string> {
 		const { start, end } = this.todayRange();
 		const presentIds = await this.db.select({ id: schema.attendanceLogs.employeeId })
 			.from(schema.attendanceLogs)
@@ -173,40 +297,39 @@ Perintah tersedia:
 			.from(schema.employees).where(eq(schema.employees.isActive, true));
 
 		const belum = allEmployees.filter((e) => !presentSet.has(e.id));
-		if (!belum.length) return this.send(chatId, "🎉 Semua pegawai sudah absen!");
+		if (!belum.length) return "🎉 Semua pegawai sudah absen!";
 
 		const list = belum.map((e) => `❌ ${e.name}`).join("\n");
-		await this.send(chatId, `<b>❌ Belum Absen (${belum.length})</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
+		return `<b>❌ Belum Absen (${belum.length})</b>\n━━━━━━━━━━━━━━━━━━━━━\n${list}`;
 	}
 
-	private async cmdTerlambat(chatId: number) {
+	private async getTerlambatText(): Promise<string> {
 		const { start, end } = this.todayRange();
 		const logs = await this.db.select({ name: schema.employees.name, timestamp: schema.attendanceLogs.timestamp })
 			.from(schema.attendanceLogs)
 			.innerJoin(schema.employees, eq(schema.attendanceLogs.employeeId, schema.employees.id))
 			.where(and(eq(schema.attendanceLogs.type, "IN"), eq(schema.attendanceLogs.status, "LATE"), between(schema.attendanceLogs.timestamp, start, end)));
 
-		if (!logs.length) return this.send(chatId, "✅ Tidak ada yang terlambat hari ini!");
+		if (!logs.length) return "✅ Tidak ada yang terlambat hari ini!";
 
 		const list = logs.map((l) => {
 			const time = new Date(l.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
 			return `⚠️ ${l.name} (${time})`;
 		}).join("\n");
 
-		await this.send(chatId, `<b>⚠️ Terlambat Hari Ini (${logs.length})</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
+		return `<b>⚠️ Terlambat Hari Ini (${logs.length})</b>\n━━━━━━━━━━━━━━━━━━━━━\n${list}`;
 	}
 
 	private shortName(name: string): string {
 		const titles = ["dr.", "dr", "drg.", "drg", "ir.", "ir", "prof.", "prof", "hj.", "hj", "h.", "s.kep."];
 		const parts = name.replace(/,/g, "").split(" ").filter((p) => p.length > 0);
-		// Skip semua title di depan
 		let i = 0;
 		while (i < parts.length - 1 && titles.includes(parts[i].toLowerCase())) i++;
 		const result = parts[i] || name;
 		return result.length === 1 && parts.length > 1 ? parts.slice(i).join("") : result;
 	}
 
-	private async cmdRekap(chatId: number) {
+	private async getRekapText(): Promise<string> {
 		const now = new Date();
 		const startMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1) - 7 * 60 * 60 * 1000);
 		const endMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59) - 7 * 60 * 60 * 1000);
@@ -226,7 +349,6 @@ Perintah tersedia:
 
 		const parseTime = (t: string) => { const [h, m] = t.split(":"); return Number(h) * 60 + Number(m); };
 
-		// Hitung hari kerja yang sudah lewat bulan ini
 		const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
 		const today = now.getDate();
 
@@ -235,7 +357,6 @@ Perintah tersedia:
 			const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
 			const inLogs = empLogs.filter((l) => l.type === "IN");
 
-			// Group by date, ambil log IN pertama per hari
 			const dayMap = new Map<string, Date>();
 			for (const log of inLogs) {
 				const key = `${log.timestamp.getFullYear()}-${log.timestamp.getMonth()}-${log.timestamp.getDate()}`;
@@ -246,7 +367,7 @@ Perintah tersedia:
 			let telat = 0;
 			let cuti = 0;
 
-			for (const [key, ts] of dayMap.entries()) {
+			for (const [, ts] of dayMap.entries()) {
 				const dow = ts.getDay();
 				const dateStr = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, "0")}-${String(ts.getDate()).padStart(2, "0")}`;
 				const shift = shifts.find((s) => s.isActive && (s.workDays as number[])?.includes(dow) && s.effectiveFrom && s.effectiveTo && dateStr >= s.effectiveFrom && dateStr <= s.effectiveTo)
@@ -258,7 +379,6 @@ Perintah tersedia:
 				}
 			}
 
-			// Hitung cuti/izin pada hari kerja
 			for (let d = 1; d <= Math.min(today, daysInMonth); d++) {
 				const date = new Date(now.getFullYear(), now.getMonth(), d);
 				const dow = date.getDay();
@@ -281,77 +401,33 @@ Perintah tersedia:
 			`${String(i + 1).padStart(2)}. ${r.name} - H:${r.hadir} T:${r.telat}${r.cuti ? ` C:${r.cuti}` : ""}`
 		);
 
-		let msg = `<b>📅 Rekap ${monthName}</b>\n━━━━━━━━━━━━━━━━━━\n`;
+		let msg = `<b>📅 Rekap ${monthName}</b>\n━━━━━━━━━━━━━━━━━━━━━\n`;
 		msg += `✅ Hadir: <b>${totalHadir}</b> | ⚠️ Telat: <b>${totalTelat}</b> | 📋 Cuti: <b>${totalCuti}</b>\n\n`;
 		msg += `<code>${lines.join("\n")}</code>`;
-
-		await this.send(chatId, msg);
+		return msg;
 	}
 
-	private async cmdCari(chatId: number, nama: string) {
-		if (!nama.trim()) return this.send(chatId, "ℹ️ Gunakan: /cari [nama]\nContoh: /cari Budi");
-
-		const employees = await this.db.select().from(schema.employees)
-			.where(sql`lower(${schema.employees.name}) like ${`%${nama.toLowerCase()}%`}`);
-
-		if (!employees.length) return this.send(chatId, `🔍 Pegawai "${nama}" tidak ditemukan.`);
-
-		const { start, end } = this.todayRange();
-		const results: string[] = [];
-
-		for (const emp of employees.slice(0, 5)) {
-			const logs = await this.db.select({ type: schema.attendanceLogs.type, timestamp: schema.attendanceLogs.timestamp, status: schema.attendanceLogs.status })
-				.from(schema.attendanceLogs)
-				.where(and(eq(schema.attendanceLogs.employeeId, emp.id), between(schema.attendanceLogs.timestamp, start, end)));
-
-			const inLog = logs.find((l) => l.type === "IN");
-			const outLog = logs.find((l) => l.type === "OUT");
-			const statusText = !inLog ? "Belum absen" : inLog.status === "LATE" ? "Terlambat" : "Hadir";
-			const inTime = inLog ? new Date(inLog.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-";
-			const outTime = outLog ? new Date(outLog.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) : "-";
-
-			results.push(`👤 <b>${emp.name}</b> (${emp.employeeCode})
-   📊 Status: ${statusText}
-   🕒 Masuk: ${inTime} | Pulang: ${outTime}`);
-		}
-
-		await this.send(chatId, `<b>🔍 Hasil Pencarian</b>\n━━━━━━━━━━━━━━━━━━\n${results.join("\n\n")}`);
-	}
-
-	private async cmdPegawai(chatId: number) {
+	private async getPegawaiText(): Promise<string> {
 		const [active] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.employees).where(eq(schema.employees.isActive, true));
 		const [inactive] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.employees).where(eq(schema.employees.isActive, false));
 		const [withFp] = await this.db.select({ count: sql<number>`count(*)` }).from(schema.employees).where(sql`${schema.employees.biometricId} is not null`);
 
-		await this.send(chatId, `<b>👥 Info Pegawai</b>
-━━━━━━━━━━━━━━━━━━
+		return `<b>👤 Info Pegawai</b>
+━━━━━━━━━━━━━━━━━━━━━
 ✅ Aktif: <b>${Number(active.count)}</b>
 ❌ Nonaktif: <b>${Number(inactive.count)}</b>
-🖐️ Sidik Jari Terdaftar: <b>${Number(withFp.count)}</b>`);
+🖐️ Sidik Jari: <b>${Number(withFp.count)}</b>`;
 	}
 
-	private async cmdPerangkat(chatId: number) {
-		const devices = await this.db.select().from(schema.devices);
-		if (!devices.length) return this.send(chatId, "📡 Belum ada perangkat terdaftar.");
-
-		const list = devices.map((d) => {
-			const icon = d.isOnline ? "🟢" : "🔴";
-			const lastSeen = d.lastSeen ? new Date(d.lastSeen).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-";
-			return `${icon} <b>${d.name}</b>\n   SN: ${d.serialNumber}\n   Last: ${lastSeen}`;
-		}).join("\n\n");
-
-		await this.send(chatId, `<b>📡 Status Perangkat</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
-	}
-
-	private async cmdShift(chatId: number) {
+	private async getShiftText(): Promise<string> {
 		const shifts = await this.db.select().from(schema.shifts).where(eq(schema.shifts.isActive, true));
-		if (!shifts.length) return this.send(chatId, "⏰ Belum ada shift aktif.");
+		if (!shifts.length) return "⏰ Belum ada shift aktif.";
 
-		const list = shifts.map((s) => `⏰ <b>${s.name}</b>\n   ${s.startTime} - ${s.endTime} (toleransi ${s.toleranceMinutes} menit)`).join("\n\n");
-		await this.send(chatId, `<b>⏰ Shift Aktif</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
+		const list = shifts.map((s) => `⏰ <b>${s.name}</b>\n   ${s.startTime} - ${s.endTime} (toleransi ${s.toleranceMinutes} mnt)`).join("\n\n");
+		return `<b>⏰ Shift Aktif</b>\n━━━━━━━━━━━━━━━━━━━━━\n${list}`;
 	}
 
-	private async cmdLibur(chatId: number) {
+	private async getLiburText(): Promise<string> {
 		const now = new Date();
 		const startMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
 		const endMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-31`;
@@ -359,38 +435,56 @@ Perintah tersedia:
 		const holidays = await this.db.select().from(schema.holidays)
 			.where(and(gte(schema.holidays.date, startMonth), lte(schema.holidays.date, endMonth)));
 
-		if (!holidays.length) return this.send(chatId, "📅 Tidak ada hari libur bulan ini.");
+		if (!holidays.length) return "📅 Tidak ada hari libur bulan ini.";
 
 		const list = holidays.map((h) => `🎉 <b>${h.date}</b> - ${h.name}`).join("\n");
 		const monthName = now.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
-		await this.send(chatId, `<b>📅 Hari Libur ${monthName}</b>\n━━━━━━━━━━━━━━━━━━\n${list}`);
+		return `<b>📅 Hari Libur ${monthName}</b>\n━━━━━━━━━━━━━━━━━━━━━\n${list}`;
 	}
 
-	// --- Public methods for notifications ---
+	private async getPerangkatText(): Promise<string> {
+		const devices = await this.db.select().from(schema.devices);
+		if (!devices.length) return "📡 Belum ada perangkat terdaftar.";
+
+		const list = devices.map((d) => {
+			const icon = d.isOnline ? "🟢" : "🔴";
+			const lastSeen = d.lastSeen ? new Date(d.lastSeen).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" }) : "-";
+			return `${icon} <b>${d.name}</b>\n   SN: ${d.serialNumber} | Last: ${lastSeen}`;
+		}).join("\n\n");
+
+		return `<b>📡 Status Perangkat</b>\n━━━━━━━━━━━━━━━━━━━━━\n${list}`;
+	}
+
+	// ─── Public Methods (Notifications) ────────────────────────
 
 	async sendNotification(message: string, chatId?: string) {
 		if (!this.enabled) return;
 		const id = chatId || this.chatId;
 		if (!id) return;
-		await this.send(Number(id), message);
+		await this.apiCall("sendMessage", { chat_id: Number(id), text: message, parse_mode: "HTML" });
 	}
 
 	async sendAttendanceAlert(data: { name: string; time: string; type: string; status: string; device: string }) {
 		if (!this.chatId) return;
 		const icon = data.type === "IN" ? "✅" : "🚪";
-		const statusIcon = data.status === "LATE" ? "⚠️" : "";
-		await this.send(Number(this.chatId), `<b>${icon} Absensi Baru</b>
-━━━━━━━━━━━━━━
+		const statusIcon = data.status === "LATE" ? " ⚠️" : "";
+		await this.apiCall("sendMessage", {
+			chat_id: Number(this.chatId),
+			text: `<b>${icon} Absensi Baru</b>
+━━━━━━━━━━━━━━━━━━━━━
 👤 <b>${data.name}</b>
 🕒 ${data.time}
-🏷️ ${data.type === "IN" ? "Masuk" : "Keluar"} ${statusIcon}
-📍 ${data.device}`);
+🏷️ ${data.type === "IN" ? "Masuk" : "Keluar"}${statusIcon}
+📍 ${data.device}`,
+			parse_mode: "HTML",
+			reply_markup: { inline_keyboard: [[{ text: "📊 Dashboard", callback_data: "act_dashboard" }]] },
+		});
 	}
 
-	// --- Helpers ---
+	// ─── API Helpers ───────────────────────────────────────────
 
-	private async send(chatId: number, text: string) {
-		await this.apiCall("sendMessage", { chat_id: chatId, text, parse_mode: "HTML" });
+	private async answerCallback(callbackId: string) {
+		await this.apiCall("answerCallbackQuery", { callback_query_id: callbackId });
 	}
 
 	private async apiCall(method: string, body?: Record<string, unknown>) {
