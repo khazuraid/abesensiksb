@@ -141,7 +141,12 @@ export class AttendanceLogsService {
 		const devicesOnline = devicesResult.filter((d) => d.isOnline).length;
 
 		// Generate Weekly Trend (Last 7 Days)
-		const weeklyTrend = [];
+		const weeklyTrend: {
+			name: string;
+			present: number;
+			late: number;
+			absent: number;
+		}[] = [];
 		const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 		for (let i = 6; i >= 0; i--) {
