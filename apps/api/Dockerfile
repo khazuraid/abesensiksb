@@ -10,7 +10,7 @@ COPY apps/api/ ./apps/api/
 COPY biome.json turbo.json ./
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm turbo build --filter=api
+RUN pnpm turbo build --filter=api --concurrency=1
 
 # Cleanup devDeps & build artifacts to reduce image size
 RUN rm -rf apps/api/src packages/*/src .turbo biome.json turbo.json

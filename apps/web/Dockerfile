@@ -8,7 +8,7 @@ COPY apps/web/ ./apps/web/
 COPY biome.json turbo.json ./
 
 RUN pnpm install --frozen-lockfile
-RUN pnpm turbo build --filter=web
+RUN pnpm turbo build --filter=web --concurrency=1
 
 FROM node:20-alpine
 WORKDIR /app
