@@ -19,4 +19,4 @@ ENV NODE_ENV=production
 ENV PORT=8888
 ENV TZ=Asia/Jakarta
 EXPOSE 8888
-CMD ["node", "apps/api/dist/main.js"]
+CMD ["sh", "-c", "node packages/database/migrate.js && node apps/api/dist/main.js"]
