@@ -23,6 +23,7 @@ async function run() {
 }
 
 run().catch((e) => {
-	console.error("[migrate] FAILED:", e.message);
-	process.exit(1);
+	console.error("[migrate] WARNING: Failed to run bootstrap.sql:", e.message);
+	console.error("[migrate] The server will still attempt to start...");
+	// process.exit(1); // Removed to prevent restart loops
 });
