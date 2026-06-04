@@ -18,10 +18,17 @@ export default function HolidaysPage() {
 	const [showForm, setShowForm] = useState(false);
 	const [form, setForm] = useState({ date: "", name: "", description: "" });
 
-	const { data: holidays, isLoading } = useQuery<Holiday[]>({
-		queryKey: ["holidays"],
-		queryFn: async () => (await api.get("/holidays")).data,
+	const [page, setPage] = useState(1);
+
+	const { data: response, isLoading } = useQuery({
+		queryKey: ["holidays", page],
+		queryFn: async () => {
+			return (await api.get(`/holidays?page=${page}&limit=10`)).data;
+		},
 	});
+
+	const holidays = response?.data || [];
+	const meta = response?.meta;
 
 	const syncMutation = useMutation({
 		mutationFn: async (year: number) => {
@@ -219,6 +226,47 @@ export default function HolidaysPage() {
 						</tbody>
 					</table>
 				</div>
+
+				{/* Pagination Controls */}
+				{meta && meta.totalPages > 1 && (
+					<div className="p-4 border-t border-black/5 flex items-center justify-between bg-[#f9f9ff]">
+						<div className="text-[12px] text-[#6e797e] font-medium">
+							Menampilkan Halaman {meta.page} dari {meta.totalPages}
+						</div>
+						<div className="flex items-center gap-2">
+							<button
+								type="button"
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
+								disabled={page === 1}
+								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
+							>
+								Sebelumnya
+							</button>
+							<div className="flex gap-1">
+								{Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(
+									(pageNum) => (
+										<button
+											key={pageNum}
+											type="button"
+											onClick={() => setPage(pageNum)}
+											className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${page === pageNum ? "bg-[#00647c] text-white" : "bg-white border border-black/10 text-[#3e484d] hover:bg-[#dee8ff]/50"}`}
+										>
+											{pageNum}
+										</button>
+									),
+								)}
+							</div>
+							<button
+								type="button"
+								onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+								disabled={page === meta.totalPages}
+								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
+							>
+								Selanjutnya
+							</button>
+						</div>
+					</div>
+				)}
 			</div>
 		</motion.div>
 	);

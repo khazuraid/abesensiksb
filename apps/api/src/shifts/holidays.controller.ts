@@ -27,8 +27,16 @@ export class HolidaysController {
 	constructor(private readonly holidaysService: HolidaysService) {}
 
 	@Get()
-	findAll() {
-		return this.holidaysService.findAll();
+	findAll(
+		@Query("limit") limit?: string,
+		@Query("page") page?: string,
+		@Query("search") search?: string,
+	) {
+		return this.holidaysService.findAll({
+			limit: limit ? Number.parseInt(limit, 10) : undefined,
+			page: page ? Number.parseInt(page, 10) : undefined,
+			search,
+		});
 	}
 
 	@Post("sync")

@@ -1,6 +1,16 @@
 import * as schema from "@adms/database";
 import { Inject, Injectable } from "@nestjs/common";
-import { and, count, desc, eq, gte, lte, type SQL } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gte,
+	ilike,
+	lte,
+	or,
+	type SQL,
+} from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
@@ -10,6 +20,8 @@ export interface AttendanceLogFilter {
 	status?: string;
 	deviceId?: number;
 	limit?: number;
+	page?: number;
+	search?: string;
 }
 
 @Injectable()
@@ -38,6 +50,15 @@ export class AttendanceLogsService {
 		}
 		if (filter.deviceId) {
 			conditions.push(eq(schema.attendanceLogs.deviceId, filter.deviceId));
+		}
+		if (filter.search) {
+			const searchPattern = `%${filter.search}%`;
+			conditions.push(
+				or(
+					ilike(schema.employees.name, searchPattern),
+					ilike(schema.employees.employeeCode, searchPattern),
+				),
+			);
 		}
 
 		const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -69,6 +90,30 @@ export class AttendanceLogsService {
 			)
 			.where(where)
 			.orderBy(desc(schema.attendanceLogs.timestamp));
+
+		if (filter.page) {
+			const limit = filter.limit || 50;
+			const offset = (filter.page - 1) * limit;
+
+			const [totalCountResult] = await this.db
+				.select({ count: count() })
+				.from(schema.attendanceLogs)
+				.where(where);
+
+			const total = totalCountResult?.count ?? 0;
+
+			const data = await query.limit(limit).offset(offset);
+
+			return {
+				data,
+				meta: {
+					total,
+					page: filter.page,
+					limit,
+					totalPages: Math.ceil(total / limit),
+				},
+			};
+		}
 
 		if (filter.limit) {
 			return await query.limit(filter.limit);

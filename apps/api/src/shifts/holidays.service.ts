@@ -1,7 +1,7 @@
 import * as schema from "@adms/database";
 import type { CreateHoliday, UpdateHoliday } from "@adms/shared-types";
 import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, ilike, or, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
@@ -11,17 +11,61 @@ interface ExternalHoliday {
 	is_national_holiday: boolean;
 }
 
+export interface HolidayFilter {
+	page?: number;
+	limit?: number;
+	search?: string;
+}
+
 @Injectable()
 export class HolidaysService {
 	private readonly logger = new Logger(HolidaysService.name);
 
 	constructor(@Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>) {}
 
-	async findAll() {
-		return await this.db
+	async findAll(filter: HolidayFilter = {}) {
+		const conditions: SQL[] = [];
+
+		if (filter.search) {
+			const searchPattern = `%${filter.search}%`;
+			conditions.push(ilike(schema.holidays.name, searchPattern));
+		}
+
+		const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const query = this.db
 			.select()
 			.from(schema.holidays)
+			.where(where)
 			.orderBy(asc(schema.holidays.date));
+
+		if (filter.page) {
+			const limit = filter.limit || 50;
+			const offset = (filter.page - 1) * limit;
+
+			const [totalCountResult] = await this.db
+				.select({ count: count() })
+				.from(schema.holidays)
+				.where(where);
+
+			const total = totalCountResult?.count ?? 0;
+			const data = await query.limit(limit).offset(offset);
+
+			return {
+				data,
+				meta: {
+					total,
+					page: filter.page,
+					limit,
+					totalPages: Math.ceil(total / limit),
+				},
+			};
+		}
+
+		if (filter.limit) {
+			return await query.limit(filter.limit);
+		}
+		return await query;
 	}
 
 	async create(data: CreateHoliday) {

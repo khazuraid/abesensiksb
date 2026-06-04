@@ -17,22 +17,36 @@ import {
 	XCircle,
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import api from "@/lib/api";
 
 export default function AttendanceLogsPage() {
 	const [search, setSearch] = useState("");
 	const [filterStatus, setFilterStatus] = useState("");
-	const [filterStartDate, setFilterStartDate] = useState("");
 	const [filterEndDate, setFilterEndDate] = useState("");
 	const [photoModal, setPhotoModal] = useState<string | null>(null);
+	const [page, setPage] = useState(1);
+	const [debouncedSearch, setDebouncedSearch] = useState("");
+
+	// Debounce search so it doesn't fire immediately on every keystroke
+	useEffect(() => {
+		const timer = setTimeout(() => setDebouncedSearch(search), 500);
+		return () => clearTimeout(timer);
+	}, [search]);
 
 	const apiBase =
 		process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
 		"http://localhost:8888";
 
-	const { data: logs, isLoading } = useQuery<AttendanceLog[]>({
-		queryKey: ["attendance-logs", filterStatus, filterStartDate, filterEndDate],
+	const { data: response, isLoading } = useQuery({
+		queryKey: [
+			"attendance-logs",
+			filterStatus,
+			filterStartDate,
+			filterEndDate,
+			page,
+			debouncedSearch,
+		],
 		queryFn: async () => {
 			const params = new URLSearchParams();
 			if (filterStatus) params.set("status", filterStatus);
@@ -42,16 +56,18 @@ export default function AttendanceLogsPage() {
 			if (filterEndDate) {
 				params.set("to", `${filterEndDate}T23:59:59`);
 			}
+			if (debouncedSearch) {
+				params.set("search", debouncedSearch);
+			}
+			params.set("page", String(page));
+			params.set("limit", "20");
 			return (await api.get(`/attendance-logs?${params}`)).data;
 		},
 		refetchInterval: 10000,
 	});
 
-	const filteredLogs = logs?.filter(
-		(log) =>
-			log.employee?.name?.toLowerCase().includes(search.toLowerCase()) ||
-			log.employee?.employeeCode?.toLowerCase().includes(search.toLowerCase()),
-	);
+	const logs = response?.data || [];
+	const meta = response?.meta;
 
 	const formatDate = (date: string | Date) =>
 		new Intl.DateTimeFormat("id-ID", {
@@ -126,7 +142,7 @@ export default function AttendanceLogsPage() {
 					</p>
 					<div className="flex items-end gap-3">
 						<h3 className="font-display text-[32px] font-bold text-[#111c2d] leading-none">
-							{logs?.length || 0}
+							{meta?.total || 0}
 						</h3>
 						<span className="text-[12px] font-semibold text-[#006c49] flex items-center mb-1 bg-[#006c49]/10 px-1.5 py-0.5 rounded">
 							<TrendingUp size={14} className="mr-1" /> 12%
@@ -261,7 +277,7 @@ export default function AttendanceLogsPage() {
 										<td colSpan={6} className="px-6 py-6 h-14 bg-white" />
 									</tr>
 								))
-							) : filteredLogs?.length === 0 ? (
+							) : logs?.length === 0 ? (
 								<tr>
 									<td
 										colSpan={6}
@@ -271,7 +287,7 @@ export default function AttendanceLogsPage() {
 									</td>
 								</tr>
 							) : (
-								filteredLogs?.map((log) => (
+								logs?.map((log: AttendanceLog) => (
 									<tr
 										key={log.id}
 										className="hover:bg-[#f9f9ff] transition-colors"
@@ -353,6 +369,58 @@ export default function AttendanceLogsPage() {
 						</tbody>
 					</table>
 				</div>
+
+				{/* Pagination Controls */}
+				{meta && meta.totalPages > 1 && (
+					<div className="p-4 border-t border-black/5 flex items-center justify-between bg-[#f9f9ff]">
+						<div className="text-[12px] text-[#6e797e] font-medium">
+							Menampilkan Halaman {meta.page} dari {meta.totalPages} (Total{" "}
+							{meta.total} data)
+						</div>
+						<div className="flex items-center gap-2">
+							<button
+								type="button"
+								onClick={() => setPage((p) => Math.max(1, p - 1))}
+								disabled={page === 1}
+								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
+							>
+								Sebelumnya
+							</button>
+							<div className="flex gap-1">
+								{Array.from(
+									{ length: Math.min(5, meta.totalPages) },
+									(_, i) => {
+										let pageNum = i + 1;
+										if (meta.totalPages > 5) {
+											if (page > 3) {
+												pageNum = page - 2 + i;
+											}
+											if (pageNum > meta.totalPages) return null;
+										}
+										return (
+											<button
+												key={pageNum}
+												type="button"
+												onClick={() => setPage(pageNum)}
+												className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${page === pageNum ? "bg-[#00647c] text-white" : "bg-white border border-black/10 text-[#3e484d] hover:bg-[#dee8ff]/50"}`}
+											>
+												{pageNum}
+											</button>
+										);
+									},
+								)}
+							</div>
+							<button
+								type="button"
+								onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
+								disabled={page === meta.totalPages}
+								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
+							>
+								Selanjutnya
+							</button>
+						</div>
+					</div>
+				)}
 			</div>
 
 			{photoModal && (

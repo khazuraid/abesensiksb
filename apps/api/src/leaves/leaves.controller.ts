@@ -21,10 +21,18 @@ export class LeavesController {
 	constructor(private readonly leavesService: LeavesService) {}
 
 	@Get()
-	findAll(@Query("employeeId") employeeId?: string) {
-		return this.leavesService.findAll(
-			employeeId ? Number.parseInt(employeeId, 10) : undefined,
-		);
+	findAll(
+		@Query("employeeId") employeeId?: string,
+		@Query("limit") limit?: string,
+		@Query("page") page?: string,
+		@Query("search") search?: string,
+	) {
+		return this.leavesService.findAll({
+			employeeId: employeeId ? Number.parseInt(employeeId, 10) : undefined,
+			limit: limit ? Number.parseInt(limit, 10) : undefined,
+			page: page ? Number.parseInt(page, 10) : undefined,
+			search,
+		});
 	}
 
 	@Post()

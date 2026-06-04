@@ -51,6 +51,8 @@ export class AttendanceLogsController {
 		@Query("status") status?: string,
 		@Query("deviceId") deviceId?: string,
 		@Query("limit") limit?: string,
+		@Query("page") page?: string,
+		@Query("search") search?: string,
 	) {
 		return this.attendanceLogsService.findAll({
 			from: from ? new Date(from) : undefined,
@@ -58,6 +60,8 @@ export class AttendanceLogsController {
 			status,
 			deviceId: deviceId ? Number.parseInt(deviceId, 10) : undefined,
 			limit: limit ? Number.parseInt(limit, 10) : undefined,
+			page: page ? Number.parseInt(page, 10) : undefined,
+			search,
 		});
 	}
 }

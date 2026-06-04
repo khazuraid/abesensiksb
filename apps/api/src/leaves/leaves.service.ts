@@ -1,19 +1,38 @@
 import * as schema from "@adms/database";
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
+
+export interface LeaveFilter {
+	employeeId?: number;
+	page?: number;
+	limit?: number;
+	search?: string;
+}
 
 @Injectable()
 export class LeavesService {
 	constructor(@Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>) {}
 
-	async findAll(employeeId?: number) {
-		const conditions = employeeId
-			? eq(schema.leaves.employeeId, employeeId)
-			: undefined;
+	async findAll(filter: LeaveFilter = {}) {
+		const conditions: SQL[] = [];
+		if (filter.employeeId) {
+			conditions.push(eq(schema.leaves.employeeId, filter.employeeId));
+		}
+		if (filter.search) {
+			const searchPattern = `%${filter.search}%`;
+			conditions.push(
+				or(
+					ilike(schema.employees.name, searchPattern),
+					ilike(schema.employees.employeeCode, searchPattern),
+				),
+			);
+		}
 
-		return await this.db
+		const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const query = this.db
 			.select({
 				id: schema.leaves.id,
 				type: schema.leaves.type,
@@ -32,8 +51,40 @@ export class LeavesService {
 				schema.employees,
 				eq(schema.leaves.employeeId, schema.employees.id),
 			)
-			.where(conditions)
+			.where(where)
 			.orderBy(desc(schema.leaves.createdAt));
+
+		if (filter.page) {
+			const limit = filter.limit || 50;
+			const offset = (filter.page - 1) * limit;
+
+			const [totalCountResult] = await this.db
+				.select({ count: count() })
+				.from(schema.leaves)
+				.leftJoin(
+					schema.employees,
+					eq(schema.leaves.employeeId, schema.employees.id),
+				)
+				.where(where);
+
+			const total = totalCountResult?.count ?? 0;
+			const data = await query.limit(limit).offset(offset);
+
+			return {
+				data,
+				meta: {
+					total,
+					page: filter.page,
+					limit,
+					totalPages: Math.ceil(total / limit),
+				},
+			};
+		}
+
+		if (filter.limit) {
+			return await query.limit(filter.limit);
+		}
+		return await query;
 	}
 
 	async create(data: {
