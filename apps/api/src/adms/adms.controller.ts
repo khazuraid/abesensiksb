@@ -30,7 +30,10 @@ export class ADMSController {
 	async handshake(@Query("SN") sn: string, @Req() req: Request) {
 		if (!sn) return "OK";
 
-		const device = await this.admsService.registerOrUpdateDevice(sn, req.ip || "");
+		const device = await this.admsService.registerOrUpdateDevice(
+			sn,
+			req.ip || "",
+		);
 
 		// Response format ADMS: key=value per line
 		const delay = device?.delay ?? 30;
@@ -70,9 +73,13 @@ export class ADMSController {
 
 		const rawData = Buffer.isBuffer(req.body)
 			? req.body.toString("utf-8").trim()
-			: (typeof req.body === "string" ? req.body.trim() : "");
+			: typeof req.body === "string"
+				? req.body.trim()
+				: "";
 
-		this.logger.log(`POST /iclock/cdata SN=${sn} table=${table} bodyLength=${rawData.length}`);
+		this.logger.log(
+			`POST /iclock/cdata SN=${sn} table=${table} bodyLength=${rawData.length}`,
+		);
 		this.logger.log(`Body: ${rawData.slice(0, 500)}`);
 
 		await this.admsService.updateDeviceStatus(sn, req.ip || "");
@@ -112,7 +119,6 @@ export class ADMSController {
 		@Query("PIN") pin: string,
 		@Query("FileName") fileName: string,
 		@Body() photoData: Buffer,
-		@Req() req: Request,
 	) {
 		if (!sn || !pin) return "OK";
 		await this.admsService.handlePhotoUpload(sn, pin, fileName, photoData);
@@ -135,7 +141,9 @@ export class ADMSController {
 	async deviceCmd(@Query("SN") _sn: string, @Req() req: Request) {
 		const body = Buffer.isBuffer(req.body)
 			? req.body.toString("utf-8").trim()
-			: (typeof req.body === "string" ? req.body.trim() : "");
+			: typeof req.body === "string"
+				? req.body.trim()
+				: "";
 		if (!body) return "OK";
 		// Format body: "ID:123&Return=0" (0=success)
 		const idMatch = body.match(/ID[=:](\d+)/);

@@ -12,6 +12,20 @@ services:
     volumes:
       - adms_postgres_data:/var/lib/postgresql/data
 
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: adms_pgbouncer
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://adms:adms123@postgres:5432/adms_db
+      MAX_CLIENT_CONN: 1000
+      DEFAULT_POOL_SIZE: 100
+      POOL_MODE: transaction
+    ports:
+      - "6432:5432"
+    depends_on:
+      - postgres
+
   redis:
     image: redis:7-alpine
     container_name: adms_redis

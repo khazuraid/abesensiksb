@@ -12,6 +12,8 @@ services:
       POSTGRES_DB: ${DB_NAME:-adms_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     # PENTING: jangan expose port 5432 ke host kalau VPS punya IP publik.
     # Postgres hanya boleh diakses dari Docker network internal.
     healthcheck:

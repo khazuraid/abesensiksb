@@ -1,6 +1,10 @@
+import { ExpressAdapter } from "@bull-board/express";
+import { BullBoardModule } from "@bull-board/nestjs";
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ScheduleModule } from "@nestjs/schedule";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { ADMSModule } from "./adms/adms.module";
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
@@ -10,6 +14,7 @@ import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./database/database.module";
 import { DevicesModule } from "./devices/devices.module";
 import { EmployeesModule } from "./employees/employees.module";
+import { EventsModule } from "./events/events.module";
 import { LeavesModule } from "./leaves/leaves.module";
 import { ReportsModule } from "./reports/reports.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -19,6 +24,7 @@ import { UsersModule } from "./users/users.module";
 
 @Module({
 	imports: [
+		ScheduleModule.forRoot(),
 		ConfigModule.forRoot({
 			isGlobal: true,
 			envFilePath: "../../.env",
@@ -42,6 +48,16 @@ import { UsersModule } from "./users/users.module";
 				};
 			})(),
 		}),
+		BullBoardModule.forRoot({
+			route: "/admin/queues",
+			adapter: ExpressAdapter,
+		}),
+		ThrottlerModule.forRoot([
+			{
+				ttl: 60000,
+				limit: 100, // 100 requests per minute
+			},
+		]),
 		DatabaseModule,
 		UsersModule,
 		EmployeesModule,
@@ -55,6 +71,7 @@ import { UsersModule } from "./users/users.module";
 		AuthModule,
 		SettingsModule,
 		LeavesModule,
+		EventsModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],

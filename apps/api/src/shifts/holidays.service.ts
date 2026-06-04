@@ -61,7 +61,23 @@ export class HolidaysService {
 	 */
 	async syncFromExternal(year?: number): Promise<{ synced: number }> {
 		const targetYear = year || new Date().getFullYear();
-		const url = `https://libur.deno.dev/api?year=${targetYear}`;
+
+		const result = await this.db
+			.select()
+			.from(schema.settings)
+			.where(eq(schema.settings.key, "HOLIDAY_API_URL"));
+
+		let url = result[0]?.value;
+		if (!url) {
+			url = `https://libur.deno.dev/api?year=${targetYear}`;
+		} else {
+			url = url.replace("{year}", targetYear.toString());
+			if (!url.includes("year=") && !url.includes("{year}")) {
+				url = url.includes("?")
+					? `${url}&year=${targetYear}`
+					: `${url}?year=${targetYear}`;
+			}
+		}
 
 		this.logger.log(`Syncing holidays from ${url}`);
 
@@ -70,7 +86,7 @@ export class HolidaysService {
 			throw new Error(`Failed to fetch holidays: ${response.statusText}`);
 		}
 
-		const data: ExternalHoliday[] = await response.json();
+		const data = (await response.json()) as ExternalHoliday[];
 		let synced = 0;
 
 		for (const item of data) {

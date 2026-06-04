@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manajemen Cuti - ADMS PRO</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #f9f9ff;
+            color: #111c2d;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#006780",
+                        "secondary-fixed-dim": "#4edea3",
+                        "surface-dim": "#cfdaf2",
+                        "on-secondary-container": "#00714d",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#3e484d",
+                        "background": "#f9f9ff",
+                        "outline": "#6e797e",
+                        "on-primary-fixed": "#001f28",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-bright": "#f9f9ff",
+                        "primary": "#00647c",
+                        "tertiary-fixed-dim": "#ffb873",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-secondary-fixed": "#002113",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#263143",
+                        "on-tertiary-container": "#fffbff",
+                        "secondary": "#006c49",
+                        "on-tertiary-fixed": "#2d1600",
+                        "on-primary": "#ffffff",
+                        "on-background": "#111c2d",
+                        "tertiary": "#894e00",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#007f9d",
+                        "on-secondary-fixed-variant": "#005236",
+                        "tertiary-container": "#a86516",
+                        "outline-variant": "#bdc8ce",
+                        "inverse-on-surface": "#ecf1ff",
+                        "secondary-container": "#6cf8bb",
+                        "primary-fixed-dim": "#6cd3f7",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#004e61",
+                        "surface": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "surface-container-highest": "#d8e3fb",
+                        "primary-fixed": "#b7eaff",
+                        "on-primary-container": "#fafdff",
+                        "surface-container-high": "#dee8ff",
+                        "tertiary-fixed": "#ffdcbf",
+                        "surface-container": "#e7eeff",
+                        "inverse-primary": "#6cd3f7",
+                        "surface-variant": "#d8e3fb",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "max-width": "1440px",
+                        "margin-desktop": "40px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "margin-mobile": "16px",
+                        "margin-tablet": "24px",
+                        "sidebar-width": "260px",
+                        "stack-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "title-lg": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "body-md": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background min-h-screen flex text-on-background">
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-sidebar-width border-r border-outline-variant bg-surface-container-lowest shadow-lg flex flex-col py-stack-lg z-50">
+<div class="px-gutter mb-8">
+<div class="font-headline-md text-headline-md font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-3xl">schedule</span>
+<div>
+<div>ADMS PRO</div>
+<div class="text-[10px] text-on-surface-variant font-normal tracking-wide">Enterprise Attendance</div>
+</div>
+</div>
+</div>
+<nav class="flex-1 px-unit space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">group</span>
+                Pegawai
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">history</span>
+                Log Absensi
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">devices</span>
+                Perangkat
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">schedule</span>
+                Shift
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined fill">event_busy</span>
+                Cuti
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+                Hari Libur
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">description</span>
+                Laporan
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                Rekap Harian
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Pengaturan
+            </a>
+</nav>
+<div class="px-unit mt-auto border-t border-outline-variant pt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+                Profil
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-md text-body-md" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Keluar
+            </a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="ml-sidebar-width flex-1 flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="h-16 border-b border-outline-variant bg-surface-container-lowest/80 backdrop-blur-md flex items-center justify-between px-margin-desktop sticky top-0 z-40">
+<div class="flex items-center gap-6">
+<div class="font-headline-md text-headline-md font-bold text-on-surface">Manajemen Absensi</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-variant/50">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-body-sm">
+                    AD
+                </div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-margin-desktop space-y-8">
+<!-- Page Header -->
+<div class="flex items-start justify-between">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Manajemen Cuti</h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Pengajuan dan persetujuan cuti pegawai.</p>
+</div>
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-lg flex items-center gap-2 font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Ajukan Cuti
+                </button>
+</div>
+<!-- Data Table Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant">
+<th class="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Pegawai</th>
+<th class="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Jenis</th>
+<th class="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Tanggal</th>
+<th class="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Alasan</th>
+<th class="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Status</th>
+<th class="py-4 px-6 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider text-right">Aksi</th>
+</tr>
+</thead>
+<tbody class="font-body-md text-body-md">
+<tr class="border-b border-outline-variant hover:bg-surface-container-low/50 transition-colors">
+<td class="py-4 px-6 font-medium text-on-surface">RITA SUSANTI, S.Kep. Kep</td>
+<td class="py-4 px-6 text-on-surface-variant">Cuti Tahunan</td>
+<td class="py-4 px-6 text-on-surface-variant">2026-05-07 → 2026-05-07</td>
+<td class="py-4 px-6 text-on-surface-variant">-</td>
+<td class="py-4 px-6">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-secondary-container text-on-secondary-container">
+                                        DISETUJUI
+                                    </span>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low/50 transition-colors">
+<td class="py-4 px-6 font-medium text-on-surface">FREDI SUSANTO, SE</td>
+<td class="py-4 px-6 text-on-surface-variant">Cuti Tahunan</td>
+<td class="py-4 px-6 text-on-surface-variant">2026-05-04 → 2026-05-04</td>
+<td class="py-4 px-6 text-on-surface-variant">-</td>
+<td class="py-4 px-6">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-secondary-container text-on-secondary-container">
+                                        DISETUJUI
+                                    </span>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low/50 transition-colors">
+<td class="py-4 px-6 font-medium text-on-surface">PUJIARTI, SKM</td>
+<td class="py-4 px-6 text-on-surface-variant">Cuti Tahunan</td>
+<td class="py-4 px-6 text-on-surface-variant">2026-05-23 → 2026-05-23</td>
+<td class="py-4 px-6 text-on-surface-variant">-</td>
+<td class="py-4 px-6">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-secondary-container text-on-secondary-container">
+                                        DISETUJUI
+                                    </span>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low/50 transition-colors">
+<td class="py-4 px-6 font-medium text-on-surface">SILFI NUR FATHIYYAH,A.Md</td>
+<td class="py-4 px-6 text-on-surface-variant">Cuti Tahunan</td>
+<td class="py-4 px-6 text-on-surface-variant">2026-05-08 → 2026-05-08</td>
+<td class="py-4 px-6 text-on-surface-variant">-</td>
+<td class="py-4 px-6">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-secondary-container text-on-secondary-container">
+                                        DISETUJUI
+                                    </span>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<tr class="border-b border-outline-variant hover:bg-surface-container-low/50 transition-colors">
+<td class="py-4 px-6 font-medium text-on-surface">ANNA PERMATASARI</td>
+<td class="py-4 px-6 text-on-surface-variant">Cuti Tahunan</td>
+<td class="py-4 px-6 text-on-surface-variant">2026-05-22 → 2026-05-30</td>
+<td class="py-4 px-6 text-on-surface-variant">-</td>
+<td class="py-4 px-6">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-secondary-container text-on-secondary-container">
+                                        DISETUJUI
+                                    </span>
+</td>
+<td class="py-4 px-6 text-right">
+<button class="text-on-surface-variant hover:text-error transition-colors p-1">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination / Footer -->
+<div class="px-6 py-4 border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between">
+<span class="font-body-sm text-on-surface-variant">Menampilkan 1 hingga 5 dari 24 data</span>
+<div class="flex items-center gap-2">
+<button class="p-2 rounded hover:bg-surface-container-low text-on-surface-variant disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary-container text-on-primary-container font-medium flex items-center justify-center text-sm">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-low text-on-surface-variant font-medium flex items-center justify-center text-sm">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-container-low text-on-surface-variant font-medium flex items-center justify-center text-sm">3</button>
+<span class="text-on-surface-variant">...</span>
+<button class="p-2 rounded hover:bg-surface-container-low text-on-surface-variant">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -11,7 +11,9 @@ export class ZodValidationPipe implements PipeTransform {
 
 	transform(value: unknown) {
 		try {
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 			const parsedValue = this.schema.parse(value);
+			// eslint-disable-next-line @typescript-eslint/no-unsafe-return
 			return parsedValue;
 		} catch (error: unknown) {
 			const zodError = error as { errors: unknown[] };

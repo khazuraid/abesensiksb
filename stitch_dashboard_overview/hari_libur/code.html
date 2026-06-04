@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hari Libur - ADMS PRO</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-surface": "#dae2fd",
+                      "surface-container-lowest": "#060e20",
+                      "on-tertiary-fixed": "#40000d",
+                      "on-primary": "#003640",
+                      "on-secondary": "#003824",
+                      "secondary-container": "#00a572",
+                      "tertiary-fixed": "#ffdadb",
+                      "border-glass": "rgba(255, 255, 255, 0.1)",
+                      "secondary-fixed": "#6ffbbe",
+                      "secondary": "#4edea3",
+                      "tertiary-container": "#ff7f8b",
+                      "on-error-container": "#ffdad6",
+                      "glow-emerald": "rgba(16, 185, 129, 0.15)",
+                      "inverse-on-surface": "#283044",
+                      "surface-tint": "#4cd7f6",
+                      "error-container": "#93000a",
+                      "outline-variant": "#3d494c",
+                      "on-surface": "#dae2fd",
+                      "on-primary-container": "#00424f",
+                      "on-error": "#690005",
+                      "surface-container-highest": "#2d3449",
+                      "primary-fixed": "#acedff",
+                      "on-tertiary-container": "#7d0023",
+                      "on-secondary-fixed": "#002113",
+                      "surface-variant": "#2d3449",
+                      "outline": "#869397",
+                      "on-primary-fixed": "#001f26",
+                      "on-surface-variant": "#bcc9cd",
+                      "on-background": "#dae2fd",
+                      "error": "#ffb4ab",
+                      "surface": "#0b1326",
+                      "on-tertiary-fixed-variant": "#92002a",
+                      "surface-container-low": "#131b2e",
+                      "inverse-primary": "#00687a",
+                      "surface-container": "#171f33",
+                      "on-secondary-container": "#00311f",
+                      "surface-glass": "rgba(30, 41, 59, 0.7)",
+                      "primary-container": "#06b6d4",
+                      "surface-container-high": "#222a3d",
+                      "glow-cyan": "rgba(6, 182, 212, 0.15)",
+                      "on-tertiary": "#67001b",
+                      "primary": "#4cd7f6",
+                      "primary-fixed-dim": "#4cd7f6",
+                      "tertiary": "#ffb2b7",
+                      "surface-dim": "#0b1326",
+                      "surface-bright": "#31394d",
+                      "secondary-fixed-dim": "#4edea3",
+                      "tertiary-fixed-dim": "#ffb2b7",
+                      "background": "#0b1326",
+                      "text-dim": "#94a3b8",
+                      "on-primary-fixed-variant": "#004e5c",
+                      "on-secondary-fixed-variant": "#005236"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-sm": "8px",
+                      "stack-md": "16px",
+                      "sidebar-width": "260px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "32px",
+                      "gutter": "24px",
+                      "container-max": "1440px",
+                      "stack-lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Outfit"],
+                      "headline-lg": ["Outfit"],
+                      "body-lg": ["Inter"],
+                      "headline-sm": ["Outfit"],
+                      "display-lg": ["Outfit"],
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "mono-sm": ["JetBrains Mono"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                      "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                      "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                      "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                      "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                      "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                      "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                      "mono-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                      "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+            font-family: theme('fontFamily.body-md');
+        }
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: theme('colors.surface-container'); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: theme('colors.surface-container-highest'); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: theme('colors.outline'); 
+        }
+        
+        .glass-panel {
+            background: theme('colors.surface-glass');
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid theme('colors.border-glass');
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden antialiased">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width border-r border-glass bg-surface-glass backdrop-blur-xl flex flex-col py-stack-lg shadow-lg z-50 hidden md:flex">
+<!-- Header -->
+<div class="px-margin-desktop mb-8">
+<div class="flex items-center gap-3 font-headline-sm text-headline-sm font-bold text-primary">
+<div class="w-8 h-8 rounded bg-primary/20 flex items-center justify-center border border-primary/30">
+<span class="material-symbols-outlined text-primary" style="font-size: 20px;">domain</span>
+</div>
+<div>
+<div>ADMS PRO</div>
+<div class="font-label-md text-label-md text-text-dim font-normal">Enterprise Attendance</div>
+</div>
+</div>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 overflow-y-auto px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">dashboard</span>
+<span class="font-body-sm text-body-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">group</span>
+<span class="font-body-sm text-body-sm">Pegawai</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">history</span>
+<span class="font-body-sm text-body-sm">Log Absensi</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">devices</span>
+<span class="font-body-sm text-body-sm">Perangkat</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">schedule</span>
+<span class="font-body-sm text-body-sm">Shift</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">event_busy</span>
+<span class="font-body-sm text-body-sm">Cuti</span>
+</a>
+<!-- Active Tab: Hari Libur -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+<span class="font-body-sm text-body-sm">Hari Libur</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">description</span>
+<span class="font-body-sm text-body-sm">Laporan</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">analytics</span>
+<span class="font-body-sm text-body-sm">Rekap Harian</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">settings</span>
+<span class="font-body-sm text-body-sm">Pengaturan</span>
+</a>
+</div>
+<!-- Footer Actions -->
+<div class="px-4 mt-auto pt-4 border-t border-glass space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">account_circle</span>
+<span class="font-body-sm text-body-sm">Profil</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-error/10 hover:text-error transition-colors duration-200 group" href="#">
+<span class="material-symbols-outlined text-[20px] group-hover:text-error transition-colors">logout</span>
+<span class="font-body-sm text-body-sm">Keluar</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-sidebar-width h-full flex flex-col relative">
+<!-- TopNavBar (Optional/Hidden on this specific dense view, but kept for structure if needed, user's screenshot doesn't show a clear topnav other than browser chrome, so we'll build a custom header for the page content instead) -->
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto p-margin-mobile md:p-margin-desktop pt-8 pb-20">
+<div class="max-w-container-max mx-auto space-y-gutter">
+<!-- Page Header & Actions -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Manajemen Hari Libur</h1>
+<p class="font-body-md text-body-md text-text-dim mt-2 max-w-2xl">
+                            Daftar hari libur nasional dan cuti bersama. Sinkronisasi data untuk memastikan akurasi perhitungan kehadiran.
+                        </p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-glass bg-surface/50 text-on-surface hover:bg-surface-variant transition-all backdrop-blur-md active:scale-95">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+<span class="font-label-md text-label-md">Sync 2026</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-on-primary hover:brightness-110 transition-all shadow-[0_0_15px_rgba(76,215,246,0.3)] active:scale-95">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span class="font-label-md text-label-md">Tambah</span>
+</button>
+</div>
+</div>
+<!-- Filters & Search Bar (Added for functional realism) -->
+<div class="glass-panel p-4 rounded-xl flex flex-col md:flex-row gap-4 justify-between items-center">
+<div class="relative w-full md:w-96">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-dim">search</span>
+<input class="w-full bg-[#020617] border border-glass text-on-surface rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary focus:shadow-[0_0_10px_rgba(76,215,246,0.2)] transition-all font-body-sm" placeholder="Cari hari libur..." type="text"/>
+</div>
+<div class="flex items-center gap-2 text-text-dim font-body-sm">
+<span>Tahun:</span>
+<select class="bg-[#020617] border border-glass rounded-lg px-3 py-1.5 text-on-surface focus:outline-none focus:border-primary appearance-none pr-8 relative">
+<option value="2026">2026</option>
+<option value="2025">2025</option>
+<option value="2024">2024</option>
+</select>
+</div>
+</div>
+<!-- High-Density Data Table -->
+<div class="glass-panel rounded-xl overflow-hidden flex flex-col relative">
+<!-- Subtle top highlight -->
+<div class="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-primary/30 to-transparent"></div>
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-glass bg-surface-container-low/50">
+<th class="py-3 px-6 font-label-md text-label-md text-text-dim whitespace-nowrap">TANGGAL</th>
+<th class="py-3 px-6 font-label-md text-label-md text-text-dim">NAMA HARI LIBUR</th>
+<th class="py-3 px-6 font-label-md text-label-md text-text-dim">KETERANGAN</th>
+<th class="py-3 px-6 font-label-md text-label-md text-text-dim text-right w-24">AKSI</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-on-surface divide-y divide-glass/50">
+<!-- Row 1 -->
+<tr class="hover:bg-[#1e293b]/50 transition-colors group">
+<td class="py-3 px-6 whitespace-nowrap font-mono-sm text-text-dim">
+<span class="text-on-surface">01 Jan 2026</span>
+</td>
+<td class="py-3 px-6 font-medium">Tahun Baru 2026 Masehi</td>
+<td class="py-3 px-6 text-text-dim flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                        Libur Nasional
+                                    </td>
+<td class="py-3 px-6 text-right">
+<button class="p-1.5 text-text-dim hover:text-error rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-[#1e293b]/50 transition-colors group">
+<td class="py-3 px-6 whitespace-nowrap font-mono-sm text-text-dim">
+<span class="text-on-surface">17 Feb 2026</span>
+</td>
+<td class="py-3 px-6 font-medium">Tahun Baru Imlek 2577 Kongzili</td>
+<td class="py-3 px-6 text-text-dim flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                        Libur Nasional
+                                    </td>
+<td class="py-3 px-6 text-right">
+<button class="p-1.5 text-text-dim hover:text-error rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-[#1e293b]/50 transition-colors group">
+<td class="py-3 px-6 whitespace-nowrap font-mono-sm text-text-dim">
+<span class="text-on-surface">20 Mar 2026</span>
+</td>
+<td class="py-3 px-6 font-medium">Hari Suci Nyepi Tahun Baru Saka 1948</td>
+<td class="py-3 px-6 text-text-dim flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                        Libur Nasional
+                                    </td>
+<td class="py-3 px-6 text-right">
+<button class="p-1.5 text-text-dim hover:text-error rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-[#1e293b]/50 transition-colors group">
+<td class="py-3 px-6 whitespace-nowrap font-mono-sm text-text-dim">
+<span class="text-on-surface">03 Apr 2026</span>
+</td>
+<td class="py-3 px-6 font-medium">Wafat Yesus Kristus</td>
+<td class="py-3 px-6 text-text-dim flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                                        Libur Nasional
+                                    </td>
+<td class="py-3 px-6 text-right">
+<button class="p-1.5 text-text-dim hover:text-error rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 (Cuti Bersama Example) -->
+<tr class="hover:bg-[#1e293b]/50 transition-colors group bg-surface-container-low/20">
+<td class="py-3 px-6 whitespace-nowrap font-mono-sm text-text-dim">
+<span class="text-on-surface">19 Mar 2026</span>
+</td>
+<td class="py-3 px-6 font-medium text-text-dim italic">Cuti Bersama Hari Raya Nyepi</td>
+<td class="py-3 px-6 text-text-dim flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary-container"></span>
+                                        Cuti Bersama
+                                    </td>
+<td class="py-3 px-6 text-right">
+<button class="p-1.5 text-text-dim hover:text-error rounded transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Empty state example (Hidden, just for structure reference if needed) -->
+<!--
+                                <tr>
+                                    <td colspan="4" class="py-12 text-center text-text-dim">
+                                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50">event_busy</span>
+                                        <p class="font-body-md">Belum ada data hari libur untuk tahun ini.</p>
+                                    </td>
+                                </tr>
+                                -->
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="border-t border-glass p-4 flex items-center justify-between text-text-dim font-body-sm bg-surface-container-lowest/30">
+<div>Menampilkan 5 dari 24 data</div>
+<div class="flex gap-1">
+<button class="p-1 rounded hover:bg-surface-variant transition-colors disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-medium flex items-center justify-center">1</button>
+<button class="w-8 h-8 rounded hover:bg-surface-variant transition-colors flex items-center justify-center">2</button>
+<button class="w-8 h-8 rounded hover:bg-surface-variant transition-colors flex items-center justify-center">3</button>
+<button class="p-1 rounded hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Mobile Navigation Toggle (Hamburger) - Minimal implementation -->
+<div class="fixed bottom-4 right-4 md:hidden z-50">
+<button class="w-12 h-12 bg-primary text-on-primary rounded-full shadow-lg flex items-center justify-center">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+</body></html>

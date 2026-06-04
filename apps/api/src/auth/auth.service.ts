@@ -14,6 +14,7 @@ export class AuthService {
 	async validateUser(email: string, pass: string): Promise<unknown> {
 		const user = await this.usersService.findByEmail(email);
 		if (user && (await bcrypt.compare(pass, user.password))) {
+			// eslint-disable-next-line @typescript-eslint/no-unused-vars
 			const { password: _, ...result } = user;
 			return result;
 		}
@@ -47,7 +48,11 @@ export class AuthService {
 		};
 	}
 
-	async changePassword(userId: number, currentPassword: string, newPassword: string) {
+	async changePassword(
+		userId: number,
+		currentPassword: string,
+		newPassword: string,
+	) {
 		const user = await this.usersService.findOne(userId);
 		if (!user) {
 			throw new UnauthorizedException("User tidak ditemukan");

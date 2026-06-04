@@ -108,12 +108,15 @@ export class ADMSService {
 
 				if (!employee) {
 					// Auto-create employee dari PIN mesin
-					const [created] = await this.db.insert(schema.employees).values({
-						employeeCode: userId,
-						name: `Pegawai ${userId}`,
-						biometricId: userId,
-						isActive: true,
-					}).returning();
+					const [created] = await this.db
+						.insert(schema.employees)
+						.values({
+							employeeCode: userId,
+							name: `Pegawai ${userId}`,
+							biometricId: userId,
+							isActive: true,
+						})
+						.returning();
 					employee = created;
 					this.logger.log(`Auto-created employee: PIN=${userId}`);
 				}
@@ -130,7 +133,7 @@ export class ADMSService {
 						and(
 							eq(schema.attendanceLogs.employeeId, employee.id),
 							eq(schema.attendanceLogs.timestamp, timestamp),
-							eq(schema.attendanceLogs.type, type as "IN" | "OUT"),
+							eq(schema.attendanceLogs.type, type),
 						),
 					);
 
@@ -150,7 +153,7 @@ export class ADMSService {
 					employeeId: employee.id,
 					deviceId,
 					timestamp,
-					type: type as "IN" | "OUT",
+					type: type,
 					status,
 				};
 
@@ -199,7 +202,9 @@ export class ADMSService {
 				for (const part of line.split("\t")) {
 					const idx = part.indexOf("=");
 					if (idx > 0) {
-						fields[part.substring(0, idx).trim()] = part.substring(idx + 1).trim();
+						fields[part.substring(0, idx).trim()] = part
+							.substring(idx + 1)
+							.trim();
 					}
 				}
 
@@ -229,7 +234,8 @@ export class ADMSService {
 				};
 
 				if (existing.length > 0) {
-					await this.db.update(schema.fingerprintTemplates)
+					await this.db
+						.update(schema.fingerprintTemplates)
 						.set({ ...data, updatedAt: new Date() })
 						.where(eq(schema.fingerprintTemplates.id, existing[0].id));
 				} else {
@@ -237,7 +243,9 @@ export class ADMSService {
 				}
 				saved++;
 			} catch (error) {
-				this.logger.warn(`Failed to save FP template from ${sn}: ${(error as Error).message}`);
+				this.logger.warn(
+					`Failed to save FP template from ${sn}: ${(error as Error).message}`,
+				);
 			}
 		}
 
@@ -294,10 +302,15 @@ export class ADMSService {
 						isActive: true,
 					});
 					synced++;
-					this.logger.log(`Auto-created employee from device: PIN=${pin}, Name=${name}`);
+					this.logger.log(
+						`Auto-created employee from device: PIN=${pin}, Name=${name}`,
+					);
 				} else if (existing.length > 0) {
 					// Update nama (jika masih placeholder) dan biometric sync timestamp
-					const updateData: Record<string, unknown> = { biometricSyncedAt: new Date(), updatedAt: new Date() };
+					const updateData: Record<string, unknown> = {
+						biometricSyncedAt: new Date(),
+						updatedAt: new Date(),
+					};
 					if (name && existing[0].name.startsWith("Pegawai ")) {
 						updateData.name = name;
 					}
@@ -308,7 +321,9 @@ export class ADMSService {
 					synced++;
 				}
 			} catch (error) {
-				this.logger.warn(`Failed to sync user from device ${sn}: ${(error as Error).message}`);
+				this.logger.warn(
+					`Failed to sync user from device ${sn}: ${(error as Error).message}`,
+				);
 			}
 		}
 
@@ -320,7 +335,12 @@ export class ADMSService {
 	 * Menerima dan menyimpan foto capture absensi dari mesin.
 	 * Foto disimpan ke folder uploads/ dan URL-nya di-update ke attendance_log terakhir.
 	 */
-	async handlePhotoUpload(sn: string, pin: string, fileName: string, photoData: Buffer) {
+	async handlePhotoUpload(
+		sn: string,
+		pin: string,
+		fileName: string,
+		photoData: Buffer,
+	) {
 		try {
 			const fs = await import("node:fs");
 			const path = await import("node:path");
@@ -384,13 +404,16 @@ export class ADMSService {
 			.where(eq(schema.devices.serialNumber, sn));
 
 		if (existing.length === 0) {
-			const [device] = await this.db.insert(schema.devices).values({
-				serialNumber: sn,
-				name: `Device ${sn}`,
-				ipAddress: ip,
-				isOnline: true,
-				lastSeen: new Date(),
-			}).returning();
+			const [device] = await this.db
+				.insert(schema.devices)
+				.values({
+					serialNumber: sn,
+					name: `Device ${sn}`,
+					ipAddress: ip,
+					isOnline: true,
+					lastSeen: new Date(),
+				})
+				.returning();
 			this.logger.log(`Auto-registered new device: ${sn}`);
 			return device;
 		}

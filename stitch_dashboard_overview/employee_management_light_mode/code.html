@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Employee Management - ADMS</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Outfit:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "on-tertiary": "#ffffff",
+                "on-secondary": "#ffffff",
+                "inverse-primary": "#6cd3f7",
+                "primary-container": "#007f9d",
+                "on-secondary-fixed-variant": "#005236",
+                "on-tertiary-fixed-variant": "#6a3b00",
+                "on-tertiary-fixed": "#2d1600",
+                "surface": "#f9f9ff",
+                "surface-variant": "#d8e3fb",
+                "secondary": "#006c49",
+                "surface-tint": "#006780",
+                "surface-dim": "#cfdaf2",
+                "surface-container-highest": "#d8e3fb",
+                "background": "#f9f9ff",
+                "on-error-container": "#93000a",
+                "outline": "#6e797e",
+                "tertiary-fixed": "#ffdcbf",
+                "surface-container": "#e7eeff",
+                "tertiary": "#894e00",
+                "on-secondary-container": "#00714d",
+                "surface-container-lowest": "#ffffff",
+                "on-tertiary-container": "#fffbff",
+                "primary-fixed-dim": "#6cd3f7",
+                "outline-variant": "#bdc8ce",
+                "secondary-container": "#6cf8bb",
+                "surface-bright": "#f9f9ff",
+                "surface-container-high": "#dee8ff",
+                "error": "#ba1a1a",
+                "primary-fixed": "#b7eaff",
+                "on-primary": "#ffffff",
+                "error-container": "#ffdad6",
+                "tertiary-fixed-dim": "#ffb873",
+                "on-background": "#111c2d",
+                "inverse-on-surface": "#ecf1ff",
+                "on-surface": "#111c2d",
+                "on-secondary-fixed": "#002113",
+                "on-primary-fixed-variant": "#004e61",
+                "secondary-fixed": "#6ffbbe",
+                "on-primary-container": "#fafdff",
+                "primary": "#00647c",
+                "surface-container-low": "#f0f3ff",
+                "on-error": "#ffffff",
+                "inverse-surface": "#263143",
+                "on-surface-variant": "#3e484d",
+                "tertiary-container": "#a86516",
+                "on-primary-fixed": "#001f28",
+                "secondary-fixed-dim": "#4edea3"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "margin-tablet": "24px",
+                "max-width": "1440px",
+                "margin-desktop": "40px",
+                "sidebar-width": "260px",
+                "gutter": "24px",
+                "margin-mobile": "16px",
+                "unit": "8px"
+        },
+        "fontFamily": {
+                "title-lg": [
+                        "Outfit"
+                ],
+                "label-sm": [
+                        "Outfit"
+                ],
+                "body-md": [
+                        "Outfit"
+                ],
+                "display-lg": [
+                        "Outfit"
+                ],
+                "headline-lg": [
+                        "Outfit"
+                ],
+                "headline-lg-mobile": [
+                        "Outfit"
+                ],
+                "label-md": [
+                        "Outfit"
+                ],
+                "headline-md": [
+                        "Outfit"
+                ],
+                "body-lg": [
+                        "Outfit"
+                ],
+                "mono-sm": [
+                        "JetBrains Mono"
+                ],
+                "body-sm": [
+                        "Outfit"
+                ],
+                "headline-sm": [
+                        "Outfit"
+                ]
+        },
+        "fontSize": {
+                "title-lg": [
+                        "20px",
+                        {
+                                "lineHeight": "28px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-sm": [
+                        "11px",
+                        {
+                                "lineHeight": "16px",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-md": [
+                        "14px",
+                        {
+                                "lineHeight": "20px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "display-lg": [
+                        "48px",
+                        {
+                                "lineHeight": "56px",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-lg": [
+                        "32px",
+                        {
+                                "lineHeight": "40px",
+                                "letterSpacing": "-0.01em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "28px",
+                        {
+                                "lineHeight": "36px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "label-md": [
+                        "12px",
+                        {
+                                "lineHeight": "16px",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "32px",
+                                "fontWeight": "600"
+                        }
+                ],
+                "body-lg": [
+                        "16px",
+                        {
+                                "lineHeight": "24px",
+                                "fontWeight": "400"
+                        }
+                ],
+                "mono-sm": ["13px", { lineHeight: "18px", fontWeight: "400" }],
+                "body-sm": ["14px", { lineHeight: "20px", fontWeight: "400" }],
+                "headline-sm": ["20px", { lineHeight: "28px", fontWeight: "600" }]
+        }
+},
+    },
+  }
+</script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1; }
+        
+        /* Custom Scrollbar for High-Density Data Tables */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dee8ff; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #bdc8ce; }
+        
+        .pulse-emerald { box-shadow: 0 0 0 0 rgba(0, 108, 73, 0.4); animation: pulse-emerald-anim 2s infinite; }
+        @keyframes pulse-emerald-anim {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 108, 73, 0.4); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(0, 108, 73, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 108, 73, 0); }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen font-body-md selection:bg-primary/30 selection:text-primary">
+<!-- TopNavBar -->
+<nav class="bg-surface/80 w-full h-16 sticky top-0 z-40 backdrop-blur-xl border-b border-outline-variant/30 shadow-sm flex justify-between items-center px-margin-desktop w-full transition-all duration-300">
+<div class="flex items-center gap-4 w-1/3">
+<span class="font-display-lg text-headline-lg font-bold text-primary">ADMS Core</span>
+</div>
+<div class="flex-1 max-w-md mx-4 relative hidden md:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-lg py-2 pl-10 pr-4 text-on-surface font-body-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-[0_0_15px_rgba(0,100,124,0)] focus:shadow-[0_0_15px_rgba(0,100,124,0.15)] placeholder:text-on-surface-variant/70" placeholder="Search employees, devices..." type="text"/>
+</div>
+<div class="flex items-center justify-end gap-2 w-1/3">
+<button aria-label="notifications" class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button aria-label="settings" class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<button aria-label="help" class="p-2 rounded-full text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer active:scale-95">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="h-6 w-px bg-outline-variant/30 mx-2 hidden sm:block"></div>
+<button class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors font-label-md cursor-pointer active:scale-95">
+                Support
+            </button>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30 ml-2 cursor-pointer hover:ring-2 hover:ring-primary transition-all">
+<img alt="Administrator Profile" class="w-full h-full object-cover" data-alt="Close-up portrait photo of a professional administrator in a high-tech corporate setting. Deep shadowy background with subtle cyan lighting accents. Professional attire, focused expression, sharp focus on the face. High-end futuristic UI corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCDwzmqXWsv14UGJJzPnaQce1BSnQfD0Su7GDd4FJWZmAae-EClQRji681QsEy85GVUq4fvSXzuG6GaRWofI7qndbmv4GXw6fKNiPtdsZEDwR5cwacYNu2fj2bw_RiDqQkDGCdKBRnB2CZetW9dkhggZ22GWVz24NeEYZDfKIIMW7T1djLeTwHcXvLdSCMx7j9hf6pFEelSPZNRPocKRXkDZ-WFyhjYJcIHMAo1RRcSFWVD4spayBAzcHC8rRbdOBOCDIc9rpa69sk"/>
+</div>
+</div>
+</nav>
+<div class="flex h-[calc(100vh-4rem)]">
+<!-- SideNavBar -->
+<aside class="bg-surface/80 fixed left-0 top-16 h-full w-sidebar-width backdrop-blur-xl border-r border-outline-variant/30 shadow-2xl flex flex-col py-6 z-30 transition-transform duration-300 md:translate-x-0 -translate-x-full" id="sidebar">
+<div class="px-6 mb-8 flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg overflow-hidden border border-primary/30 shadow-[0_0_10px_rgba(0,100,124,0.1)]">
+<img alt="System Administrator" class="w-full h-full object-cover" data-alt="A stylized avatar image representing a system administrator. Clean, modern aesthetic, perhaps a minimal geometric representation or a highly polished portrait. Lit with cool, futuristic blue and cyan tones against a dark charcoal background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSqD7MZUrBleHLvbFoLkxcrjZr69uCtrnJkeBgBr8inkAACtCQBVx4PUD37fzFXjrXfQ9rIhmm7Ung241YEu3Ds685lcMjAF9IiTPZ8qZCoJS7d-byGkAgVjfKQWO9ORM9iZ8dmqR_Op1n2faEwZgbWsrcHckUHNlFNWN1ikuuZVuM-BHPdZdcCdBnIrxxir5WBV6XgR3eG_J5gwq-n-b6kLWePc4HZkM-Hb4F70jTWjEZV9XNjpR6F6RMuUyiQCWAYHafZ8uzIis"/>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm font-black text-primary">ADMS Admin</h2>
+<p class="font-label-md text-label-md text-on-surface-variant">Enterprise Tier</p>
+</div>
+</div>
+<nav class="flex-1 px-4 space-y-2">
+<a class="group flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg opacity-70 group-hover:opacity-100 transition-opacity">dashboard</span>
+<span class="font-label-md text-label-md">Overview</span>
+</a>
+<a class="group flex items-center px-4 py-3 rounded-lg bg-primary/10 text-primary border-l-4 border-primary shadow-[inset_0_0_20px_rgba(0,100,124,0.05)] transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg fill-icon">badge</span>
+<span class="font-label-md text-label-md">Employees</span>
+</a>
+<a class="group flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg opacity-70 group-hover:opacity-100 transition-opacity">history</span>
+<span class="font-label-md text-label-md">Attendance Logs</span>
+</a>
+<a class="group flex items-center px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg opacity-70 group-hover:opacity-100 transition-opacity">terminal</span>
+<span class="font-label-md text-label-md">Devices</span>
+</a>
+</nav>
+<div class="px-4 mt-auto space-y-4">
+<button class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors font-label-md text-label-md shadow-[0_0_15px_rgba(0,100,124,0.05)]">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Add New Terminal
+                </button>
+<div class="h-px bg-outline-variant/30 w-full"></div>
+<div class="space-y-1">
+<a class="group flex items-center px-4 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg opacity-70 group-hover:opacity-100 transition-opacity">settings</span>
+<span class="font-label-md text-label-md">Settings</span>
+</a>
+<a class="group flex items-center px-4 py-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error/10 transition-all duration-200" href="#">
+<span class="material-symbols-outlined mr-3 text-lg opacity-70 group-hover:opacity-100 transition-opacity">logout</span>
+<span class="font-label-md text-label-md">Logout</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-0 md:ml-sidebar-width w-full max-w-[1440px] mx-auto p-margin-mobile md:p-margin-desktop overflow-y-auto">
+<!-- Page Header -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Employee Directory</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Manage personnel records and biometric enrollments.</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg border border-outline-variant/30 bg-surface/80 text-on-surface hover:bg-surface-container backdrop-blur-md transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-sm">upload</span>
+                        Mass Push to Device
+                    </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-sm">person_add</span>
+                        Add Employee
+                    </button>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant/30 rounded-xl shadow-lg flex flex-col h-[calc(100vh-14rem)] overflow-hidden">
+<!-- Toolbar -->
+<div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low/50">
+<div class="flex items-center gap-3">
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant/30 rounded-md py-1.5 pl-9 pr-3 text-on-surface font-body-sm focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all placeholder:text-on-surface-variant" placeholder="Search NIP or Name..." type="text"/>
+</div>
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-outline-variant/30 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all font-label-md text-label-md">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                            Filter Dept
+                        </button>
+</div>
+<div class="flex items-center gap-4 text-on-surface-variant font-label-md text-label-md">
+<span>Total: 1,248</span>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-sm">chevron_left</span></button>
+<span class="px-2">1 / 25</span>
+<button class="p-1 rounded hover:bg-surface-container transition-colors"><span class="material-symbols-outlined text-sm">chevron_right</span></button>
+</div>
+</div>
+</div>
+<!-- Table -->
+<div class="flex-1 overflow-auto">
+<table class="w-full text-left border-collapse">
+<thead class="sticky top-0 bg-surface shadow-sm z-10 border-b border-outline-variant/30">
+<tr>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">NIP</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">Employee Name</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">Department</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">Designation</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-center">Biometric Status</th>
+<th class="py-3 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="group hover:bg-surface-container-high/30 transition-colors h-12">
+<td class="py-2 px-4 font-mono-sm text-on-surface-variant">ID-10042</td>
+<td class="py-2 px-4 font-medium text-on-surface">Sarah Jenkins</td>
+<td class="py-2 px-4 text-on-surface-variant">Engineering</td>
+<td class="py-2 px-4 text-on-surface-variant">Senior Developer</td>
+<td class="py-2 px-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Face Enrolled">
+<span class="material-symbols-outlined text-[14px] text-secondary">face</span>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary pulse-emerald"></div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Fingerprint Enrolled">
+<span class="material-symbols-outlined text-[14px] text-secondary">fingerprint</span>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary pulse-emerald"></div>
+</div>
+</div>
+</td>
+<td class="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">edit</span></button>
+<button class="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-sm">delete</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="group hover:bg-surface-container-high/30 transition-colors h-12 bg-surface-container-low/30">
+<td class="py-2 px-4 font-mono-sm text-on-surface-variant">ID-10043</td>
+<td class="py-2 px-4 font-medium text-on-surface">Michael Chen</td>
+<td class="py-2 px-4 text-on-surface-variant">Marketing</td>
+<td class="py-2 px-4 text-on-surface-variant">Brand Manager</td>
+<td class="py-2 px-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Face Not Enrolled">
+<span class="material-symbols-outlined text-[14px] text-error opacity-50">face</span>
+<div class="w-1.5 h-1.5 rounded-full bg-error"></div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Fingerprint Enrolled">
+<span class="material-symbols-outlined text-[14px] text-secondary">fingerprint</span>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary pulse-emerald"></div>
+</div>
+</div>
+</td>
+<td class="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">edit</span></button>
+<button class="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-sm">delete</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="group hover:bg-surface-container-high/30 transition-colors h-12">
+<td class="py-2 px-4 font-mono-sm text-on-surface-variant">ID-10045</td>
+<td class="py-2 px-4 font-medium text-on-surface">Elena Rodriguez</td>
+<td class="py-2 px-4 text-on-surface-variant">Operations</td>
+<td class="py-2 px-4 text-on-surface-variant">Logistics Coordinator</td>
+<td class="py-2 px-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Face Enrolled">
+<span class="material-symbols-outlined text-[14px] text-secondary">face</span>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary pulse-emerald"></div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Fingerprint Not Enrolled">
+<span class="material-symbols-outlined text-[14px] text-error opacity-50">fingerprint</span>
+<div class="w-1.5 h-1.5 rounded-full bg-error"></div>
+</div>
+</div>
+</td>
+<td class="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">edit</span></button>
+<button class="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-sm">delete</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="group hover:bg-surface-container-high/30 transition-colors h-12 bg-surface-container-low/30">
+<td class="py-2 px-4 font-mono-sm text-on-surface-variant">ID-10050</td>
+<td class="py-2 px-4 font-medium text-on-surface">David Kim</td>
+<td class="py-2 px-4 text-on-surface-variant">IT Support</td>
+<td class="py-2 px-4 text-on-surface-variant">Systems Analyst</td>
+<td class="py-2 px-4 text-center">
+<div class="flex items-center justify-center gap-2">
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-primary/50 shadow-[0_0_10px_rgba(0,100,124,0.1)]" title="Face Processing">
+<span class="material-symbols-outlined text-[14px] text-primary">face</span>
+<div class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+</div>
+<div class="flex items-center gap-1 bg-surface-container rounded-full px-2 py-0.5 border border-outline-variant/30" title="Fingerprint Enrolled">
+<span class="material-symbols-outlined text-[14px] text-secondary">fingerprint</span>
+<div class="w-1.5 h-1.5 rounded-full bg-secondary pulse-emerald"></div>
+</div>
+</div>
+</td>
+<td class="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-1.5 text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-sm">edit</span></button>
+<button class="p-1.5 text-on-surface-variant hover:text-error transition-colors"><span class="material-symbols-outlined text-sm">delete</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+</body></html>

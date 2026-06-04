@@ -39,3 +39,11 @@ yarn-error.log*
 
 # Coolify / deployment logs (jangan commit, sering ada hostname internal)
 deployment-*-logs-*.txt
+
+.agent
+
+# Agent files
+.agents/
+.gemini/
+skills-lock.json
+

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Toaster } from "sonner";
+import { SocketProvider } from "@/providers/socket-provider";
 import Providers from "./providers";
-import { Sidebar } from "./sidebar";
 
 export const metadata: Metadata = {
-	title: "ADMS Attendance System",
-	description: "Premium Attendance Management System",
+	title: "ADMS OS | Quantum",
+	description: "Next-Generation Enterprise Workflows",
 };
 
 export default function RootLayout({
@@ -14,13 +15,13 @@ export default function RootLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<html lang="en" className="dark">
-			<body className="font-sans bg-background text-foreground antialiased">
+		<html lang="en" className="light">
+			<body>
 				<Providers>
-					<div className="flex min-h-screen">
-						<Sidebar />
-						<main className="flex-1 md:ml-64 p-8">{children}</main>
-					</div>
+					<SocketProvider>
+						{children}
+					</SocketProvider>
+					<Toaster position="top-right" richColors />
 				</Providers>
 			</body>
 		</html>

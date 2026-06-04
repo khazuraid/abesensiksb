@@ -1,6 +1,15 @@
 import * as schema from "@adms/database";
-import type { CreateDevice, SendCommand, UpdateDevice } from "@adms/shared-types";
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import type {
+	CreateDevice,
+	SendCommand,
+	UpdateDevice,
+} from "@adms/shared-types";
+import {
+	BadRequestException,
+	Inject,
+	Injectable,
+	NotFoundException,
+} from "@nestjs/common";
 import { and, desc, eq, or } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
@@ -71,7 +80,7 @@ export class DevicesService {
 	}
 
 	async sendCommand(dto: SendCommand) {
-		const device = await this.findOne(dto.deviceId);
+		await this.findOne(dto.deviceId);
 		const commands: string[] = [];
 		const results: (typeof schema.deviceCommands.$inferSelect)[] = [];
 
@@ -171,23 +180,30 @@ export class DevicesService {
 
 			case "user.clone": {
 				if (!dto.user_id) throw new BadRequestException("user_id is required");
-				if (!dto.device_target?.length) throw new BadRequestException("device_target is required");
+				if (!dto.device_target?.length)
+					throw new BadRequestException("device_target is required");
 
 				// Get user info from source employee
-				const employee = await this.db.select().from(schema.employees).where(
-					or(
-						eq(schema.employees.biometricId, dto.user_id),
-						eq(schema.employees.employeeCode, dto.user_id),
-					),
-				);
+				const employee = await this.db
+					.select()
+					.from(schema.employees)
+					.where(
+						or(
+							eq(schema.employees.biometricId, dto.user_id),
+							eq(schema.employees.employeeCode, dto.user_id),
+						),
+					);
 
 				// Get fingerprint templates from source device
-				const templates = await this.db.select().from(schema.fingerprintTemplates).where(
-					and(
-						eq(schema.fingerprintTemplates.deviceId, dto.deviceId),
-						eq(schema.fingerprintTemplates.userId, dto.user_id),
-					),
-				);
+				const templates = await this.db
+					.select()
+					.from(schema.fingerprintTemplates)
+					.where(
+						and(
+							eq(schema.fingerprintTemplates.deviceId, dto.deviceId),
+							eq(schema.fingerprintTemplates.userId, dto.user_id),
+						),
+					);
 
 				const userName = employee[0]?.name || dto.user_id;
 				const userPayload = `PIN=${dto.user_id}\tName=${userName}\tPri=0\tPasswd=\tCard=\tGrp=`;
@@ -197,19 +213,27 @@ export class DevicesService {
 					if (targetId === dto.deviceId) continue;
 
 					// Push user info
-					const userCmd = await this.db.insert(schema.deviceCommands)
-						.values({ deviceId: targetId, command: `DATA UPDATE USERINFO ${userPayload}` })
+					const userCmd = await this.db
+						.insert(schema.deviceCommands)
+						.values({
+							deviceId: targetId,
+							command: `DATA UPDATE USERINFO ${userPayload}`,
+						})
 						.returning();
-					results.push(userCmd[0]!);
+					results.push(userCmd[0]);
 
 					// Push each fingerprint template
 					for (const t of templates) {
 						if (!t.template) continue;
 						const fpPayload = `PIN=${t.userId}\tFID=${t.fid}\tSize=${t.size || 0}\tValid=${t.valid ? 1 : 0}\tTMP=${t.template}`;
-						const fpCmd = await this.db.insert(schema.deviceCommands)
-							.values({ deviceId: targetId, command: `DATA UPDATE FINGERTMP ${fpPayload}` })
+						const fpCmd = await this.db
+							.insert(schema.deviceCommands)
+							.values({
+								deviceId: targetId,
+								command: `DATA UPDATE FINGERTMP ${fpPayload}`,
+							})
 							.returning();
-						results.push(fpCmd[0]!);
+						results.push(fpCmd[0]);
 					}
 				}
 
@@ -245,7 +269,9 @@ export class DevicesService {
 			}
 
 			default:
-				throw new BadRequestException(`Unsupported command type: ${dto.type}`);
+				throw new BadRequestException(
+					`Unsupported command type: ${(dto as { type: string }).type}`,
+				);
 		}
 
 		for (const cmd of commands) {
@@ -253,7 +279,7 @@ export class DevicesService {
 				.insert(schema.deviceCommands)
 				.values({ deviceId: dto.deviceId, command: cmd })
 				.returning();
-			results.push(result[0]!);
+			results.push(result[0]);
 		}
 
 		return results;

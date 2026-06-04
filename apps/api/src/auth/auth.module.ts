@@ -13,7 +13,7 @@ import { JwtStrategy } from "./jwt.strategy";
 		PassportModule,
 		JwtModule.registerAsync({
 			imports: [ConfigModule],
-			useFactory: async (configService: ConfigService) => {
+			useFactory: (configService: ConfigService) => {
 				const secret = configService.get<string>("JWT_SECRET");
 				if (!secret) {
 					throw new Error("JWT_SECRET environment variable is required");

@@ -11,9 +11,9 @@ import {
 } from "@nestjs/common";
 import type { Request } from "express";
 import { ZodValidationPipe } from "../common/pipes/zod-validation.pipe";
+import { UsersService } from "../users/users.service";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
-import { UsersService } from "../users/users.service";
 
 @Controller("auth")
 export class AuthController {
@@ -34,6 +34,7 @@ export class AuthController {
 		const payload = req.user as { userId: number };
 		const user = await this.usersService.findOne(payload.userId);
 		if (!user) return req.user;
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars
 		const { password: _, ...safe } = user as Record<string, unknown>;
 		return safe;
 	}
@@ -55,6 +56,10 @@ export class AuthController {
 		@Body() body: { currentPassword: string; newPassword: string },
 	) {
 		const payload = req.user as { userId: number };
-		return this.authService.changePassword(payload.userId, body.currentPassword, body.newPassword);
+		return this.authService.changePassword(
+			payload.userId,
+			body.currentPassword,
+			body.newPassword,
+		);
 	}
 }

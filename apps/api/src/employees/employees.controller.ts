@@ -49,11 +49,29 @@ export class EmployeesController {
 		const result = await this.employeesService.create(createEmployeeDto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "CREATE",
 			target: "employees",
 			details: { new: result },
+		});
+
+		return result;
+	}
+
+	@Post("bulk")
+	async bulkCreate(
+		@Body() createEmployeesDto: CreateEmployee[],
+		@Req() req: Request,
+	) {
+		const result = await this.employeesService.bulkCreate(createEmployeesDto);
+		const user = req.user as { id: number };
+
+		void this.auditLogsService.record({
+			userId: user.id,
+			action: "CREATE",
+			target: "employees",
+			details: { bulk: true, count: createEmployeesDto.length },
 		});
 
 		return result;
@@ -69,7 +87,7 @@ export class EmployeesController {
 		const result = await this.employeesService.update(id, updateEmployeeDto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "UPDATE",
 			target: "employees",
@@ -84,7 +102,7 @@ export class EmployeesController {
 		const result = await this.employeesService.remove(id);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "DELETE",
 			target: "employees",
@@ -102,13 +120,20 @@ export class EmployeesController {
 		@Body() body: { employeeIds: number[]; shiftId: number },
 		@Req() req: Request,
 	) {
-		const result = await this.employeesService.bulkAssignShift(body.employeeIds, body.shiftId);
+		const result = await this.employeesService.bulkAssignShift(
+			body.employeeIds,
+			body.shiftId,
+		);
 		const user = req.user as { id: number };
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "UPDATE",
 			target: "employees",
-			details: { bulk: true, employeeIds: body.employeeIds, shiftId: body.shiftId },
+			details: {
+				bulk: true,
+				employeeIds: body.employeeIds,
+				shiftId: body.shiftId,
+			},
 		});
 		return result;
 	}
@@ -122,16 +147,21 @@ export class EmployeesController {
 		@Body() body: { deviceId: number },
 		@Req() req: Request,
 	) {
-		await this.devicesService.sendCommand({ deviceId: body.deviceId, type: "user.sync" });
+		await this.devicesService.sendCommand({
+			deviceId: body.deviceId,
+			type: "user.sync",
+		});
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "SYNC",
 			target: "employees",
 			details: { deviceId: body.deviceId },
 		});
 
-		return { message: "Perintah sync user dikirim ke mesin. Data akan masuk otomatis." };
+		return {
+			message: "Perintah sync user dikirim ke mesin. Data akan masuk otomatis.",
+		};
 	}
 }

@@ -34,6 +34,15 @@ export class EmployeesService {
 		return result[0];
 	}
 
+	async bulkCreate(data: CreateEmployee[]) {
+		if (data.length === 0) return [];
+		const result = await this.db
+			.insert(schema.employees)
+			.values(data)
+			.returning();
+		return result;
+	}
+
 	async update(id: number, data: UpdateEmployee) {
 		const result = await this.db
 			.update(schema.employees)

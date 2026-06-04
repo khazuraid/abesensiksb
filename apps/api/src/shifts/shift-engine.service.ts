@@ -1,5 +1,5 @@
 import * as schema from "@adms/database";
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
@@ -29,8 +29,6 @@ type AttendanceStatus = "PRESENT" | "LATE" | "ABSENT" | "EARLY_OUT";
  */
 @Injectable()
 export class ShiftEngineService {
-	private readonly logger = new Logger(ShiftEngineService.name);
-
 	constructor(@Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>) {}
 
 	async evaluateAttendance(
@@ -49,24 +47,38 @@ export class ShiftEngineService {
 		let shift: typeof schema.shifts.$inferSelect | undefined;
 
 		if (input.shiftId) {
-			const result = await this.db.select().from(schema.shifts).where(eq(schema.shifts.id, input.shiftId));
+			const result = await this.db
+				.select()
+				.from(schema.shifts)
+				.where(eq(schema.shifts.id, input.shiftId));
 			shift = result[0];
 		}
 
-		if (!shift || !shift.isActive) {
+		if (!shift?.isActive) {
 			// Auto-match berdasarkan workDays
-			const allShifts = await this.db.select().from(schema.shifts).where(eq(schema.shifts.isActive, true));
-			shift = allShifts.find((s) => (s.workDays as number[])?.includes(dayOfWeek));
+			const allShifts = await this.db
+				.select()
+				.from(schema.shifts)
+				.where(eq(schema.shifts.isActive, true));
+			shift = allShifts.find((s) => s.workDays?.includes(dayOfWeek));
 		}
 
 		if (!shift) return "PRESENT";
 
 		// Cek apakah hari ini termasuk hari kerja shift
-		const workDays = (shift.workDays as number[]) || [1, 2, 3, 4, 5];
+		const workDays = shift.workDays || [1, 2, 3, 4, 5];
 		if (!workDays.includes(dayOfWeek)) return "PRESENT";
 
-		const { startTime, endTime, toleranceMinutes, earlyOutTolerance, maxLateTime, minOutTime } = shift;
-		const scanMinutes = input.timestamp.getHours() * 60 + input.timestamp.getMinutes();
+		const {
+			startTime,
+			endTime,
+			toleranceMinutes,
+			earlyOutTolerance,
+			maxLateTime,
+			minOutTime,
+		} = shift;
+		const scanMinutes =
+			input.timestamp.getHours() * 60 + input.timestamp.getMinutes();
 
 		// === SCAN MASUK ===
 		if (input.type === "IN") {

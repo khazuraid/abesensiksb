@@ -90,12 +90,21 @@ export const shifts = pgTable("shifts", {
 	// Batas maksimal jam masuk — lewat dari ini dianggap ABSENT (format HH:mm)
 	maxLateTime: time("max_late_time"),
 
+	// Batas awal jam masuk (paling cepat boleh absen)
+	minInTime: time("min_in_time"),
+
 	// Batas minimal jam pulang — pulang sebelum ini dianggap ABSENT (format HH:mm)
 	minOutTime: time("min_out_time"),
 
+	// Batas maksimal jam pulang — lebih dari ini tidak dihitung (atau lembur)
+	maxOutTime: time("max_out_time"),
+
 	// Hari kerja aktif untuk shift ini (array: 0=Minggu, 1=Senin, ..., 6=Sabtu)
 	// Contoh: [1,2,3,4,5] = Senin-Jumat
-	workDays: jsonb("work_days").$type<number[]>().default([1, 2, 3, 4, 5]).notNull(),
+	workDays: jsonb("work_days")
+		.$type<number[]>()
+		.default([1, 2, 3, 4, 5])
+		.notNull(),
 
 	// Tanggal berlaku shift (opsional, jika null = berlaku selamanya)
 	effectiveFrom: date("effective_from"),
@@ -115,6 +124,9 @@ export const devices = pgTable("devices", {
 	name: varchar("name", { length: 255 }).notNull(),
 
 	location: varchar("location", { length: 255 }),
+
+	latitude: varchar("latitude", { length: 50 }),
+	longitude: varchar("longitude", { length: 50 }),
 
 	ipAddress: varchar("ip_address", { length: 50 }),
 
@@ -229,7 +241,9 @@ export const leaves = pgTable("leaves", {
 	endDate: date("end_date").notNull(),
 	reason: text("reason"),
 	status: leaveStatusEnum("status").default("PENDING").notNull(),
-	approvedBy: integer("approved_by").references(() => users.id, { onDelete: "set null" }),
+	approvedBy: integer("approved_by").references(() => users.id, {
+		onDelete: "set null",
+	}),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -261,7 +275,9 @@ export const settings = pgTable("settings", {
  */
 export const fingerprintTemplates = pgTable("fingerprint_templates", {
 	id: serial("id").primaryKey(),
-	deviceId: integer("device_id").notNull().references(() => devices.id, { onDelete: "cascade" }),
+	deviceId: integer("device_id")
+		.notNull()
+		.references(() => devices.id, { onDelete: "cascade" }),
 	userId: varchar("user_id", { length: 50 }).notNull(),
 	fid: varchar("fid", { length: 10 }).notNull(),
 	size: integer("size"),

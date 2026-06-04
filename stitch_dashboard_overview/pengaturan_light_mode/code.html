@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Pengaturan - Telegram Bot</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#006780",
+                    "secondary-fixed-dim": "#4edea3",
+                    "surface-dim": "#cfdaf2",
+                    "on-secondary-container": "#00714d",
+                    "error-container": "#ffdad6",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#6ffbbe",
+                    "on-surface-variant": "#3e484d",
+                    "background": "#f9f9ff",
+                    "outline": "#6e797e",
+                    "on-primary-fixed": "#001f28",
+                    "error": "#ba1a1a",
+                    "surface-container-low": "#f0f3ff",
+                    "surface-bright": "#f9f9ff",
+                    "primary": "#00647c",
+                    "tertiary-fixed-dim": "#ffb873",
+                    "on-tertiary-fixed-variant": "#6a3b00",
+                    "on-secondary-fixed": "#002113",
+                    "on-error-container": "#93000a",
+                    "inverse-surface": "#263143",
+                    "on-tertiary-container": "#fffbff",
+                    "secondary": "#006c49",
+                    "on-tertiary-fixed": "#2d1600",
+                    "on-primary": "#ffffff",
+                    "on-background": "#111c2d",
+                    "tertiary": "#894e00",
+                    "on-secondary": "#ffffff",
+                    "primary-container": "#007f9d",
+                    "on-secondary-fixed-variant": "#005236",
+                    "tertiary-container": "#a86516",
+                    "outline-variant": "#bdc8ce",
+                    "inverse-on-surface": "#ecf1ff",
+                    "secondary-container": "#6cf8bb",
+                    "primary-fixed-dim": "#6cd3f7",
+                    "on-error": "#ffffff",
+                    "on-primary-fixed-variant": "#004e61",
+                    "surface": "#f9f9ff",
+                    "on-surface": "#111c2d",
+                    "surface-container-highest": "#d8e3fb",
+                    "primary-fixed": "#b7eaff",
+                    "on-primary-container": "#fafdff",
+                    "surface-container-high": "#dee8ff",
+                    "tertiary-fixed": "#ffdcbf",
+                    "surface-container": "#e7eeff",
+                    "inverse-primary": "#6cd3f7",
+                    "surface-variant": "#d8e3fb",
+                    "on-tertiary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "max-width": "1440px",
+                    "margin-desktop": "40px",
+                    "gutter": "24px",
+                    "unit": "8px",
+                    "margin-mobile": "16px",
+                    "margin-tablet": "24px",
+                    "sidebar-width": "260px"
+            },
+            "fontFamily": {
+                    "label-md": ["Outfit"],
+                    "display-lg": ["Outfit"],
+                    "headline-lg-mobile": ["Outfit"],
+                    "body-lg": ["Outfit"],
+                    "headline-md": ["Outfit"],
+                    "label-sm": ["Outfit"],
+                    "title-lg": ["Outfit"],
+                    "headline-lg": ["Outfit"],
+                    "body-md": ["Outfit"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                    "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                    "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                    "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                    "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                    "label-sm": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+                    "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                    "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                    "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body { font-family: 'Outfit', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width border-r border-outline-variant bg-surface-container-lowest shadow-sm z-50 flex flex-col py-6 hidden md:flex">
+<!-- Brand -->
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary font-headline-md shadow-sm">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">admin_panel_settings</span>
+</div>
+<div>
+<h1 class="font-title-lg text-title-lg font-bold text-primary">ADMS PRO</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Enterprise Attendance</p>
+</div>
+</div>
+<!-- Navigation Tabs -->
+<div class="flex-1 overflow-y-auto px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-md text-body-md font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-md text-body-md font-medium">Pegawai</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-body-md text-body-md font-medium">Log Absensi</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">devices</span>
+<span class="font-body-md text-body-md font-medium">Perangkat</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">schedule</span>
+<span class="font-body-md text-body-md font-medium">Shift</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">event_busy</span>
+<span class="font-body-md text-body-md font-medium">Cuti</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-body-md text-body-md font-medium">Hari Libur</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="font-body-md text-body-md font-medium">Laporan</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-body-md text-body-md font-medium">Rekap Harian</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-md text-body-md">Pengaturan</span>
+</a>
+</div>
+<!-- Footer Tabs -->
+<div class="px-4 mt-auto border-t border-outline-variant pt-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-body-md text-body-md font-medium">Profil</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-error hover:bg-error-container/50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-body-md text-body-md font-medium">Keluar</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[260px] flex flex-col min-h-screen">
+<!-- TopNavBar -->
+<header class="h-16 border-b border-outline-variant bg-surface-container-lowest/80 backdrop-blur-md sticky top-0 z-40 flex items-center justify-between px-6 md:px-margin-desktop">
+<div class="flex items-center gap-4">
+<button class="md:hidden text-on-surface-variant p-2 rounded-lg hover:bg-surface-variant">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="hidden sm:flex items-center bg-surface-container-low rounded-full px-4 py-2 border border-outline-variant focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all w-64">
+<span class="material-symbols-outlined text-outline text-[20px] mr-2">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-body-md w-full placeholder:text-outline p-0" placeholder="Cari..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary hover:bg-surface-variant/50 rounded-full transition-colors">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+</div>
+<div class="h-8 w-px bg-outline-variant"></div>
+<div class="flex items-center gap-3 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-bold font-label-md">
+                        AD
+                    </div>
+</div>
+</div>
+</header>
+<!-- Page Content -->
+<div class="flex-1 p-6 md:p-margin-desktop max-w-max-width mx-auto w-full">
+<!-- Page Header -->
+<div class="mb-8">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-2">Pengaturan</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Konfigurasi Telegram Bot dan notifikasi sistem.</p>
+</div>
+<!-- Settings Card -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant shadow-sm overflow-hidden">
+<!-- Card Header -->
+<div class="p-6 border-b border-outline-variant flex items-center gap-4 bg-surface-container-low/30">
+<div class="w-12 h-12 rounded-lg bg-secondary-container flex items-center justify-center text-on-secondary-container">
+<span class="material-symbols-outlined text-[28px]">smart_toy</span>
+</div>
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface font-semibold">Telegram Bot</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Konfigurasi bot untuk notifikasi otomatis</p>
+</div>
+</div>
+<!-- Form Content -->
+<div class="p-6 space-y-8">
+<!-- Bot Token -->
+<div class="space-y-2">
+<label class="block font-label-md text-label-md text-on-surface uppercase tracking-wider">Bot Token</label>
+<input class="w-full bg-surface text-on-surface border border-outline-variant rounded-lg px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow font-mono tracking-widest text-lg placeholder:text-outline" placeholder="Masukkan Bot Token" type="password" value="1234567890:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"/>
+<p class="font-label-sm text-label-sm text-outline mt-1">Dapatkan dari @BotFather di Telegram</p>
+</div>
+<!-- Chat ID -->
+<div class="space-y-2">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">chat</span>
+<label class="block font-label-md text-label-md text-on-surface uppercase tracking-wider">Chat ID</label>
+</div>
+<input class="w-full bg-surface text-on-surface border border-outline-variant rounded-lg px-4 py-3 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow placeholder:text-outline" placeholder="Masukkan Chat ID" type="text" value="8306895212"/>
+<p class="font-label-sm text-label-sm text-outline mt-1">ID grup atau channel untuk menerima notifikasi</p>
+</div>
+<!-- Divider -->
+<hr class="border-outline-variant"/>
+<!-- Notifications Toggles -->
+<div class="space-y-4">
+<label class="block font-label-md text-label-md text-on-surface uppercase tracking-wider mb-4">Notifikasi</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center w-5 h-5">
+<input checked="" class="peer appearance-none w-5 h-5 border-2 border-outline rounded bg-surface-container-lowest checked:bg-secondary checked:border-secondary transition-all cursor-pointer" type="checkbox"/>
+<span class="material-symbols-outlined text-on-secondary absolute text-[16px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Kirim notifikasi saat pegawai absen</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center w-5 h-5">
+<input checked="" class="peer appearance-none w-5 h-5 border-2 border-outline rounded bg-surface-container-lowest checked:bg-secondary checked:border-secondary transition-all cursor-pointer" type="checkbox"/>
+<span class="material-symbols-outlined text-on-secondary absolute text-[16px] pointer-events-none opacity-0 peer-checked:opacity-100 transition-opacity" style="font-variation-settings: 'FILL' 1;">check</span>
+</div>
+<span class="font-body-md text-body-md text-on-surface group-hover:text-primary transition-colors">Kirim alert saat mesin offline</span>
+</label>
+</div>
+</div>
+<!-- Card Footer / Actions -->
+<div class="p-6 border-t border-outline-variant bg-surface-container-low/30 flex justify-end">
+<button class="bg-secondary text-on-secondary px-6 py-2.5 rounded-lg font-label-md text-label-md flex items-center gap-2 hover:bg-secondary/90 transition-colors shadow-sm hover:shadow active:scale-95">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                        Simpan Pengaturan
+                    </button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

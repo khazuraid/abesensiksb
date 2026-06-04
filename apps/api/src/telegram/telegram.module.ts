@@ -1,6 +1,7 @@
 import { Global, Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { TelegramService } from "./telegram.service";
+import { TelegramCronService } from "./telegram-cron.service";
 
 @Global()
 @Module({
@@ -14,7 +15,8 @@ import { TelegramService } from "./telegram.service";
 			inject: [ConfigService],
 		},
 		TelegramService,
+		TelegramCronService,
 	],
-	exports: [TelegramService],
+	exports: [TelegramService, TelegramCronService],
 })
 export class TelegramModule {}

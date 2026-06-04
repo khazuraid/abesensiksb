@@ -38,7 +38,6 @@ export class ReportsService {
 			.where(eq(schema.employees.isActive, true));
 
 		const shifts = await this.db.select().from(schema.shifts);
-		const shiftMap = new Map(shifts.map((s) => [s.id, s]));
 
 		const logs = await this.db
 			.select()
@@ -48,38 +47,54 @@ export class ReportsService {
 		const holidays = await this.db
 			.select()
 			.from(schema.holidays)
-			.where(between(schema.holidays.date, `${year}-${String(month).padStart(2, "0")}-01`, `${year}-${String(month).padStart(2, "0")}-${daysInMonth}`));
+			.where(
+				between(
+					schema.holidays.date,
+					`${year}-${String(month).padStart(2, "0")}-01`,
+					`${year}-${String(month).padStart(2, "0")}-${daysInMonth}`,
+				),
+			);
 		const holidayDates = new Set(holidays.map((h) => h.date));
 
 		const leaves = await this.db
-			.select({ employeeId: schema.leaves.employeeId, startDate: schema.leaves.startDate, endDate: schema.leaves.endDate })
+			.select({
+				employeeId: schema.leaves.employeeId,
+				startDate: schema.leaves.startDate,
+				endDate: schema.leaves.endDate,
+			})
 			.from(schema.leaves)
 			.where(eq(schema.leaves.status, "APPROVED"));
-
-		const defaultShift = shifts.find((s) => s.isActive) || null;
 
 		return allEmployees.map((emp) => {
 			const empLogs = logs.filter((l) => l.employeeId === emp.id);
 			const empLeaves = leaves.filter((l) => l.employeeId === emp.id);
 
-			const isOnLeave = (dateStr: string) => empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate);
+			const isOnLeave = (dateStr: string) =>
+				empLeaves.some((l) => dateStr >= l.startDate && dateStr <= l.endDate);
 
 			// Cari shift berdasarkan hari dan tanggal berlaku
 			const getShiftForDay = (dow: number, dateStr: string) => {
 				// Prioritas: shift dengan tanggal berlaku yang cocok
-				const dated = shifts.find((s) =>
-					s.isActive &&
-					(s.workDays as number[])?.includes(dow) &&
-					s.effectiveFrom && s.effectiveTo &&
-					dateStr >= s.effectiveFrom && dateStr <= s.effectiveTo
+				const dated = shifts.find(
+					(s) =>
+						s.isActive &&
+						s.workDays?.includes(dow) &&
+						s.effectiveFrom &&
+						s.effectiveTo &&
+						dateStr >= s.effectiveFrom &&
+						dateStr <= s.effectiveTo,
 				);
 				if (dated) return dated;
 				// Fallback: shift tanpa tanggal yang cocok hari-nya
-				return shifts.find((s) =>
-					s.isActive &&
-					(s.workDays as number[])?.includes(dow) &&
-					!s.effectiveFrom && !s.effectiveTo
-				) || null;
+				return (
+					shifts.find(
+						(s) =>
+							s.isActive &&
+							s.workDays?.includes(dow) &&
+							!s.effectiveFrom &&
+							!s.effectiveTo,
+					) || null
+				);
 			};
 
 			const days: {
@@ -110,11 +125,39 @@ export class ReportsService {
 				const isWorkDay = shift !== null && !isHoliday;
 
 				const dayLogs = empLogs.filter((l) => {
-					return l.timestamp.getFullYear() === year && l.timestamp.getMonth() === month - 1 && l.timestamp.getDate() === d;
+					return (
+						l.timestamp.getFullYear() === year &&
+						l.timestamp.getMonth() === month - 1 &&
+						l.timestamp.getDate() === d
+					);
 				});
 
-				const inLog = dayLogs.find((l) => l.type === "IN");
-				const outLog = dayLogs.filter((l) => l.type === "OUT").pop();
+				dayLogs.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+				let inLog: (typeof dayLogs)[0] | undefined;
+				let outLog: (typeof dayLogs)[0] | undefined;
+
+				if (dayLogs.length === 1) {
+					const log = dayLogs[0];
+					if (shift) {
+						const startMinutes = parseTime(shift.startTime);
+						const endMinutes = parseTime(shift.endTime);
+						const scanMinutes = getWIBMinutes(log.timestamp);
+						if (
+							Math.abs(scanMinutes - startMinutes) <=
+							Math.abs(scanMinutes - endMinutes)
+						) {
+							inLog = log;
+						} else {
+							outLog = log;
+						}
+					} else {
+						inLog = log;
+					}
+				} else if (dayLogs.length > 1) {
+					inLog = dayLogs[0];
+					outLog = dayLogs[dayLogs.length - 1];
+				}
 
 				let lateMinutes = 0;
 				let earlyOutMinutes = 0;
@@ -122,26 +165,34 @@ export class ReportsService {
 
 				if (!isWorkDay) {
 					status = "-";
-				} else if (inLog) {
-					// Hitung ulang status berdasarkan shift saat ini
-					if (shift) {
-						const startMinutes = parseTime(shift.startTime);
-						const scanInMinutes = getWIBMinutes(inLog.timestamp);
-						const cutoff = startMinutes + (shift.toleranceMinutes ?? 0);
+				} else if (inLog || outLog) {
+					// Default to PRESENT, we will override if LATE/EARLY_OUT/ABSENT
+					status = "PRESENT";
 
-						if (shift.maxLateTime) {
-							const maxMinutes = parseTime(shift.maxLateTime);
-							if (scanInMinutes > maxMinutes) {
-								status = "ABSENT";
-							} else if (scanInMinutes > cutoff) {
-								status = "LATE";
-								lateMinutes = scanInMinutes - cutoff;
+					if (shift) {
+						// Cek absen masuk
+						if (inLog) {
+							const startMinutes = parseTime(shift.startTime);
+							const scanInMinutes = getWIBMinutes(inLog.timestamp);
+							const cutoff = startMinutes + (shift.toleranceMinutes ?? 0);
+
+							if (shift.maxLateTime) {
+								const maxMinutes = parseTime(shift.maxLateTime);
+								if (scanInMinutes > maxMinutes) {
+									status = "ABSENT";
+								} else if (scanInMinutes > cutoff) {
+									status = "LATE";
+									lateMinutes = scanInMinutes - cutoff;
+								}
 							} else {
-								status = "PRESENT";
+								if (scanInMinutes > cutoff) {
+									status = "LATE";
+									lateMinutes = scanInMinutes - cutoff;
+								}
 							}
 						} else {
-							status = scanInMinutes > cutoff ? "LATE" : "PRESENT";
-							if (status === "LATE") lateMinutes = scanInMinutes - cutoff;
+							// Tidak absen masuk
+							status = "ABSENT";
 						}
 
 						// Cek pulang cepat
@@ -153,14 +204,24 @@ export class ReportsService {
 								earlyOutMinutes = endMinutes - scanOutMinutes;
 								if (status !== "ABSENT") status = "EARLY_OUT";
 							}
+						} else {
+							// Jika ini hari ini dan shift belum berakhir, jangan mark early/absent untuk out log
+							const nowMinutes =
+								new Date().getHours() * 60 + new Date().getMinutes();
+							const endMinutes = parseTime(shift.endTime);
+							const isToday =
+								dateStr === new Date().toISOString().split("T")[0];
+							// Kalau sudah lewat shift dan belum absen pulang, kita biarkan status sesuai inLog
+							// Atau bisa juga mark early out max. Tergantung kebijakan.
 						}
-					} else {
-						status = "PRESENT";
 					}
 
 					if (status === "PRESENT" || status === "LATE") totalPresent++;
 					if (status === "LATE") totalLate++;
-					if (status === "EARLY_OUT") { totalEarlyOut++; totalPresent++; }
+					if (status === "EARLY_OUT") {
+						totalEarlyOut++;
+						totalPresent++;
+					}
 				} else {
 					// Hari kerja tapi tidak ada log — cek cuti/izin atau absen
 					if (date <= new Date()) {
@@ -191,7 +252,11 @@ export class ReportsService {
 				id: emp.id,
 				name: emp.name,
 				employeeCode: emp.employeeCode,
-				shiftName: shifts.filter((s) => s.isActive).map((s) => s.name).join(", ") || "-",
+				shiftName:
+					shifts
+						.filter((s) => s.isActive)
+						.map((s) => s.name)
+						.join(", ") || "-",
 				days,
 				totalPresent,
 				totalLate,
@@ -229,6 +294,7 @@ export class ReportsService {
 			{ header: "HADIR", key: "totalPresent", width: 10 },
 			{ header: "TERLAMBAT", key: "totalLate", width: 15 },
 			{ header: "ALPA", key: "totalAbsent", width: 10 },
+			{ header: "CUTI/IZIN", key: "totalLeave", width: 15 },
 		];
 
 		worksheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -258,7 +324,20 @@ export class ReportsService {
 	async generateDailyRecapExcel(month: number, year: number) {
 		const data = await this.getDailyRecap(month, year);
 		const workbook = new Workbook();
-		const months = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+		const months = [
+			"Januari",
+			"Februari",
+			"Maret",
+			"April",
+			"Mei",
+			"Juni",
+			"Juli",
+			"Agustus",
+			"September",
+			"Oktober",
+			"November",
+			"Desember",
+		];
 
 		for (const emp of data) {
 			const sheetName = emp.name.substring(0, 31).replace(/[*?:/\\[\]]/g, "");
@@ -275,7 +354,9 @@ export class ReportsService {
 			];
 
 			// Title
-			ws.insertRow(1, [`${emp.name} - ${months[month - 1]} ${year} (${emp.shiftName})`]);
+			ws.insertRow(1, [
+				`${emp.name} - ${months[month - 1]} ${year} (${emp.shiftName})`,
+			]);
 			ws.mergeCells("A1:G1");
 			ws.getRow(1).font = { bold: true, size: 14 };
 			ws.insertRow(2, []);
@@ -283,7 +364,11 @@ export class ReportsService {
 			// Header row is now row 3
 			const headerRow = ws.getRow(3);
 			headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
-			headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF4F46E5" } };
+			headerRow.fill = {
+				type: "pattern",
+				pattern: "solid",
+				fgColor: { argb: "FF4F46E5" },
+			};
 
 			for (const day of emp.days) {
 				const d = new Date(day.date + "T00:00:00");
@@ -295,10 +380,21 @@ export class ReportsService {
 				else if (!day.isWorkDay) statusLabel = "OFF";
 				else {
 					switch (day.status) {
-						case "PRESENT": statusLabel = "HADIR"; break;
-						case "LATE": statusLabel = "TELAT"; break;
-						case "EARLY_OUT": statusLabel = "PULANG CEPAT"; break;
-						case "ABSENT": statusLabel = "ALPA"; break;
+						case "PRESENT":
+							statusLabel = "HADIR";
+							break;
+						case "LATE":
+							statusLabel = "TELAT";
+							break;
+						case "EARLY_OUT":
+							statusLabel = "PULANG CEPAT";
+							break;
+						case "ABSENT":
+							statusLabel = "ALPA";
+							break;
+						case "LEAVE":
+							statusLabel = "CUTI/IZIN";
+							break;
 					}
 				}
 
@@ -323,8 +419,16 @@ export class ReportsService {
 			// Summary row
 			ws.addRow([]);
 			ws.addRow(["TOTAL", "", "", "", "", "", ""]);
-			ws.addRow(["Hadir", emp.totalPresent, "", "Telat", emp.totalLate, "Pulang Cepat", emp.totalEarlyOut]);
-			ws.addRow(["Alpa", emp.totalAbsent]);
+			ws.addRow([
+				"Hadir",
+				emp.totalPresent,
+				"",
+				"Telat",
+				emp.totalLate,
+				"Pulang Cepat",
+				emp.totalEarlyOut,
+			]);
+			ws.addRow(["Alpa", emp.totalAbsent, "", "Cuti/Izin", emp.totalLeave]);
 		}
 
 		return workbook;

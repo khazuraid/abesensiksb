@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manajemen Shift - ADMS Pro</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-tint": "#006780",
+                        "secondary-fixed-dim": "#4edea3",
+                        "surface-dim": "#cfdaf2",
+                        "on-secondary-container": "#00714d",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#3e484d",
+                        "background": "#f9f9ff",
+                        "outline": "#6e797e",
+                        "on-primary-fixed": "#001f28",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-bright": "#f9f9ff",
+                        "primary": "#00647c",
+                        "tertiary-fixed-dim": "#ffb873",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-secondary-fixed": "#002113",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#263143",
+                        "on-tertiary-container": "#fffbff",
+                        "secondary": "#006c49",
+                        "on-tertiary-fixed": "#2d1600",
+                        "on-primary": "#ffffff",
+                        "on-background": "#111c2d",
+                        "tertiary": "#894e00",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#007f9d",
+                        "on-secondary-fixed-variant": "#005236",
+                        "tertiary-container": "#a86516",
+                        "outline-variant": "#bdc8ce",
+                        "inverse-on-surface": "#ecf1ff",
+                        "secondary-container": "#6cf8bb",
+                        "primary-fixed-dim": "#6cd3f7",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#004e61",
+                        "surface": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "surface-container-highest": "#d8e3fb",
+                        "primary-fixed": "#b7eaff",
+                        "on-primary-container": "#fafdff",
+                        "surface-container-high": "#dee8ff",
+                        "tertiary-fixed": "#ffdcbf",
+                        "surface-container": "#e7eeff",
+                        "inverse-primary": "#6cd3f7",
+                        "surface-variant": "#d8e3fb",
+                        "on-tertiary": "#ffffff"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "max-width": "1440px",
+                        "margin-desktop": "40px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "margin-mobile": "16px",
+                        "margin-tablet": "24px",
+                        "sidebar-width": "260px",
+                        "stack-lg": "24px"
+                    },
+                    fontFamily: {
+                        "label-md": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "title-lg": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "body-md": ["Outfit"]
+                    },
+                    fontSize: {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        .ambient-shadow {
+            box-shadow: 0 10px 40px -10px rgba(0, 100, 124, 0.08);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width border-r border-glass bg-surface-glass backdrop-blur-xl shadow-lg flex flex-col py-stack-lg z-50">
+<!-- Brand -->
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schedule</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary flex items-center gap-2">ADMS PRO</h1>
+<p class="font-label-sm text-label-sm text-on-surface-variant">Enterprise Attendance</p>
+</div>
+</div>
+<!-- Main Nav -->
+<div class="flex-1 px-4 space-y-1 overflow-y-auto">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">group</span>
+                Pegawai
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">history</span>
+                Log Absensi
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">devices</span>
+                Perangkat
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">schedule</span>
+                Shift
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">event_busy</span>
+                Cuti
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+                Hari Libur
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">description</span>
+                Laporan
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                Rekap Harian
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">settings</span>
+                Pengaturan
+            </a>
+</div>
+<!-- Footer Nav -->
+<div class="px-4 mt-auto pt-4 border-t border-surface-variant/50">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+                Profil
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors duration-200 font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Keluar
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-[260px] flex-1 flex flex-col min-h-screen">
+<!-- Header -->
+<header class="h-24 px-margin-desktop flex items-center justify-between z-40 bg-surface/80 backdrop-blur-md border-b border-glass sticky top-0">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Manajemen Shift</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-1">Atur jam kerja, toleransi keterlambatan, dan jadwal operasional.</p>
+</div>
+<button class="bg-primary hover:bg-primary/90 text-on-primary px-6 py-3 rounded-lg font-label-md text-label-md flex items-center gap-2 transition-all shadow-sm hover:shadow-md">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                Tambah Shift
+            </button>
+</header>
+<!-- Content Canvas -->
+<div class="p-margin-desktop flex-1">
+<!-- Shift Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-gutter">
+<!-- Card 1: sabtu -->
+<div class="glass-panel rounded-xl p-6 ambient-shadow hover:-translate-y-1 transition-transform duration-300 relative group">
+<!-- Header -->
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schedule</span>
+</div>
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface">sabtu</h3>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container/50 text-on-secondary-container mt-1">
+                                    AKTIF
+                                </span>
+</div>
+</div>
+<div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+<button class="w-8 h-8 rounded-full hover:bg-surface-variant flex items-center justify-center text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-8 h-8 rounded-full hover:bg-error-container flex items-center justify-center text-error transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Time Blocks -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-surface-container-low rounded-lg p-4 border border-outline-variant/30">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">MASUK</p>
+<p class="font-headline-md text-headline-md text-secondary">07:00:00</p>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 border border-outline-variant/30">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">PULANG</p>
+<p class="font-headline-md text-headline-md text-on-surface">13:00:00</p>
+</div>
+</div>
+<!-- Details -->
+<div class="border-t border-outline-variant/30 pt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+                            Toleransi Telat: <span class="font-medium text-secondary">15m</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">update</span>
+                            Pulang Awal: <span class="font-medium text-secondary">15m</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant w-full mt-1">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+                            Maks Masuk: <span class="font-medium text-error">09:00:00</span>
+</div>
+</div>
+</div>
+<!-- Card 2: senin jumat -->
+<div class="glass-panel rounded-xl p-6 ambient-shadow hover:-translate-y-1 transition-transform duration-300 relative group">
+<!-- Header -->
+<div class="flex items-start justify-between mb-6">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-full bg-secondary-container/30 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">schedule</span>
+</div>
+<div>
+<h3 class="font-title-lg text-title-lg text-on-surface">senin jumat</h3>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container/50 text-on-secondary-container mt-1">
+                                    AKTIF
+                                </span>
+</div>
+</div>
+<div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+<button class="w-8 h-8 rounded-full hover:bg-surface-variant flex items-center justify-center text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+</button>
+<button class="w-8 h-8 rounded-full hover:bg-error-container flex items-center justify-center text-error transition-colors">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<!-- Time Blocks -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-surface-container-low rounded-lg p-4 border border-outline-variant/30">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">MASUK</p>
+<p class="font-headline-md text-headline-md text-secondary">07:00:00</p>
+</div>
+<div class="bg-surface-container-low rounded-lg p-4 border border-outline-variant/30">
+<p class="font-label-sm text-label-sm text-on-surface-variant mb-1 uppercase tracking-wider">PULANG</p>
+<p class="font-headline-md text-headline-md text-on-surface">14:00:00</p>
+</div>
+</div>
+<!-- Details -->
+<div class="border-t border-outline-variant/30 pt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">timer</span>
+                            Toleransi Telat: <span class="font-medium text-secondary">15m</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">update</span>
+                            Pulang Awal: <span class="font-medium text-secondary">15m</span>
+</div>
+<div class="flex items-center gap-1.5 text-on-surface-variant w-full mt-1">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+                            Maks Masuk: <span class="font-medium text-error">09:00:00</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-on-background/40 backdrop-blur-sm">
+<div class="bg-surface-container-lowest w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+<!-- Modal Header -->
+<div class="px-8 py-6 border-b border-outline-variant/30 flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-on-surface">Edit Shift</h2>
+<button class="text-on-surface-variant hover:text-error transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body -->
+<div class="flex-1 overflow-y-auto p-8 space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Nama Shift -->
+<div class="col-span-full">
+<label class="block font-label-md text-on-surface-variant mb-2">NAMA SHIFT</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="text" value="senin jumat"/>
+</div>
+<!-- Jam Masuk & Pulang -->
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">JAM MASUK</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="time" value="07:00"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">JAM PULANG</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="time" value="14:00"/>
+</div>
+<!-- Toleransi -->
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">TOLERANSI TERLAMBAT (MENIT)</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="number" value="15"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">TOLERANSI PULANG AWAL (MENIT)</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="number" value="15"/>
+</div>
+<!-- Maks & Min -->
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">MAKSIMUM JAM MASUK</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="time" value="09:00"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">MIN. JAM PULANG</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="time" value="13:00"/>
+</div>
+<!-- Hari Kerja -->
+<div class="col-span-full">
+<label class="block font-label-md text-on-surface-variant mb-3">HARI KERJA</label>
+<div class="flex flex-wrap gap-2">
+<button class="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary font-medium text-sm">Sen</button>
+<button class="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary font-medium text-sm">Sel</button>
+<button class="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary font-medium text-sm">Rab</button>
+<button class="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary font-medium text-sm">Kam</button>
+<button class="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary font-medium text-sm">Jum</button>
+<button class="px-4 py-2 rounded-full border border-outline-variant text-on-surface-variant font-medium text-sm">Sab</button>
+<button class="px-4 py-2 rounded-full border border-outline-variant text-on-surface-variant font-medium text-sm">Min</button>
+</div>
+</div>
+<!-- Validitas -->
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">BERLAKU DARI</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="date"/>
+</div>
+<div>
+<label class="block font-label-md text-on-surface-variant mb-2">BERLAKU SAMPAI</label>
+<input class="w-full rounded-lg border-outline-variant bg-surface focus:border-primary focus:ring-1 focus:ring-primary text-body-md" type="date"/>
+</div>
+<!-- Status Aktif -->
+<div class="col-span-full flex items-center gap-3 mt-2">
+<input checked="" class="w-5 h-5 rounded text-primary focus:ring-primary border-outline-variant" id="status-aktif" type="checkbox"/>
+<label class="font-body-md text-on-surface" for="status-aktif">Shift Aktif</label>
+</div>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="px-8 py-6 bg-surface-container-low flex items-center justify-between">
+<button class="flex items-center gap-2 text-error hover:bg-error/10 px-4 py-2 rounded-lg transition-colors font-label-md">
+<span class="material-symbols-outlined">delete</span>
+                Hapus Shift
+            </button>
+<div class="flex items-center gap-4">
+<button class="px-6 py-2.5 rounded-lg font-label-md text-on-surface-variant hover:bg-surface-variant transition-colors">Batal</button>
+<button class="px-8 py-2.5 rounded-lg bg-primary text-on-primary font-label-md hover:shadow-lg transition-all shadow-sm">Simpan Perubahan</button>
+</div>
+</div>
+</div>
+</div></body></html>

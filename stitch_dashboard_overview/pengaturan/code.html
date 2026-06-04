@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ADMS PRO - Pengaturan</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=JetBrains+Mono:wght@400&amp;family=Outfit:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "inverse-surface": "#dae2fd",
+                    "surface-container-lowest": "#060e20",
+                    "on-tertiary-fixed": "#40000d",
+                    "on-primary": "#003640",
+                    "on-secondary": "#003824",
+                    "secondary-container": "#00a572",
+                    "tertiary-fixed": "#ffdadb",
+                    "border-glass": "rgba(255, 255, 255, 0.1)",
+                    "secondary-fixed": "#6ffbbe",
+                    "secondary": "#4edea3",
+                    "tertiary-container": "#ff7f8b",
+                    "on-error-container": "#ffdad6",
+                    "glow-emerald": "rgba(16, 185, 129, 0.15)",
+                    "inverse-on-surface": "#283044",
+                    "surface-tint": "#4cd7f6",
+                    "error-container": "#93000a",
+                    "outline-variant": "#3d494c",
+                    "on-surface": "#dae2fd",
+                    "on-primary-container": "#00424f",
+                    "on-error": "#690005",
+                    "surface-container-highest": "#2d3449",
+                    "primary-fixed": "#acedff",
+                    "on-tertiary-container": "#7d0023",
+                    "on-secondary-fixed": "#002113",
+                    "surface-variant": "#2d3449",
+                    "outline": "#869397",
+                    "on-primary-fixed": "#001f26",
+                    "on-surface-variant": "#bcc9cd",
+                    "on-background": "#dae2fd",
+                    "error": "#ffb4ab",
+                    "surface": "#0b1326",
+                    "on-tertiary-fixed-variant": "#92002a",
+                    "surface-container-low": "#131b2e",
+                    "inverse-primary": "#00687a",
+                    "surface-container": "#171f33",
+                    "on-secondary-container": "#00311f",
+                    "surface-glass": "rgba(30, 41, 59, 0.7)",
+                    "primary-container": "#06b6d4",
+                    "surface-container-high": "#222a3d",
+                    "glow-cyan": "rgba(6, 182, 212, 0.15)",
+                    "on-tertiary": "#67001b",
+                    "primary": "#4cd7f6",
+                    "primary-fixed-dim": "#4cd7f6",
+                    "tertiary": "#ffb2b7",
+                    "surface-dim": "#0b1326",
+                    "surface-bright": "#31394d",
+                    "secondary-fixed-dim": "#4edea3",
+                    "tertiary-fixed-dim": "#ffb2b7",
+                    "background": "#0b1326",
+                    "text-dim": "#94a3b8",
+                    "on-primary-fixed-variant": "#004e5c",
+                    "on-secondary-fixed-variant": "#005236"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "stack-md": "16px",
+                    "sidebar-width": "260px",
+                    "margin-mobile": "16px",
+                    "margin-desktop": "32px",
+                    "gutter": "24px",
+                    "container-max": "1440px",
+                    "stack-lg": "24px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Outfit"],
+                    "headline-lg": ["Outfit"],
+                    "body-lg": ["Inter"],
+                    "headline-sm": ["Outfit"],
+                    "display-lg": ["Outfit"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "mono-sm": ["JetBrains Mono"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-sm": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "mono-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+          font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar for webkit */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5); 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1); 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2); 
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased min-h-screen overflow-x-hidden selection:bg-primary/30 selection:text-primary">
+<!-- Top Navigation Area (Optional depending on specific layout needs, usually hidden on desktop if SideNav is full height, but required by prompt instructions if applicable. We will suppress as it's not strictly a top-level nav flow but we'll include it based on the image context if necessary. The image doesn't show a top nav, just the sidebar and content. I will omit TopNavBar to match the specific screen request) -->
+<!-- Side Navigation -->
+<nav class="hidden md:flex fixed left-0 top-0 h-full w-sidebar-width border-r border-glass bg-surface-glass backdrop-blur-xl shadow-lg flex-col py-stack-lg z-50">
+<!-- Logo -->
+<div class="px-margin-desktop mb-8">
+<div class="font-headline-sm text-headline-sm font-bold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined fill text-secondary">schedule</span>
+                ADMS PRO
+            </div>
+<p class="font-body-sm text-body-sm text-text-dim mt-1">Enterprise Attendance</p>
+</div>
+<!-- Main Nav Items -->
+<div class="flex-1 overflow-y-auto px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">group</span>
+                Pegawai
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">history</span>
+                Log Absensi
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">devices</span>
+                Perangkat
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">schedule</span>
+                Shift
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">event_busy</span>
+                Cuti
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">calendar_today</span>
+                Hari Libur
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">description</span>
+                Laporan
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">analytics</span>
+                Rekap Harian
+            </a>
+<!-- Active Tab: Pengaturan -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold transition-colors duration-200 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-primary">settings</span>
+                Pengaturan
+            </a>
+</div>
+<!-- Footer Nav Items -->
+<div class="mt-auto px-4 pt-4 border-t border-glass space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">account_circle</span>
+                Profil
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 font-body-sm text-body-sm group" href="#">
+<span class="material-symbols-outlined text-text-dim group-hover:text-on-surface transition-colors">logout</span>
+                Keluar
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="md:ml-sidebar-width min-h-screen p-margin-mobile md:p-margin-desktop lg:p-[48px] max-w-container-max mx-auto w-full box-border">
+<!-- Page Header -->
+<header class="mb-8">
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-2">Pengaturan</h1>
+<p class="font-body-md text-body-md text-text-dim">Konfigurasi Telegram Bot dan notifikasi sistem.</p>
+</header>
+<!-- Settings Card -->
+<div class="bg-surface-glass border border-glass rounded-xl shadow-lg backdrop-blur-xl p-6 lg:p-8 relative overflow-hidden">
+<!-- Subtle gradient glow effect behind the card -->
+<div class="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<!-- Card Header: Telegram Bot -->
+<div class="flex items-center gap-4 mb-8 pb-6 border-b border-glass">
+<div class="w-12 h-12 rounded-lg bg-[#0F172A] border border-glass flex items-center justify-center shadow-inner relative group">
+<!-- Inner glow on icon container -->
+<div class="absolute inset-0 bg-primary/10 rounded-lg blur-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<svg class="w-6 h-6 text-primary relative z-10" fill="none" stroke="currentColor" viewbox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Telegram Bot</h2>
+<p class="font-body-sm text-body-sm text-text-dim">Konfigurasi bot untuk notifikasi otomatis</p>
+</div>
+</div>
+<!-- Form Area -->
+<form class="space-y-8 relative z-10">
+<!-- Input Group: Bot Token -->
+<div class="space-y-2">
+<label class="block font-label-md text-label-md text-text-dim uppercase tracking-wider" for="bot-token">Bot Token</label>
+<div class="relative">
+<input class="w-full bg-[#020617] border border-glass rounded-lg px-4 py-3 font-mono-sm text-mono-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-inner placeholder-text-dim/50" id="bot-token" name="bot-token" placeholder="Enter bot token" type="password" value="••••••••••••••••••••••••••••••••••••••••••"/>
+</div>
+<p class="font-body-sm text-[13px] text-text-dim/70 mt-1">Dapatkan dari @BotFather di Telegram</p>
+</div>
+<!-- Input Group: Chat ID -->
+<div class="space-y-2">
+<label class="block font-label-md text-label-md text-text-dim uppercase tracking-wider flex items-center gap-2" for="chat-id">
+<span class="material-symbols-outlined text-[16px]">chat_bubble_outline</span>
+                        Chat ID
+                    </label>
+<div class="relative">
+<input class="w-full bg-[#020617] border border-glass rounded-lg px-4 py-3 font-mono-sm text-mono-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-inner placeholder-text-dim/50" id="chat-id" name="chat-id" placeholder="Enter chat ID" type="text" value="8306895212"/>
+</div>
+<p class="font-body-sm text-[13px] text-text-dim/70 mt-1">ID grup atau channel untuk menerima notifikasi</p>
+</div>
+<!-- Checkbox Group: Notifikasi -->
+<div class="space-y-4 pt-4 border-t border-glass">
+<h3 class="font-label-md text-label-md text-text-dim uppercase tracking-wider mb-2">Notifikasi</h3>
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="w-5 h-5 rounded bg-[#020617] border border-glass peer-checked:bg-secondary peer-checked:border-secondary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-[#003824] opacity-0 peer-checked:opacity-100 transition-opacity">check</span>
+</div>
+<!-- Subtle glow on hover -->
+<div class="absolute inset-0 bg-secondary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Kirim notifikasi saat pegawai absen</span>
+</label>
+<label class="flex items-center gap-3 cursor-pointer group">
+<div class="relative flex items-center justify-center">
+<input checked="" class="peer sr-only" type="checkbox"/>
+<div class="w-5 h-5 rounded bg-[#020617] border border-glass peer-checked:bg-secondary peer-checked:border-secondary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px] text-[#003824] opacity-0 peer-checked:opacity-100 transition-opacity">check</span>
+</div>
+<!-- Subtle glow on hover -->
+<div class="absolute inset-0 bg-secondary/20 rounded blur-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant group-hover:text-on-surface transition-colors">Kirim alert saat mesin offline</span>
+</label>
+</div>
+<!-- Action Button -->
+<div class="pt-6">
+<button class="inline-flex items-center justify-center gap-2 px-6 py-3 bg-secondary hover:bg-secondary-fixed text-[#003824] font-label-md text-label-md rounded-lg transition-all duration-200 shadow-[0_0_15px_rgba(78,222,163,0.2)] hover:shadow-[0_0_25px_rgba(78,222,163,0.4)] active:scale-95" type="button">
+<span class="material-symbols-outlined text-[18px]">save</span>
+                        Simpan Pengaturan
+                    </button>
+</div>
+</form>
+</div>
+</main>
+</body></html>

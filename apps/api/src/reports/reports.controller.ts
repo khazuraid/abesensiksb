@@ -37,7 +37,10 @@ export class ReportsController {
 		@Query("year", ParseIntPipe) year: number,
 		@Res() res: Response,
 	) {
-		const workbook = await this.reportsService.generateDailyRecapExcel(month, year);
+		const workbook = await this.reportsService.generateDailyRecapExcel(
+			month,
+			year,
+		);
 		res.setHeader(
 			"Content-Type",
 			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

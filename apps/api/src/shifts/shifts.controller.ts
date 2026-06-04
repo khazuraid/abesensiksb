@@ -47,7 +47,7 @@ export class ShiftsController {
 		const result = await this.shiftsService.create(createShiftDto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "CREATE",
 			target: "shifts",
@@ -67,7 +67,7 @@ export class ShiftsController {
 		const result = await this.shiftsService.update(id, updateShiftDto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "UPDATE",
 			target: "shifts",
@@ -82,7 +82,7 @@ export class ShiftsController {
 		const result = await this.shiftsService.remove(id);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "DELETE",
 			target: "shifts",

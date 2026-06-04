@@ -23,7 +23,10 @@ export class WebhookService {
 		secret: string | null,
 		payload: WebhookPayload,
 	) {
-		const urls = webhookUrls.split(",").map((u) => u.trim()).filter(Boolean);
+		const urls = webhookUrls
+			.split(",")
+			.map((u) => u.trim())
+			.filter(Boolean);
 		const timestamp = Math.floor(Date.now() / 1000).toString();
 
 		const headers: Record<string, string> = {
@@ -48,7 +51,9 @@ export class WebhookService {
 				});
 				this.logger.debug(`Webhook sent to ${url}`);
 			} catch (error) {
-				this.logger.warn(`Webhook failed for ${url}: ${(error as Error).message}`);
+				this.logger.warn(
+					`Webhook failed for ${url}: ${(error as Error).message}`,
+				);
 			}
 		}
 	}

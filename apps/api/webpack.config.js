@@ -4,15 +4,11 @@ module.exports = (options) => ({
 	...options,
 	externals: [
 		// Exclude semua node_modules KECUALI @adms/* workspace packages
-		function ({ request }, callback) {
-			if (request && request.startsWith("@adms/")) {
+		({ request }, callback) => {
+			if (request?.startsWith("@adms/")) {
 				return callback(); // bundle it
 			}
-			if (
-				request &&
-				!request.startsWith(".") &&
-				!path.isAbsolute(request)
-			) {
+			if (request && !request.startsWith(".") && !path.isAbsolute(request)) {
 				return callback(null, "commonjs " + request);
 			}
 			callback();

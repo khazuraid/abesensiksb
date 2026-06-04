@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Hari Libur - Manajemen Absensi</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#006780",
+                        "secondary-fixed-dim": "#4edea3",
+                        "surface-dim": "#cfdaf2",
+                        "on-secondary-container": "#00714d",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#3e484d",
+                        "background": "#f9f9ff",
+                        "outline": "#6e797e",
+                        "on-primary-fixed": "#001f28",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-bright": "#f9f9ff",
+                        "primary": "#00647c",
+                        "tertiary-fixed-dim": "#ffb873",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-secondary-fixed": "#002113",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#263143",
+                        "on-tertiary-container": "#fffbff",
+                        "secondary": "#006c49",
+                        "on-tertiary-fixed": "#2d1600",
+                        "on-primary": "#ffffff",
+                        "on-background": "#111c2d",
+                        "tertiary": "#894e00",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#007f9d",
+                        "on-secondary-fixed-variant": "#005236",
+                        "tertiary-container": "#a86516",
+                        "outline-variant": "#bdc8ce",
+                        "inverse-on-surface": "#ecf1ff",
+                        "secondary-container": "#6cf8bb",
+                        "primary-fixed-dim": "#6cd3f7",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#004e61",
+                        "surface": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "surface-container-highest": "#d8e3fb",
+                        "primary-fixed": "#b7eaff",
+                        "on-primary-container": "#fafdff",
+                        "surface-container-high": "#dee8ff",
+                        "tertiary-fixed": "#ffdcbf",
+                        "surface-container": "#e7eeff",
+                        "inverse-primary": "#6cd3f7",
+                        "surface-variant": "#d8e3fb",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "max-width": "1440px",
+                        "margin-desktop": "40px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "margin-mobile": "16px",
+                        "margin-tablet": "24px",
+                        "sidebar-width": "260px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "title-lg": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "body-md": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Outfit', sans-serif; background-color: #f9f9ff; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased bg-background">
+<!-- TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-16 border-b border-outline-variant/30 z-40 bg-surface/80 backdrop-blur-md flex items-center justify-between px-margin-desktop shadow-sm">
+<div class="flex items-center gap-6">
+<h1 class="font-headline-md text-headline-md font-bold text-on-surface">Manajemen Absensi</h1>
+<nav class="hidden md:flex items-center gap-6">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-primary transition-colors cursor-pointer active:opacity-70" href="#">Overview</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-primary transition-colors cursor-pointer active:opacity-70" href="#">Analytics</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface hover:text-primary transition-colors cursor-pointer active:opacity-70" href="#">Export</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="hidden md:flex items-center gap-2 px-4 py-2 bg-surface-container border border-outline-variant/50 rounded-full font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[18px]">sync</span>
+                Sync Data
+            </button>
+<button class="hidden md:flex items-center gap-2 px-4 py-2 bg-primary text-on-primary rounded-full font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm">
+                Ajukan Cuti
+            </button>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors"><span class="material-symbols-outlined">notifications</span></button>
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors"><span class="material-symbols-outlined">help_outline</span></button>
+<button class="p-2 hover:bg-surface-variant/50 rounded-full transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold overflow-hidden border border-outline-variant/30">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" data-alt="A professional headshot of a business executive in a modern office setting. The lighting is bright and even, highlighting their features. The aesthetic is corporate yet approachable, aligning with a high-end enterprise software user profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2VOZyNECbIf4DC2wu1Dd9s3FyXFMp_uhAjUzrElXXJHrNGTZDQLbSA9YFI-UjvORMPZ1Dil_AJ6ulyf0XSl_joC1ASQVRTlvVIX0BaP9meGosv3KfBTTzDF9k73KvoCvsy4dSaMQuxfQUdPeTRpqixg5qRwlA6Y1t-B_SulnTGUCV7koplYYnbs9H3F9_qbP0RTKntlAY0Sed1ZrUjPAJtbrlEYLlo9iYQbijep-SvFmZy6RGjus_3rlAqASJWv-SSeFHleDNe48"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="fixed left-0 top-0 h-full w-[260px] border-r border-outline-variant/30 bg-surface/90 backdrop-blur-xl shadow-lg flex flex-col py-6 z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm">
+<span class="material-symbols-outlined font-bold text-[24px]">verified_user</span>
+</div>
+<div>
+<h2 class="font-headline-sm text-headline-sm font-bold text-primary tracking-tight">ADMS PRO</h2>
+<p class="font-label-sm text-label-sm text-on-surface-variant opacity-80">Enterprise Attendance</p>
+</div>
+</div>
+<nav class="flex-1 overflow-y-auto px-4 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="font-body-sm text-body-sm font-medium">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">group</span>
+<span class="font-body-sm text-body-sm font-medium">Pegawai</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">history</span>
+<span class="font-body-sm text-body-sm font-medium">Log Absensi</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">devices</span>
+<span class="font-body-sm text-body-sm font-medium">Perangkat</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">schedule</span>
+<span class="font-body-sm text-body-sm font-medium">Shift</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">event_busy</span>
+<span class="font-body-sm text-body-sm font-medium">Cuti</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="font-body-sm text-body-sm">Hari Libur</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span class="font-body-sm text-body-sm font-medium">Laporan</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+<span class="font-body-sm text-body-sm font-medium">Rekap Harian</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="font-body-sm text-body-sm font-medium">Pengaturan</span>
+</a>
+</nav>
+<div class="px-4 mt-auto space-y-1 pt-4 border-t border-outline-variant/30">
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">account_circle</span>
+<span class="font-body-sm text-body-sm font-medium">Profil</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/20 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span class="font-body-sm text-body-sm font-medium">Keluar</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[260px] pt-16 min-h-screen">
+<div class="p-margin-desktop max-w-[1200px] mx-auto">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-1">Hari Libur</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Kelola hari libur nasional dan cuti bersama.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-surface-container-high border border-outline-variant/30 rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-variant transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">cloud_sync</span>
+                        Sync 2026
+                    </button>
+<button class="flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container hover:shadow-md transition-all">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                        Tambah
+                    </button>
+</div>
+</div>
+<!-- Data Table Card -->
+<div class="bg-surface-container-lowest border border-outline-variant/40 rounded-xl shadow-sm overflow-hidden glass-panel">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant/40">
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider w-[20%]">TANGGAL</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider w-[40%]">NAMA</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider w-[30%]">KETERANGAN</th>
+<th class="px-6 py-4 font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider w-[10%] text-right">AKSI</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/20">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-medium">2026-01-01</td>
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-semibold">Tahun Baru 2026 Masehi</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Hari Libur Nasional (sync otomatis)</td>
+<td class="px-6 py-4 text-right">
+<button class="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/20 opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-medium">2026-01-16</td>
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-semibold">Isra Mi'raj Nabi Muhammad SAW</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Hari Libur Nasional (sync otomatis)</td>
+<td class="px-6 py-4 text-right">
+<button class="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/20 opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-medium">2026-02-17</td>
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-semibold">Tahun Baru Imlek 2577 Kongzili</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Hari Libur Nasional (sync otomatis)</td>
+<td class="px-6 py-4 text-right">
+<button class="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/20 opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-medium">2026-03-19</td>
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-semibold">Hari Suci Nyepi Tahun Baru Saka 1948</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Hari Libur Nasional (sync otomatis)</td>
+<td class="px-6 py-4 text-right">
+<button class="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/20 opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-medium">2026-03-21</td>
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-semibold">Hari Raya Idul Fitri 1447 Hijriyah</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Hari Libur Nasional (sync otomatis)</td>
+<td class="px-6 py-4 text-right">
+<button class="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/20 opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-container/30 transition-colors group">
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-medium">2026-03-22</td>
+<td class="px-6 py-4 font-body-md text-body-md text-on-surface font-semibold">Hari Raya Idul Fitri 1447 Hijriyah</td>
+<td class="px-6 py-4 font-body-sm text-body-sm text-on-surface-variant">Hari Libur Nasional (sync otomatis)</td>
+<td class="px-6 py-4 text-right">
+<button class="text-outline hover:text-error transition-colors p-1 rounded-full hover:bg-error-container/20 opacity-0 group-hover:opacity-100 focus:opacity-100">
+<span class="material-symbols-outlined text-[20px]">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</main>
+</body></html>

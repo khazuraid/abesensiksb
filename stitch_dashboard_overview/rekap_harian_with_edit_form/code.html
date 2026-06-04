@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rekap Harian - ADMS PRO</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.filled {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom scrollbar for the table container */
+        .table-scroll::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .table-scroll::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 4px;
+        }
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .table-scroll::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Status Dot Colors */
+        .status-h { @apply bg-secondary-container text-on-secondary-container; } /* Hadir */
+        .status-t { @apply bg-tertiary-container text-on-tertiary-container; } /* Telat */
+        .status-pc { @apply bg-tertiary-fixed-dim text-on-tertiary-fixed-variant; } /* Pulang Cepat */
+        .status-a { @apply bg-error-container text-on-error-container; } /* Alpa */
+        .status-c { @apply bg-primary-container text-on-primary-container; } /* Cuti */
+        .status-l { @apply bg-surface-container-highest text-on-surface-variant; } /* Libur */
+        .status-o { @apply bg-surface-variant text-outline; } /* Off */
+        .status-empty { @apply bg-surface text-outline-variant border border-outline-variant border-dashed; }
+
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#006780",
+                        "secondary-fixed-dim": "#4edea3",
+                        "surface-dim": "#cfdaf2",
+                        "on-secondary-container": "#00714d",
+                        "error-container": "#ffdad6",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#6ffbbe",
+                        "on-surface-variant": "#3e484d",
+                        "background": "#f9f9ff",
+                        "outline": "#6e797e",
+                        "on-primary-fixed": "#001f28",
+                        "error": "#ba1a1a",
+                        "surface-container-low": "#f0f3ff",
+                        "surface-bright": "#f9f9ff",
+                        "primary": "#00647c",
+                        "tertiary-fixed-dim": "#ffb873",
+                        "on-tertiary-fixed-variant": "#6a3b00",
+                        "on-secondary-fixed": "#002113",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#263143",
+                        "on-tertiary-container": "#fffbff",
+                        "secondary": "#006c49",
+                        "on-tertiary-fixed": "#2d1600",
+                        "on-primary": "#ffffff",
+                        "on-background": "#111c2d",
+                        "tertiary": "#894e00",
+                        "on-secondary": "#ffffff",
+                        "primary-container": "#007f9d",
+                        "on-secondary-fixed-variant": "#005236",
+                        "tertiary-container": "#a86516",
+                        "outline-variant": "#bdc8ce",
+                        "inverse-on-surface": "#ecf1ff",
+                        "secondary-container": "#6cf8bb",
+                        "primary-fixed-dim": "#6cd3f7",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#004e61",
+                        "surface": "#f9f9ff",
+                        "on-surface": "#111c2d",
+                        "surface-container-highest": "#d8e3fb",
+                        "primary-fixed": "#b7eaff",
+                        "on-primary-container": "#fafdff",
+                        "surface-container-high": "#dee8ff",
+                        "tertiary-fixed": "#ffdcbf",
+                        "surface-container": "#e7eeff",
+                        "inverse-primary": "#6cd3f7",
+                        "surface-variant": "#d8e3fb",
+                        "on-tertiary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sidebar-width": "260px",
+                        "max-width": "1440px",
+                        "margin-desktop": "40px",
+                        "gutter": "24px",
+                        "unit": "8px",
+                        "margin-mobile": "16px",
+                        "margin-tablet": "24px",
+                        "stack-lg": "32px",
+                        "stack-md": "16px",
+                        "stack-sm": "8px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Outfit"],
+                        "display-lg": ["Outfit"],
+                        "headline-lg-mobile": ["Outfit"],
+                        "body-lg": ["Outfit"],
+                        "headline-md": ["Outfit"],
+                        "label-sm": ["Outfit"],
+                        "title-lg": ["Outfit"],
+                        "headline-lg": ["Outfit"],
+                        "body-md": ["Outfit"],
+                        "headline-sm": ["Outfit"],
+                        "body-sm": ["Outfit"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["11px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md antialiased overflow-x-hidden min-h-screen">
+<!-- TopNavBar -->
+<header class="bg-surface/80 backdrop-blur-md fixed top-0 right-0 w-full md:w-[calc(100%-260px)] h-16 border-b border-outline-variant z-40 flex items-center justify-between px-margin-desktop shadow-sm">
+<div class="flex items-center gap-gutter">
+<!-- Search Bar on Left -->
+<div class="relative hidden sm:block w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-10 pr-4 py-2 font-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow" placeholder="Cari pegawai..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-unit">
+<!-- Navigation Links (Hidden on Mobile, simplified for TopNav in App context) -->
+<nav class="hidden lg:flex items-center gap-unit mr-gutter">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-md transition-colors" href="#">Overview</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-md transition-colors" href="#">Analytics</a>
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface px-3 py-2 rounded-md transition-colors" href="#">Export</a>
+</nav>
+<!-- Actions -->
+<div class="flex items-center gap-unit border-l border-outline-variant pl-unit ml-unit">
+<button aria-label="Notifications" class="p-2 text-outline hover:text-on-surface hover:bg-surface-variant rounded-full transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+<button aria-label="Help" class="p-2 text-outline hover:text-on-surface hover:bg-surface-variant rounded-full transition-colors hidden sm:block">
+<span class="material-symbols-outlined">help_outline</span>
+</button>
+<!-- Profile -->
+<div class="flex items-center gap-2 ml-2 cursor-pointer hover:bg-surface-variant/50 p-1 rounded-lg transition-colors">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-headline-sm">
+                        AD
+                    </div>
+</div>
+</div>
+</div>
+</header>
+<!-- SideNavBar -->
+<aside class="bg-surface-container-lowest fixed left-0 top-0 h-full w-sidebar-width border-r border-outline-variant shadow-sm z-50 flex flex-col py-stack-lg hidden md:flex">
+<!-- Brand -->
+<div class="px-gutter mb-stack-lg">
+<div class="font-headline-sm text-headline-sm font-bold text-primary flex items-center gap-2">
+<div class="w-8 h-8 rounded-lg bg-primary text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined filled text-xl">schedule</span>
+</div>
+<div>
+<div>ADMS PRO</div>
+<div class="font-label-sm text-label-sm text-outline font-normal">Enterprise Attendance</div>
+</div>
+</div>
+</div>
+<!-- CTA -->
+<div class="px-gutter mb-stack-md">
+<button class="w-full bg-primary text-on-primary font-label-md text-label-md py-3 rounded-lg hover:bg-primary-container hover:text-on-primary-container transition-colors shadow-sm flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">add</span> Tambah Data
+            </button>
+</div>
+<!-- Navigation -->
+<nav class="flex-1 overflow-y-auto px-unit flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span> Dashboard
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">group</span> Pegawai
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">history</span> Log Absensi
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">devices</span> Perangkat
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">schedule</span> Shift
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">event_busy</span> Cuti
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">calendar_today</span> Hari Libur
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">description</span> Laporan
+            </a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined text-lg">analytics</span> Rekap Harian
+            </a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">settings</span> Pengaturan
+            </a>
+</nav>
+<!-- Footer Nav -->
+<div class="px-unit mt-auto pt-stack-md border-t border-outline-variant/50 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">account_circle</span> Profil
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:text-error hover:bg-error-container/50 font-body-sm text-body-sm transition-colors duration-200" href="#">
+<span class="material-symbols-outlined text-lg">logout</span> Keluar
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-[260px] pt-24 px-margin-mobile md:px-margin-desktop pb-12 min-h-screen flex flex-col">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-stack-lg">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface mb-1">Rekap Harian</h1>
+<p class="font-body-md text-body-md text-outline">Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat, PC=Pulang Cepat, A=Alpa, C=Cuti/Izin, L=Libur, O=Off</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<!-- Date Navigator -->
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded-lg p-1 shadow-sm">
+<button class="p-1.5 text-outline hover:text-on-surface hover:bg-surface-variant rounded-md transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<div class="px-4 font-label-md text-label-md text-on-surface min-w-[120px] text-center">Juni 2026</div>
+<button class="p-1.5 text-outline hover:text-on-surface hover:bg-surface-variant rounded-md transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+<!-- Export Button -->
+<button class="flex items-center gap-2 px-4 py-2.5 bg-surface-container-lowest border border-outline text-on-surface font-label-md text-label-md rounded-lg hover:bg-surface-variant transition-colors shadow-sm"><span class="material-symbols-outlined text-sm">filter_list</span> Filter</button><button class="bg-primary text-on-primary font-label-md text-label-md px-4 py-2.5 rounded-lg hover:bg-primary-container shadow-sm flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-sm">download</span> Export
+                </button>
+</div>
+</div>
+<!-- Filters (Optional, implied by search in original) -->
+<div class="mb-4 flex gap-3">
+<div class="relative w-full md:w-80 hidden md:block"> <!-- Search bar duplicated for canvas if needed, or kept in topnav -->
+<!-- Omitting canvas search to match provided image's structure where search is inside the table header area or topnav -->
+</div>
+</div>
+<!-- Table Container -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
+<!-- Table Toolbar -->
+<div class="p-4 border-b border-outline-variant bg-surface-container-lowest flex justify-between items-center">
+<div class="relative w-full md:w-80">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm">search</span>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg pl-10 pr-4 py-2 text-sm font-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-shadow" placeholder="Cari pegawai..." type="text"/>
+</div>
+<div class="flex gap-2">
+<!-- Legend Chips -->
+<div class="hidden lg:flex items-center gap-2">
+<span class="px-2 py-1 rounded text-[10px] font-semibold bg-secondary-container text-on-secondary-container">H</span>
+<span class="px-2 py-1 rounded text-[10px] font-semibold bg-tertiary-container text-on-tertiary-container">T</span>
+<span class="px-2 py-1 rounded text-[10px] font-semibold bg-tertiary-fixed-dim text-on-tertiary-fixed-variant">PC</span>
+<span class="px-2 py-1 rounded text-[10px] font-semibold bg-error-container text-on-error-container">A</span>
+</div>
+</div>
+</div>
+<!-- Scrollable Table -->
+<div class="overflow-x-auto table-scroll flex-1 relative">
+<table class="w-full text-left border-collapse min-w-[1200px]">
+<thead class="sticky top-0 bg-surface z-10 shadow-sm border-b border-outline-variant">
+<tr>
+<th class="p-4 font-label-sm text-label-sm text-outline-variant uppercase tracking-wider font-semibold sticky left-0 bg-surface z-20 shadow-[1px_0_0_0_#e2e8f0]">Pegawai</th>
+<!-- Days 1-30 -->
+<!-- Generate days 1-30 -->
+<script>
+                                for(let i=1; i<=30; i++) {
+                                    document.write(`<th class="p-2 text-center font-label-sm text-label-sm text-outline-variant w-8 min-w-[32px]">${i}</th>`);
+                                }
+                            </script>
+<!-- Summary Columns -->
+<th class="p-2 text-center font-label-sm text-label-sm text-on-secondary-container w-8 sticky right-[128px] bg-surface/90 backdrop-blur shadow-[-1px_0_0_0_#e2e8f0]">H</th>
+<th class="p-2 text-center font-label-sm text-label-sm text-on-tertiary-container w-8 sticky right-[96px] bg-surface/90 backdrop-blur">T</th>
+<th class="p-2 text-center font-label-sm text-label-sm text-on-tertiary-fixed-variant w-8 sticky right-[64px] bg-surface/90 backdrop-blur">PC</th>
+<th class="p-2 text-center font-label-sm text-label-sm text-primary w-8 sticky right-[32px] bg-surface/90 backdrop-blur">C</th>
+<th class="p-2 text-center font-label-sm text-label-sm text-error w-8 sticky right-0 bg-surface/90 backdrop-blur">A</th>
+</tr>
+</thead>
+<tbody class="font-body-sm text-body-sm text-on-surface divide-y divide-outline-variant/30">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-4 sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 border-r border-outline-variant/30">
+<div class="font-semibold text-on-surface">dr. Hj. FADILLAH FARAH H</div>
+<div class="text-[11px] text-outline mt-0.5">sabtu, senin jumat</div>
+</td>
+<!-- Status Cells -->
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-l cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">L</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-h cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">H</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-h cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">H</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-h cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">H</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-o cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">O</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<!-- Fill remaining with empty for brevity in example, imagine realistic data -->
+<script>
+                                for(let i=11; i<=30; i++) {
+                                    let status = '-'; let cls = 'status-empty';
+                                    if(i===14 || i===21 || i===28) { status = 'O'; cls = 'status-o'; }
+                                    if(i===16) { status = 'L'; cls = 'status-l'; }
+                                    document.write(`<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold ${cls}">${status}</div></td>`);
+                                }
+                            </script>
+<!-- Summary Data -->
+<td class="p-2 text-center font-semibold text-on-secondary-container sticky right-[128px] bg-surface-container-lowest group-hover:bg-surface-container-low border-l border-outline-variant/30">3</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-container sticky right-[96px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-fixed-variant sticky right-[64px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-primary sticky right-[32px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-error sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-4 sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 border-r border-outline-variant/30">
+<div class="font-semibold text-on-surface">Hj. OMAH KURNIADEWI, SKM</div>
+<div class="text-[11px] text-outline mt-0.5">sabtu, senin jumat</div>
+</td>
+<!-- Status Cells -->
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-l cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">L</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-t cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">T</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-t cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">T</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-t cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">T</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-o cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">O</div></td>
+<script>
+                                for(let i=8; i<=30; i++) {
+                                    let status = '-'; let cls = 'status-empty';
+                                    if(i===14 || i===21 || i===28) { status = 'O'; cls = 'status-o'; }
+                                    if(i===16) { status = 'L'; cls = 'status-l'; }
+                                    document.write(`<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold ${cls}">${status}</div></td>`);
+                                }
+                            </script>
+<!-- Summary Data -->
+<td class="p-2 text-center font-semibold text-on-secondary-container sticky right-[128px] bg-surface-container-lowest group-hover:bg-surface-container-low border-l border-outline-variant/30">3</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-container sticky right-[96px] bg-surface-container-lowest group-hover:bg-surface-container-low">3</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-fixed-variant sticky right-[64px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-primary sticky right-[32px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-error sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-4 sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 border-r border-outline-variant/30">
+<div class="font-semibold text-on-surface">KOKOM KOMALASARI, A.Md.K</div>
+<div class="text-[11px] text-outline mt-0.5">sabtu, senin jumat</div>
+</td>
+<!-- Status Cells -->
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-l cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">L</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-a cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">A</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-a cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">A</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-a cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">A</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-o cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">O</div></td>
+<script>
+                                for(let i=8; i<=30; i++) {
+                                    let status = '-'; let cls = 'status-empty';
+                                    if(i===14 || i===21 || i===28) { status = 'O'; cls = 'status-o'; }
+                                    if(i===16) { status = 'L'; cls = 'status-l'; }
+                                    document.write(`<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold ${cls}">${status}</div></td>`);
+                                }
+                            </script>
+<!-- Summary Data -->
+<td class="p-2 text-center font-semibold text-on-secondary-container sticky right-[128px] bg-surface-container-lowest group-hover:bg-surface-container-low border-l border-outline-variant/30">0</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-container sticky right-[96px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-fixed-variant sticky right-[64px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-primary sticky right-[32px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-error sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">3</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-4 sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 border-r border-outline-variant/30">
+<div class="font-semibold text-on-surface">drg. NENDA SRIWIDASARI</div>
+<div class="text-[11px] text-outline mt-0.5">sabtu, senin jumat</div>
+</td>
+<!-- Status Cells -->
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-l cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">L</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-pc cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">PC</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-t cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">T</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-t cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">T</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-o cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">O</div></td>
+<script>
+                                for(let i=8; i<=30; i++) {
+                                    let status = '-'; let cls = 'status-empty';
+                                    if(i===14 || i===21 || i===28) { status = 'O'; cls = 'status-o'; }
+                                    if(i===16) { status = 'L'; cls = 'status-l'; }
+                                    document.write(`<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold ${cls}">${status}</div></td>`);
+                                }
+                            </script>
+<!-- Summary Data -->
+<td class="p-2 text-center font-semibold text-on-secondary-container sticky right-[128px] bg-surface-container-lowest group-hover:bg-surface-container-low border-l border-outline-variant/30">3</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-container sticky right-[96px] bg-surface-container-lowest group-hover:bg-surface-container-low">2</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-fixed-variant sticky right-[64px] bg-surface-container-lowest group-hover:bg-surface-container-low">1</td>
+<td class="p-2 text-center font-semibold text-primary sticky right-[32px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-error sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-variant/20 transition-colors group">
+<td class="p-4 sticky left-0 bg-surface-container-lowest group-hover:bg-surface-container-low z-10 border-r border-outline-variant/30">
+<div class="font-semibold text-on-surface">IAR MUTIA NURAHMI, A.MD.</div>
+<div class="text-[11px] text-outline mt-0.5">sabtu, senin jumat</div>
+</td>
+<!-- Status Cells -->
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-l cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">L</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-h cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">H</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-t cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">T</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-h cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">H</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-empty cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">-</div></td>
+<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold status-o cursor-pointer hover:scale-110 transition-transform" onclick="document.getElementById('edit-status-modal').classList.remove('hidden')" title="Klik untuk edit kehadiran">O</div></td>
+<script>
+                                for(let i=8; i<=30; i++) {
+                                    let status = '-'; let cls = 'status-empty';
+                                    if(i===14 || i===21 || i===28) { status = 'O'; cls = 'status-o'; }
+                                    if(i===16) { status = 'L'; cls = 'status-l'; }
+                                    document.write(`<td class="p-1.5 text-center"><div class="w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold ${cls}">${status}</div></td>`);
+                                }
+                            </script>
+<!-- Summary Data -->
+<td class="p-2 text-center font-semibold text-on-secondary-container sticky right-[128px] bg-surface-container-lowest group-hover:bg-surface-container-low border-l border-outline-variant/30">3</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-container sticky right-[96px] bg-surface-container-lowest group-hover:bg-surface-container-low">1</td>
+<td class="p-2 text-center font-semibold text-on-tertiary-fixed-variant sticky right-[64px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-primary sticky right-[32px] bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+<td class="p-2 text-center font-semibold text-error sticky right-0 bg-surface-container-lowest group-hover:bg-surface-container-low">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination / Table Footer -->
+<div class="p-4 border-t border-outline-variant bg-surface-container-lowest flex justify-between items-center text-sm font-body-sm text-outline">
+<div>Menampilkan 1-5 dari 45 pegawai</div>
+<div class="flex gap-1">
+<button class="px-3 py-1 rounded bg-surface-variant text-on-surface-variant hover:bg-outline-variant hover:text-on-surface transition-colors disabled:opacity-50">Prev</button>
+<button class="px-3 py-1 rounded bg-primary text-on-primary font-medium">1</button>
+<button class="px-3 py-1 rounded hover:bg-surface-variant text-on-surface-variant transition-colors">2</button>
+<button class="px-3 py-1 rounded hover:bg-surface-variant text-on-surface-variant transition-colors">3</button>
+<button class="px-3 py-1 rounded bg-surface-variant text-on-surface-variant hover:bg-outline-variant hover:text-on-surface transition-colors">Next</button>
+</div>
+</div>
+</div>
+</main>
+<div class="hidden fixed inset-0 z-[100] flex items-center justify-center bg-inverse-surface/40 backdrop-blur-sm p-4" id="edit-status-modal">
+<div class="bg-surface-container-lowest rounded-xl shadow-2xl border border-outline-variant w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+<!-- Modal Header -->
+<div class="p-4 border-b border-outline-variant flex justify-between items-center">
+<h3 class="font-title-lg text-title-lg text-on-surface">Edit Kehadiran Harian</h3>
+<button class="p-1 text-outline hover:text-on-surface hover:bg-surface-variant rounded-full transition-colors" onclick="document.getElementById('edit-status-modal').classList.add('hidden')">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Modal Body / Form -->
+<div class="p-6 space-y-4">
+<!-- Nama Pegawai (Read-only) -->
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-1.5">Nama Pegawai</label>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg px-4 py-2 text-on-surface font-body-md focus:outline-none cursor-not-allowed" readonly="" type="text" value="dr. Hj. FADILLAH FARAH H"/>
+</div>
+<!-- Tanggal -->
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-1.5">Tanggal</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2 text-on-surface font-body-md focus:ring-1 focus:ring-primary focus:border-primary" type="date"/>
+</div>
+<!-- Status Kehadiran -->
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-1.5">Status Kehadiran</label>
+<select class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2 text-on-surface font-body-md focus:ring-1 focus:ring-primary focus:border-primary">
+<option value="H">Hadir</option>
+<option value="T">Telat</option>
+<option value="PC">Pulang Cepat</option>
+<option value="A">Alpa</option>
+<option value="C">Cuti/Izin</option>
+<option value="L">Libur</option>
+<option value="O">Off</option>
+</select>
+</div>
+<!-- Jam Masuk & Pulang -->
+<div class="grid grid-cols-2 gap-4">
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-1.5">Jam Masuk</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2 text-on-surface font-body-md focus:ring-1 focus:ring-primary focus:border-primary" type="time"/>
+</div>
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-1.5">Jam Pulang</label>
+<input class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2 text-on-surface font-body-md focus:ring-1 focus:ring-primary focus:border-primary" type="time"/>
+</div>
+</div>
+<!-- Keterangan -->
+<div>
+<label class="block text-label-md font-label-md text-on-surface-variant mb-1.5">Keterangan</label>
+<textarea class="w-full bg-surface-bright border border-outline-variant rounded-lg px-4 py-2 text-on-surface font-body-md focus:ring-1 focus:ring-primary focus:border-primary resize-none" placeholder="Tambahkan keterangan jika ada..." rows="3"></textarea>
+</div>
+</div>
+<!-- Modal Footer -->
+<div class="p-4 bg-surface-container border-t border-outline-variant flex justify-end gap-3">
+<button class="px-4 py-2 text-label-md font-label-md text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-lg transition-colors" onclick="document.getElementById('edit-status-modal').classList.add('hidden')">Batal</button>
+<button class="px-6 py-2 text-label-md font-label-md bg-primary text-on-primary rounded-lg hover:bg-primary-container shadow-sm transition-colors">Simpan Perubahan</button>
+</div>
+</div>
+</div></body></html>

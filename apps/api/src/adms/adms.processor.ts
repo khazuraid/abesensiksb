@@ -5,6 +5,7 @@ import type { Job } from "bullmq";
 import { eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
+import { EventsGateway } from "../events/events.gateway";
 import { TelegramService } from "../telegram/telegram.service";
 import { WebhookService } from "./webhook.service";
 
@@ -16,6 +17,7 @@ export class ADMSProcessor extends WorkerHost {
 		@Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>,
 		private readonly telegramService: TelegramService,
 		private readonly webhookService: WebhookService,
+		private readonly eventsGateway: EventsGateway,
 	) {
 		super();
 	}
@@ -60,8 +62,14 @@ export class ADMSProcessor extends WorkerHost {
 					device.webhookSecret ?? null,
 					{
 						sn,
-						timestamp: new Date(log.timestamp).toISOString().replace("T", " ").substring(0, 19),
-						user_id: employee?.biometricId || employee?.employeeCode || String(log.employeeId),
+						timestamp: new Date(log.timestamp)
+							.toISOString()
+							.replace("T", " ")
+							.substring(0, 19),
+						user_id:
+							employee?.biometricId ||
+							employee?.employeeCode ||
+							String(log.employeeId),
 						verify: 1,
 						status: log.type === "IN" ? 0 : 1,
 						workcode: 0,
@@ -81,9 +89,19 @@ export class ADMSProcessor extends WorkerHost {
 				device: device?.name || sn,
 			});
 
+			// 5. Broadcast to WebSockets
+			this.eventsGateway.broadcastNewLog({
+				sn,
+				...log,
+				employeeName: employee?.name || "Unknown",
+			});
+
 			return { success: true };
 		} catch (error) {
-			this.logger.error(`Failed to process job ${job.id}`, (error as Error).stack);
+			this.logger.error(
+				`Failed to process job ${job.id}`,
+				(error as Error).stack,
+			);
 			throw error;
 		}
 	}

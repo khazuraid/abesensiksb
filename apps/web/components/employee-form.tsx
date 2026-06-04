@@ -37,7 +37,7 @@ export default function EmployeeForm({
 		handleSubmit,
 		formState: { errors },
 	} = useForm<CreateEmployee>({
-		// biome-ignore lint/suspicious/noExplicitAny: zodResolver type mismatch with react-hook-form
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		resolver: zodResolver(CreateEmployeeSchema) as any,
 		defaultValues: initialData || {
 			isActive: true,

@@ -1,3 +1,5 @@
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
+import { BullBoardModule } from "@bull-board/nestjs";
 import { BullModule } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
 import { ShiftsModule } from "../shifts/shifts.module";
@@ -10,6 +12,10 @@ import { WebhookService } from "./webhook.service";
 @Module({
 	imports: [
 		BullModule.registerQueue({ name: "adms-logs" }),
+		BullBoardModule.forFeature({
+			name: "adms-logs",
+			adapter: BullMQAdapter,
+		}),
 		ShiftsModule,
 	],
 	controllers: [ADMSController],

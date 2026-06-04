@@ -5,6 +5,7 @@ import {
 	UnauthorizedException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import type { Request } from "express";
 
 /**
  * Guard untuk endpoint ADMS (/iclock/*).
@@ -20,7 +21,7 @@ export class AdmsGuard implements CanActivate {
 		const secret = this.configService.get<string>("ADMS_SECRET_KEY");
 		if (!secret) return true; // Dev mode: no key required
 
-		const request = context.switchToHttp().getRequest();
+		const request = context.switchToHttp().getRequest<Request>();
 		const key = request.query?.key;
 
 		if (key !== secret) {

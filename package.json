@@ -6,11 +6,20 @@
 		"build": "turbo run build",
 		"lint": "turbo run lint",
 		"db:generate": "turbo run db:generate",
-		"db:migrate": "turbo run db:migrate"
+		"db:migrate": "turbo run db:migrate",
+		"prepare": "husky"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.15",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.0.7",
 		"turbo": "^2.9.12"
+	},
+	"lint-staged": {
+		"*.{js,ts,tsx,jsx}": [
+			"biome check --apply",
+			"eslint --fix"
+		]
 	},
 	"packageManager": "pnpm@9.0.0",
 	"pnpm": {

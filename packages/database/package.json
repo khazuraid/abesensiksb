@@ -12,12 +12,14 @@
 		"db:seed": "npx tsx seed.ts"
 	},
 	"dependencies": {
-		"drizzle-orm": "^0.36.4",
 		"dotenv": "^16.4.5",
+		"drizzle-orm": "^0.36.4",
 		"pg": "^8.13.1"
 	},
 	"devDependencies": {
+		"@types/bcrypt": "^6.0.0",
 		"@types/pg": "^8.11.10",
+		"bcrypt": "^6.0.0",
 		"drizzle-kit": "^0.28.1",
 		"typescript": "^5.6.3"
 	}

@@ -28,7 +28,10 @@ export class LeavesService {
 				},
 			})
 			.from(schema.leaves)
-			.leftJoin(schema.employees, eq(schema.leaves.employeeId, schema.employees.id))
+			.leftJoin(
+				schema.employees,
+				eq(schema.leaves.employeeId, schema.employees.id),
+			)
 			.where(conditions)
 			.orderBy(desc(schema.leaves.createdAt));
 	}
@@ -40,7 +43,10 @@ export class LeavesService {
 		endDate: string;
 		reason?: string;
 	}) {
-		const [result] = await this.db.insert(schema.leaves).values(data).returning();
+		const [result] = await this.db
+			.insert(schema.leaves)
+			.values(data)
+			.returning();
 		return result;
 	}
 
@@ -50,7 +56,8 @@ export class LeavesService {
 			.set({ status: "APPROVED", approvedBy: userId, updatedAt: new Date() })
 			.where(and(eq(schema.leaves.id, id), eq(schema.leaves.status, "PENDING")))
 			.returning();
-		if (!result) throw new NotFoundException("Leave not found or already processed");
+		if (!result)
+			throw new NotFoundException("Leave not found or already processed");
 		return result;
 	}
 
@@ -60,12 +67,16 @@ export class LeavesService {
 			.set({ status: "REJECTED", approvedBy: userId, updatedAt: new Date() })
 			.where(and(eq(schema.leaves.id, id), eq(schema.leaves.status, "PENDING")))
 			.returning();
-		if (!result) throw new NotFoundException("Leave not found or already processed");
+		if (!result)
+			throw new NotFoundException("Leave not found or already processed");
 		return result;
 	}
 
 	async remove(id: number) {
-		const [result] = await this.db.delete(schema.leaves).where(eq(schema.leaves.id, id)).returning();
+		const [result] = await this.db
+			.delete(schema.leaves)
+			.where(eq(schema.leaves.id, id))
+			.returning();
 		if (!result) throw new NotFoundException("Leave not found");
 		return { message: "Leave deleted" };
 	}

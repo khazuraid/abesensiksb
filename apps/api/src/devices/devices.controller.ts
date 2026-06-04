@@ -49,7 +49,7 @@ export class DevicesController {
 		const result = await this.devicesService.create(createDeviceDto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "CREATE",
 			target: "devices",
@@ -69,7 +69,7 @@ export class DevicesController {
 		const result = await this.devicesService.update(id, updateDeviceDto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "UPDATE",
 			target: "devices",
@@ -84,7 +84,7 @@ export class DevicesController {
 		const result = await this.devicesService.remove(id);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "DELETE",
 			target: "devices",
@@ -107,7 +107,7 @@ export class DevicesController {
 		const result = await this.devicesService.sendCommand(dto);
 		const user = req.user as { id: number };
 
-		this.auditLogsService.record({
+		void this.auditLogsService.record({
 			userId: user.id,
 			action: "COMMAND",
 			target: "devices",

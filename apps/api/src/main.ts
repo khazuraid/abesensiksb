@@ -2,6 +2,9 @@ process.env.TZ = "Asia/Jakarta";
 
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
+import compression from "compression";
+import { type NextFunction, type Request, type Response } from "express";
+import helmet from "helmet";
 import { join } from "path";
 import { AppModule } from "./app.module";
 
@@ -13,24 +16,35 @@ async function bootstrap() {
 	const httpAdapter = app.getHttpAdapter();
 	const expressApp = httpAdapter.getInstance();
 
+	// Keamanan Server
+	app.use(helmet());
+
+	// Kompresi (gzip) untuk meringankan server
+	app.use(compression());
+
 	// /iclock: mesin kirim plain text - parse sebagai raw buffer
-	expressApp.use("/iclock", (req: any, res: any, next: () => void) => {
-		if (req.method !== "POST") return next();
-		const chunks: Buffer[] = [];
-		req.on("data", (chunk: Buffer) => chunks.push(chunk));
-		req.on("end", () => {
-			req.body = Buffer.concat(chunks);
-			next();
-		});
-	});
+	expressApp.use(
+		"/iclock",
+		(req: Request, _res: Response, next: NextFunction) => {
+			if (req.method !== "POST") return next();
+			const chunks: Buffer[] = [];
+			req.on("data", (chunk: Buffer) => chunks.push(chunk));
+			req.on("end", () => {
+				req.body = Buffer.concat(chunks);
+				next();
+			});
+		},
+	);
 
 	// /api: JSON body parser
-	expressApp.use("/api", (req: any, res: any, next: () => void) => {
-		if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") return next();
+	expressApp.use("/api", (req: Request, _res: Response, next: NextFunction) => {
+		if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH")
+			return next();
 		const chunks: Buffer[] = [];
 		req.on("data", (chunk: Buffer) => chunks.push(chunk));
 		req.on("end", () => {
 			try {
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 				req.body = JSON.parse(Buffer.concat(chunks).toString("utf-8"));
 			} catch {
 				req.body = {};
@@ -58,4 +72,7 @@ async function bootstrap() {
 	console.log(`API berjalan di http://localhost:${port}`);
 }
 
-bootstrap();
+bootstrap().catch((err) => {
+	console.error(err);
+	process.exit(1);
+});

@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Manajemen Cuti - ADMS PRO</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Outfit:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "inverse-surface": "#dae2fd",
+                        "surface-container-lowest": "#060e20",
+                        "on-tertiary-fixed": "#40000d",
+                        "on-primary": "#003640",
+                        "on-secondary": "#003824",
+                        "secondary-container": "#00a572",
+                        "tertiary-fixed": "#ffdadb",
+                        "border-glass": "rgba(255, 255, 255, 0.1)",
+                        "secondary-fixed": "#6ffbbe",
+                        "secondary": "#4edea3",
+                        "tertiary-container": "#ff7f8b",
+                        "on-error-container": "#ffdad6",
+                        "glow-emerald": "rgba(16, 185, 129, 0.15)",
+                        "inverse-on-surface": "#283044",
+                        "surface-tint": "#4cd7f6",
+                        "error-container": "#93000a",
+                        "outline-variant": "#3d494c",
+                        "on-surface": "#dae2fd",
+                        "on-primary-container": "#00424f",
+                        "on-error": "#690005",
+                        "surface-container-highest": "#2d3449",
+                        "primary-fixed": "#acedff",
+                        "on-tertiary-container": "#7d0023",
+                        "on-secondary-fixed": "#002113",
+                        "surface-variant": "#2d3449",
+                        "outline": "#869397",
+                        "on-primary-fixed": "#001f26",
+                        "on-surface-variant": "#bcc9cd",
+                        "on-background": "#dae2fd",
+                        "error": "#ffb4ab",
+                        "surface": "#0b1326",
+                        "on-tertiary-fixed-variant": "#92002a",
+                        "surface-container-low": "#131b2e",
+                        "inverse-primary": "#00687a",
+                        "surface-container": "#171f33",
+                        "on-secondary-container": "#00311f",
+                        "surface-glass": "rgba(30, 41, 59, 0.7)",
+                        "primary-container": "#06b6d4",
+                        "surface-container-high": "#222a3d",
+                        "glow-cyan": "rgba(6, 182, 212, 0.15)",
+                        "on-tertiary": "#67001b",
+                        "primary": "#4cd7f6",
+                        "primary-fixed-dim": "#4cd7f6",
+                        "tertiary": "#ffb2b7",
+                        "surface-dim": "#0b1326",
+                        "surface-bright": "#31394d",
+                        "secondary-fixed-dim": "#4edea3",
+                        "tertiary-fixed-dim": "#ffb2b7",
+                        "background": "#0b1326",
+                        "text-dim": "#94a3b8",
+                        "on-primary-fixed-variant": "#004e5c",
+                        "on-secondary-fixed-variant": "#005236"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-sm": "8px",
+                        "stack-md": "16px",
+                        "sidebar-width": "260px",
+                        "margin-mobile": "16px",
+                        "margin-desktop": "32px",
+                        "gutter": "24px",
+                        "container-max": "1440px",
+                        "stack-lg": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Outfit", "sans-serif"],
+                        "headline-lg": ["Outfit", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "headline-sm": ["Outfit", "sans-serif"],
+                        "display-lg": ["Outfit", "sans-serif"],
+                        "body-sm": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "mono-sm": ["JetBrains Mono", "monospace"],
+                        "label-md": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "mono-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Custom styles for specific elements not fully covered by Tailwind config */
+        .glass-panel {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-glass);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .ghost-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .table-row-hover:hover {
+            background-color: rgba(30, 41, 59, 0.5); /* #1e293b with opacity */
+        }
+
+        /* Scrollbar styling for table container */
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background-color: var(--surface-bright);
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased min-h-screen flex overflow-hidden font-body-md">
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-sidebar-width border-r border-glass bg-surface-glass backdrop-blur-xl flex flex-col py-stack-lg z-50 hidden md:flex">
+<!-- Brand Logo -->
+<div class="px-gutter mb-stack-lg">
+<a class="font-headline-sm text-headline-sm font-bold text-primary flex items-center gap-2" href="#">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">schedule</span>
+<div>
+<div>ADMS PRO</div>
+<div class="font-label-md text-label-md text-on-surface-variant font-normal tracking-normal uppercase">Enterprise Attendance</div>
+</div>
+</a>
+</div>
+<!-- Main Navigation -->
+<div class="flex-1 overflow-y-auto px-stack-sm scrollbar-thin">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-body-sm text-body-sm">Dashboard</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="font-body-sm text-body-sm">Pegawai</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-body-sm text-body-sm">Log Absensi</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="devices">devices</span>
+<span class="font-body-sm text-body-sm">Perangkat</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="schedule">schedule</span>
+<span class="font-body-sm text-body-sm">Shift</span>
+</a>
+</li>
+<!-- Active Item -->
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg bg-primary-container/10 text-primary border-l-4 border-primary font-semibold hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="event_busy" style="font-variation-settings: 'FILL' 1;">event_busy</span>
+<span class="font-body-sm text-body-sm">Cuti</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span class="font-body-sm text-body-sm">Hari Libur</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-body-sm text-body-sm">Laporan</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+<span class="font-body-sm text-body-sm">Rekap Harian</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-body-sm text-body-sm">Pengaturan</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Footer Navigation -->
+<div class="px-stack-sm pt-stack-md mt-auto border-t border-glass">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-surface-variant/50 hover:bg-white/5 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-body-sm text-body-sm">Profil</span>
+</a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-stack-md py-3 rounded-lg text-error hover:bg-error/10 transition-colors duration-200 scale-95 active:scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+<span class="font-body-sm text-body-sm">Keluar</span>
+</a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 ml-0 md:ml-[260px] flex flex-col h-screen overflow-hidden">
+<!-- Header / Page Title Area -->
+<header class="px-margin-desktop py-stack-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-glass bg-surface/50 backdrop-blur-md sticky top-0 z-30">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface">Manajemen Cuti</h1>
+<p class="font-body-sm text-body-sm text-text-dim mt-1">Pengajuan dan persetujuan cuti pegawai.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="bg-primary hover:bg-primary-fixed text-on-primary font-label-md text-label-md px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-[0_0_15px_rgba(76,215,246,0.3)] hover:shadow-[0_0_20px_rgba(76,215,246,0.5)] cursor-pointer active:scale-95">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Ajukan Cuti
+                </button>
+</div>
+</header>
+<!-- Content Canvas -->
+<div class="flex-1 overflow-y-auto p-margin-desktop scrollbar-thin">
+<!-- Table Container -->
+<div class="glass-panel rounded-xl overflow-hidden flex flex-col">
+<div class="overflow-x-auto">
+<table class="w-full text-left whitespace-nowrap">
+<thead>
+<tr class="border-b border-glass bg-surface-container-low/50">
+<th class="px-gutter py-4 font-label-md text-label-md text-text-dim uppercase tracking-wider w-1/4">Pegawai</th>
+<th class="px-gutter py-4 font-label-md text-label-md text-text-dim uppercase tracking-wider">Jenis</th>
+<th class="px-gutter py-4 font-label-md text-label-md text-text-dim uppercase tracking-wider">Tanggal</th>
+<th class="px-gutter py-4 font-label-md text-label-md text-text-dim uppercase tracking-wider">Alasan</th>
+<th class="px-gutter py-4 font-label-md text-label-md text-text-dim uppercase tracking-wider w-32 text-center">Status</th>
+<th class="px-gutter py-4 font-label-md text-label-md text-text-dim uppercase tracking-wider w-16 text-center">Aksi</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-glass font-body-sm text-body-sm">
+<!-- Row 1 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">RITA SUSANTI, S.Kep. Kep</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-07 <span class="text-text-dim mx-1">→</span> 2026-05-07
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">FREDI SUSANTO, SE</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-04 <span class="text-text-dim mx-1">→</span> 2026-05-04
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">PUJIARTI, SKM</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-23 <span class="text-text-dim mx-1">→</span> 2026-05-23
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">SILFI NUR FATHIYYAH,A.Md</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-08 <span class="text-text-dim mx-1">→</span> 2026-05-08
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">ANNA PERMATASARI</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-22 <span class="text-text-dim mx-1">→</span> 2026-05-30
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">drg. NENDA SRIWIDASARI</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-25 <span class="text-text-dim mx-1">→</span> 2026-05-25
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 7 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">GINA LATHIFAH, SKM</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-02 <span class="text-text-dim mx-1">→</span> 2026-05-02
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 8 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">SUHARNI, S.Kep. Ne</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-23 <span class="text-text-dim mx-1">→</span> 2026-05-23
+                                </td>
+<td class="px-gutter py-2 text-text-dim">cuti</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 9 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">Hj. OMAH KURNIADEWI, SKM</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-21 <span class="text-text-dim mx-1">→</span> 2026-05-22
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 10 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">LIN SUHRIA NOVIYANTI, S.</td>
+<td class="px-gutter py-2 text-on-surface-variant">Cuti Tahunan</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-18 <span class="text-text-dim mx-1">→</span> 2026-05-18
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 11 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">MALA LISIANTI, S.Kep. Ne</td>
+<td class="px-gutter py-2 text-on-surface-variant">Lainnya</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-12 <span class="text-text-dim mx-1">→</span> 2026-05-16
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+<!-- Row 12 -->
+<tr class="table-row-hover transition-colors h-12">
+<td class="px-gutter py-2 font-medium text-on-surface">FAYA AIYASYA YONANDA, A.</td>
+<td class="px-gutter py-2 text-on-surface-variant">Sakit</td>
+<td class="px-gutter py-2 font-mono-sm text-mono-sm text-on-surface-variant">
+                                    2026-05-12 <span class="text-text-dim mx-1">→</span> 2026-05-12
+                                </td>
+<td class="px-gutter py-2 text-text-dim">-</td>
+<td class="px-gutter py-2 text-center">
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary/10 text-secondary border border-secondary/20 shadow-[0_0_10px_rgba(78,222,163,0.1)]">DISETUJUI</span>
+</td>
+<td class="px-gutter py-2 text-center">
+<button class="text-text-dim hover:text-error transition-colors p-1 rounded-md hover:bg-surface-variant/50">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Spacer for bottom padding -->
+<div class="h-8"></div>
+</div>
+</main>
+</body></html>
