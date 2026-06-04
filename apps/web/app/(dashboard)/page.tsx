@@ -215,10 +215,7 @@ export default function Dashboard() {
 				<div className="lg:col-span-8 adms-card flex flex-col p-0 overflow-hidden bg-white[#1a1f24]">
 					<div className="p-6 border-b border-black/5 flex justify-between items-center bg-[#e7eeff]/30[#e7eeff]/5">
 						<h2 className="font-display text-lg font-semibold text-[#111c2d][#f9f9ff] flex items-center gap-2">
-							<BarChart3
-								size={18}
-								className="text-[#00647c][#6bd2ff]"
-							/>
+							<BarChart3 size={18} className="text-[#00647c][#6bd2ff]" />
 							Weekly Attendance Trend
 						</h2>
 					</div>
@@ -275,10 +272,7 @@ export default function Dashboard() {
 				<div className="lg:col-span-4 adms-card flex flex-col p-0 overflow-hidden bg-white[#1a1f24]">
 					<div className="p-6 border-b border-black/5 flex justify-between items-center bg-[#e7eeff]/30[#e7eeff]/5">
 						<h2 className="font-display text-lg font-semibold text-[#111c2d][#f9f9ff] flex items-center gap-2">
-							<PieChartIcon
-								size={18}
-								className="text-[#00647c][#6bd2ff]"
-							/>
+							<PieChartIcon size={18} className="text-[#00647c][#6bd2ff]" />
 							Today's Ratio
 						</h2>
 					</div>
@@ -295,8 +289,8 @@ export default function Dashboard() {
 									dataKey="value"
 									stroke="none"
 								>
-									{donutData.map((entry, index) => (
-										<Cell key={`cell-${index}`} fill={entry.color} />
+									{donutData.map((entry, _index) => (
+										<Cell key={`cell-${entry.name}`} fill={entry.color} />
 									))}
 								</Pie>
 								<Tooltip
@@ -327,7 +321,10 @@ export default function Dashboard() {
 							<Activity size={18} className="text-[#00647c]" />
 							Live Attendance Feed
 						</h2>
-						<button className="adms-button-outline !py-1.5 !px-3 !text-xs">
+						<button
+							type="button"
+							className="adms-button-outline !py-1.5 !px-3 !text-xs"
+						>
 							Filter
 						</button>
 					</div>

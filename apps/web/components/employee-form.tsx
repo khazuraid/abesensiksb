@@ -38,6 +38,7 @@ export default function EmployeeForm({
 		formState: { errors },
 	} = useForm<CreateEmployee>({
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		/* biome-ignore lint/suspicious/noExplicitAny: zod resolver type mismatch */
 		resolver: zodResolver(CreateEmployeeSchema) as any,
 		defaultValues: initialData || {
 			isActive: true,

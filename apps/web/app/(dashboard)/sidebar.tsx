@@ -110,7 +110,10 @@ export function Sidebar() {
 
 			{/* Mobile Menu Trigger (Visible only on mobile) */}
 			<div className="md:hidden fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-black/5 z-40 px-4 py-3 flex items-center gap-4">
-				<button className="text-[#3e484d] hover:bg-[#3e484d]/10 p-2 rounded-full transition-colors active:scale-95">
+				<button
+					type="button"
+					className="text-[#3e484d] hover:bg-[#3e484d]/10 p-2 rounded-full transition-colors active:scale-95"
+				>
 					<Menu size={24} />
 				</button>
 				<div className="font-display text-[20px] font-bold flex items-center gap-2">

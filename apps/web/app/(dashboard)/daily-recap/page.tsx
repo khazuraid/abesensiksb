@@ -194,7 +194,7 @@ export default function DailyRecapPage() {
 			window.URL.revokeObjectURL(url);
 		} catch (e: unknown) {
 			const err = e as { response?: { status?: number }; message?: string };
-			alert("Gagal export: " + (err?.response?.status || err?.message));
+			alert(`Gagal export: ${err?.response?.status || err?.message}`);
 		}
 	};
 	const handleExportPdf = async () => {
@@ -283,6 +283,7 @@ export default function DailyRecapPage() {
 				<div className="flex flex-wrap items-center gap-3">
 					<div className="flex items-center bg-white border border-[#bdc8ce] rounded-lg p-1 shadow-sm">
 						<button
+							type="button"
 							onClick={prevMonth}
 							className="p-1.5 text-[#6e797e] hover:text-[#111c2d] hover:bg-[#f9f9ff] rounded-md transition-colors"
 						>
@@ -292,6 +293,7 @@ export default function DailyRecapPage() {
 							{months[month - 1]} {year}
 						</div>
 						<button
+							type="button"
 							onClick={nextMonth}
 							className="p-1.5 text-[#6e797e] hover:text-[#111c2d] hover:bg-[#f9f9ff] rounded-md transition-colors"
 						>
@@ -300,12 +302,14 @@ export default function DailyRecapPage() {
 					</div>
 					<div className="flex gap-2">
 						<button
+							type="button"
 							onClick={handleExport}
 							className="bg-[#00647c] text-white font-semibold text-[13px] px-4 py-2.5 rounded-lg hover:bg-[#007f9d] shadow-sm flex items-center gap-2 transition-colors active:scale-95"
 						>
 							<Download size={16} /> Excel
 						</button>
 						<button
+							type="button"
 							onClick={handleExportPdf}
 							className="bg-[#ba1a1a] text-white font-semibold text-[13px] px-4 py-2.5 rounded-lg hover:bg-[#a01313] shadow-sm flex items-center gap-2 transition-colors active:scale-95"
 						>
@@ -498,6 +502,7 @@ export default function DailyRecapPage() {
 						<div className="px-6 py-4 border-b border-black/5 flex justify-between items-center bg-[#f9f9ff]">
 							<h3 className="font-semibold text-[#111c2d]">Edit Absensi</h3>
 							<button
+								type="button"
 								onClick={() => setEditingDay(null)}
 								className="text-[#6e797e] hover:text-[#111c2d]"
 							>
@@ -516,11 +521,12 @@ export default function DailyRecapPage() {
 							</p>
 
 							<div className="mb-4">
-								<label className="block text-[12px] font-semibold text-[#6e797e] mb-1">
+								<div className="block text-[12px] font-semibold text-[#6e797e] mb-1">
 									Pilih Tipe
-								</label>
+								</div>
 								<div className="flex gap-2">
 									<button
+										type="button"
 										className={`flex-1 py-1.5 rounded-md text-[13px] font-medium transition-colors ${editingDay.field === "in" ? "bg-[#00647c] text-white" : "bg-gray-100 text-[#3e484d]"}`}
 										onClick={() =>
 											setEditingDay({ ...editingDay, field: "in" })
@@ -529,6 +535,7 @@ export default function DailyRecapPage() {
 										Jam Masuk
 									</button>
 									<button
+										type="button"
 										className={`flex-1 py-1.5 rounded-md text-[13px] font-medium transition-colors ${editingDay.field === "out" ? "bg-[#00647c] text-white" : "bg-gray-100 text-[#3e484d]"}`}
 										onClick={() =>
 											setEditingDay({ ...editingDay, field: "out" })
@@ -540,10 +547,14 @@ export default function DailyRecapPage() {
 							</div>
 
 							<div className="mb-6">
-								<label className="block text-[12px] font-semibold text-[#6e797e] mb-1">
+								<label
+									htmlFor="time-input"
+									className="block text-[12px] font-semibold text-[#6e797e] mb-1"
+								>
 									{editingDay.field === "in" ? "Waktu Masuk" : "Waktu Keluar"}
 								</label>
 								<input
+									id="time-input"
 									type="time"
 									value={editingDay.value}
 									onChange={(e) =>
@@ -554,6 +565,7 @@ export default function DailyRecapPage() {
 							</div>
 
 							<button
+								type="button"
 								onClick={() => {
 									const dayData = selectedEmployee.days.find(
 										(d) => d.date === editingDay.date,

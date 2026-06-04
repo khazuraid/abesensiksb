@@ -18,9 +18,7 @@ export default function RootLayout({
 		<html lang="en" className="light">
 			<body>
 				<Providers>
-					<SocketProvider>
-						{children}
-					</SocketProvider>
+					<SocketProvider>{children}</SocketProvider>
 					<Toaster position="top-right" richColors />
 				</Providers>
 			</body>

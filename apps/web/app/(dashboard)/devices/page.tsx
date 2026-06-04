@@ -39,8 +39,8 @@ export default function DevicesPage() {
 		}: {
 			id: number;
 			command: DeviceCommandType;
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			payload?: any;
+			//
+			payload?: unknown;
 		}) => {
 			const res = await api.post(`/devices/${id}/command`, {
 				command,
@@ -77,7 +77,10 @@ export default function DevicesPage() {
 						Manajemen seluruh mesin absensi ADMS.
 					</p>
 				</div>
-				<button className="flex items-center gap-2 px-4 py-2 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[13px] shadow-sm active:scale-95">
+				<button
+					type="button"
+					className="flex items-center gap-2 px-4 py-2 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
+				>
 					<Plus size={18} /> Tambah Mesin
 				</button>
 			</div>
@@ -101,7 +104,10 @@ export default function DevicesPage() {
 									onChange={(e) => setSearch(e.target.value)}
 								/>
 							</div>
-							<button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#bdc8ce] text-[#3e484d] hover:text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] whitespace-nowrap">
+							<button
+								type="button"
+								className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#bdc8ce] text-[#3e484d] hover:text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] whitespace-nowrap"
+							>
 								<Filter size={16} /> Filter Tipe
 							</button>
 						</div>
@@ -176,7 +182,10 @@ export default function DevicesPage() {
 													{dev.ipAddress || "-"}
 												</td>
 												<td className="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-													<button className="p-1.5 text-[#6e797e] hover:text-[#00647c] transition-colors">
+													<button
+														type="button"
+														className="p-1.5 text-[#6e797e] hover:text-[#00647c] transition-colors"
+													>
 														<MoreVertical size={16} />
 													</button>
 												</td>
@@ -199,14 +208,17 @@ export default function DevicesPage() {
 						</h3>
 
 						<div className="bg-[#f9f9ff] p-3 rounded-lg border border-[#bdc8ce]">
-							<label className="font-sans text-[12px] font-semibold text-[#6e797e] block mb-1">
+							<label
+								htmlFor="protocol-logs"
+								className="font-sans text-[12px] font-semibold text-[#6e797e] block mb-1"
+							>
 								Target Perangkat
 							</label>
 							<select
 								className="w-full bg-transparent border-none text-[13px] font-sans text-[#111c2d] focus:ring-0 p-0 cursor-pointer"
 								value={selectedDevice?.id || ""}
 								onChange={(e) => {
-									const id = parseInt(e.target.value);
+									const id = parseInt(e.target.value, 10);
 									const dev = devices?.find((d) => d.id === id);
 									setSelectedDevice(dev || null);
 								}}
@@ -224,6 +236,7 @@ export default function DevicesPage() {
 
 						<div className="grid grid-cols-2 gap-3">
 							<button
+								type="button"
 								disabled={!selectedDevice}
 								onClick={() => {
 									if (selectedDevice)
@@ -241,6 +254,7 @@ export default function DevicesPage() {
 								Reboot
 							</button>
 							<button
+								type="button"
 								disabled={!selectedDevice}
 								onClick={() => {
 									if (selectedDevice)
@@ -258,6 +272,7 @@ export default function DevicesPage() {
 								Sync Time
 							</button>
 							<button
+								type="button"
 								disabled={!selectedDevice}
 								onClick={() => {
 									if (selectedDevice)
@@ -275,6 +290,7 @@ export default function DevicesPage() {
 								Tarik Data Absensi
 							</button>
 							<button
+								type="button"
 								disabled={!selectedDevice}
 								onClick={() => {
 									if (
@@ -307,7 +323,7 @@ export default function DevicesPage() {
 								<span className="w-2 h-2 rounded-full bg-[#006c49] animate-pulse"></span>
 								Log Protokol
 							</h3>
-							<button className="text-white/50 hover:text-white">
+							<button type="button" className="text-white/50 hover:text-white">
 								<MoreVertical size={16} />
 							</button>
 						</div>

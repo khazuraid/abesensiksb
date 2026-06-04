@@ -112,10 +112,14 @@ export default function EmployeesPage() {
 					</p>
 				</div>
 				<div className="flex flex-wrap gap-3">
-					<button className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95">
+					<button
+						type="button"
+						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
+					>
 						<UploadCloud size={18} /> Push ke Perangkat
 					</button>
 					<button
+						type="button"
 						onClick={() => setIsFormOpen(true)}
 						className="flex items-center gap-2 px-4 py-2 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
 					>
@@ -142,18 +146,27 @@ export default function EmployeesPage() {
 								onChange={(e) => setSearch(e.target.value)}
 							/>
 						</div>
-						<button className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#bdc8ce] text-[#3e484d] hover:text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] whitespace-nowrap">
+						<button
+							type="button"
+							className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#bdc8ce] text-[#3e484d] hover:text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] whitespace-nowrap"
+						>
 							<Filter size={16} /> Filter Dept
 						</button>
 					</div>
 					<div className="flex items-center gap-4 text-[#3e484d] font-semibold text-[13px]">
 						<span>Total: {filteredEmployees?.length || 0}</span>
 						<div className="flex items-center gap-1">
-							<button className="p-1 rounded hover:bg-[#f9f9ff] transition-colors">
+							<button
+								type="button"
+								className="p-1 rounded hover:bg-[#f9f9ff] transition-colors"
+							>
 								<ChevronLeft size={16} />
 							</button>
 							<span className="px-2">1 / 1</span>
-							<button className="p-1 rounded hover:bg-[#f9f9ff] transition-colors">
+							<button
+								type="button"
+								className="p-1 rounded hover:bg-[#f9f9ff] transition-colors"
+							>
 								<ChevronRight size={16} />
 							</button>
 						</div>
@@ -244,12 +257,14 @@ export default function EmployeesPage() {
 										</td>
 										<td className="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
 											<button
+												type="button"
 												onClick={() => handleEdit(emp)}
 												className="p-1.5 text-[#6e797e] hover:text-[#00647c] transition-colors"
 											>
 												<Edit2 size={16} />
 											</button>
 											<button
+												type="button"
 												onClick={() => {
 													if (confirm("Yakin ingin menghapus pegawai ini?")) {
 														deleteMutation.mutate(emp.id);

@@ -245,9 +245,9 @@ function ShiftForm({
 						</div>
 					</div>
 					<div>
-						<label className="block text-[13px] font-semibold text-[#3e484d] mb-2">
+						<div className="block text-[13px] font-semibold text-[#3e484d] mb-2">
 							Hari Kerja
-						</label>
+						</div>
 						<div className="flex gap-2 flex-wrap">
 							{dayNames.map((name, idx) => (
 								<button
@@ -351,6 +351,7 @@ export default function ShiftsPage() {
 					</p>
 				</div>
 				<button
+					type="button"
 					onClick={() => {
 						setSelectedShift(null);
 						setIsFormOpen(true);
@@ -402,6 +403,7 @@ export default function ShiftsPage() {
 								</div>
 								<div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
 									<button
+										type="button"
 										onClick={() => {
 											setSelectedShift(shift);
 											setIsFormOpen(true);
@@ -411,6 +413,7 @@ export default function ShiftsPage() {
 										<Edit2 size={16} />
 									</button>
 									<button
+										type="button"
 										onClick={() => {
 											if (confirm("Yakin ingin menghapus shift ini?")) {
 												deleteMutation.mutate(shift.id);

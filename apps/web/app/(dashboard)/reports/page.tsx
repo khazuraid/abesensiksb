@@ -37,7 +37,8 @@ export default function ReportsPage() {
 	const { data: reportData, isLoading } = useQuery<MonthlyReport[]>({
 		queryKey: ["monthly-report", month, year],
 		queryFn: async () => {
-			return (await api.get(`/reports/summary?month=${month}&year=${year}`)).data;
+			return (await api.get(`/reports/summary?month=${month}&year=${year}`))
+				.data;
 		},
 	});
 
@@ -51,12 +52,14 @@ export default function ReportsPage() {
 	const { data: dailyRecapData, isLoading: isLoadingDaily } = useQuery({
 		queryKey: ["daily-recap", month, year],
 		queryFn: async () => {
-			return (await api.get(`/reports/daily-recap?month=${month}&year=${year}`)).data;
+			return (await api.get(`/reports/daily-recap?month=${month}&year=${year}`))
+				.data;
 		},
 		enabled: !!selectedEmployee,
 	});
 
 	const selectedEmployeeDetail = dailyRecapData?.find(
+		/* biome-ignore lint/suspicious/noExplicitAny: too complex */
 		(emp: any) => emp.id === selectedEmployee,
 	);
 
@@ -88,16 +91,25 @@ export default function ReportsPage() {
 
 	if (reportData && reportData.length > 0) {
 		const totalDays = reportData.reduce(
-			(acc, curr) => acc + curr.totalPresent + curr.totalAbsent + curr.totalLeave,
+			(acc, curr) =>
+				acc + curr.totalPresent + curr.totalAbsent + curr.totalLeave,
 			0,
 		);
-		const totalPresent = reportData.reduce((acc, curr) => acc + curr.totalPresent, 0);
-		const totalAbsent = reportData.reduce((acc, curr) => acc + curr.totalAbsent, 0);
+		const totalPresent = reportData.reduce(
+			(acc, curr) => acc + curr.totalPresent,
+			0,
+		);
+		const totalAbsent = reportData.reduce(
+			(acc, curr) => acc + curr.totalAbsent,
+			0,
+		);
 
 		stats.totalLate = reportData.reduce((acc, curr) => acc + curr.totalLate, 0);
 
 		if (totalDays > 0) {
-			stats.avgAttendance = Number(((totalPresent / totalDays) * 100).toFixed(1));
+			stats.avgAttendance = Number(
+				((totalPresent / totalDays) * 100).toFixed(1),
+			);
 			stats.absentRate = Number(((totalAbsent / totalDays) * 100).toFixed(1));
 		}
 	}
@@ -128,6 +140,7 @@ export default function ReportsPage() {
 						<ChevronDown size={20} className="text-[#6e797e] ml-2" />
 					</div>
 					<button
+						type="button"
 						onClick={handleExport}
 						className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#bdc8ce] text-[#00647c] rounded-lg font-semibold text-[13px] hover:bg-[#dee8ff]/50 hover:border-[#00647c]/50 transition-colors shadow-sm active:scale-95"
 					>
@@ -168,7 +181,8 @@ export default function ReportsPage() {
 						Rata-rata Kehadiran
 					</h3>
 					<p className="font-display text-[32px] font-semibold text-[#111c2d] mt-1 relative z-10">
-						{stats.avgAttendance}<span className="text-[24px]">%</span>
+						{stats.avgAttendance}
+						<span className="text-[24px]">%</span>
 					</p>
 				</div>
 
@@ -201,7 +215,8 @@ export default function ReportsPage() {
 						Tingkat Absensi
 					</h3>
 					<p className="font-display text-[32px] font-semibold text-[#111c2d] mt-1 relative z-10">
-						{stats.absentRate}<span className="text-[24px]">%</span>
+						{stats.absentRate}
+						<span className="text-[24px]">%</span>
 					</p>
 				</div>
 			</div>
@@ -268,10 +283,23 @@ export default function ReportsPage() {
 								</tr>
 							) : (
 								filteredData.map((row) => {
-									const totalRowDays = row.totalPresent + row.totalAbsent + row.totalLeave;
-									const attendanceRate = totalRowDays > 0 ? (row.totalPresent / totalRowDays) * 100 : 0;
-									const scoreValue = Math.round(attendanceRate - (row.totalLate * 2));
-									const score = scoreValue >= 90 ? "A" : scoreValue >= 80 ? "B" : scoreValue >= 70 ? "C" : "D";
+									const totalRowDays =
+										row.totalPresent + row.totalAbsent + row.totalLeave;
+									const attendanceRate =
+										totalRowDays > 0
+											? (row.totalPresent / totalRowDays) * 100
+											: 0;
+									const scoreValue = Math.round(
+										attendanceRate - row.totalLate * 2,
+									);
+									const score =
+										scoreValue >= 90
+											? "A"
+											: scoreValue >= 80
+												? "B"
+												: scoreValue >= 70
+													? "C"
+													: "D";
 
 									return (
 										<tr
@@ -330,6 +358,7 @@ export default function ReportsPage() {
 											</td>
 											<td className="px-6 py-4 text-right">
 												<button
+													type="button"
 													onClick={() => setSelectedEmployee(row.id)}
 													title="Lihat Detail Harian"
 													className="text-[#00647c] hover:text-[#007f9d] p-1.5 rounded-lg hover:bg-[#dee8ff]/50 transition-colors opacity-0 group-hover:opacity-100"
@@ -359,6 +388,7 @@ export default function ReportsPage() {
 								Detail Riwayat Harian
 							</h3>
 							<button
+								type="button"
 								onClick={() => setSelectedEmployee(null)}
 								className="text-[#6e797e] hover:text-[#ba1a1a] transition-colors p-1"
 							>
@@ -414,60 +444,67 @@ export default function ReportsPage() {
 												</tr>
 											</thead>
 											<tbody className="divide-y divide-black/5 text-[13px]">
-												{selectedEmployeeDetail.days.map((day: any, i: number) => {
-													let statusColor = "text-[#3e484d]";
-													let statusLabel = "-";
-													
-													if (day.isHoliday) {
-														statusLabel = "Libur";
-														statusColor = "text-[#894e00]";
-													} else if (!day.isWorkDay) {
-														statusLabel = "Off";
-													} else {
-														switch (day.status) {
-															case "PRESENT":
-																statusLabel = "Hadir";
-																statusColor = "text-[#006c49]";
-																break;
-															case "LATE":
-																statusLabel = "Telat";
-																statusColor = "text-[#894e00]";
-																break;
-															case "EARLY_OUT":
-																statusLabel = "Pulang Cepat";
-																statusColor = "text-[#894e00]";
-																break;
-															case "ABSENT":
-																statusLabel = "Alpa";
-																statusColor = "text-[#ba1a1a]";
-																break;
-															case "LEAVE":
-																statusLabel = "Cuti/Izin";
-																statusColor = "text-[#00647c]";
-																break;
-														}
-													}
+												{selectedEmployeeDetail.days.map(
+													/* biome-ignore lint/suspicious/noExplicitAny: complex object */
+													(day: any, _i: number) => {
+														let statusColor = "text-[#3e484d]";
+														let statusLabel = "-";
 
-													return (
-														<tr key={i} className="hover:bg-[#f9f9ff]">
-															<td className="px-4 py-3 font-medium">
-																{day.date}
-															</td>
-															<td className={`px-4 py-3 font-semibold ${statusColor}`}>
-																{statusLabel}
-															</td>
-															<td className="px-4 py-3">
-																{day.clockIn || "-"}
-															</td>
-															<td className="px-4 py-3">
-																{day.clockOut || "-"}
-															</td>
-															<td className="px-4 py-3 text-[#ba1a1a]">
-																{day.lateMinutes > 0 ? `${day.lateMinutes} mnt` : "-"}
-															</td>
-														</tr>
-													);
-												})}
+														if (day.isHoliday) {
+															statusLabel = "Libur";
+															statusColor = "text-[#894e00]";
+														} else if (!day.isWorkDay) {
+															statusLabel = "Off";
+														} else {
+															switch (day.status) {
+																case "PRESENT":
+																	statusLabel = "Hadir";
+																	statusColor = "text-[#006c49]";
+																	break;
+																case "LATE":
+																	statusLabel = "Telat";
+																	statusColor = "text-[#894e00]";
+																	break;
+																case "EARLY_OUT":
+																	statusLabel = "Pulang Cepat";
+																	statusColor = "text-[#894e00]";
+																	break;
+																case "ABSENT":
+																	statusLabel = "Alpa";
+																	statusColor = "text-[#ba1a1a]";
+																	break;
+																case "LEAVE":
+																	statusLabel = "Cuti/Izin";
+																	statusColor = "text-[#00647c]";
+																	break;
+															}
+														}
+
+														return (
+															<tr key={day.date} className="hover:bg-[#f9f9ff]">
+																<td className="px-4 py-3 font-medium">
+																	{day.date}
+																</td>
+																<td
+																	className={`px-4 py-3 font-semibold ${statusColor}`}
+																>
+																	{statusLabel}
+																</td>
+																<td className="px-4 py-3">
+																	{day.clockIn || "-"}
+																</td>
+																<td className="px-4 py-3">
+																	{day.clockOut || "-"}
+																</td>
+																<td className="px-4 py-3 text-[#ba1a1a]">
+																	{day.lateMinutes > 0
+																		? `${day.lateMinutes} mnt`
+																		: "-"}
+																</td>
+															</tr>
+														);
+													},
+												)}
 											</tbody>
 										</table>
 									</div>

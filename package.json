@@ -17,8 +17,7 @@
 	},
 	"lint-staged": {
 		"*.{js,ts,tsx,jsx}": [
-			"biome check --apply",
-			"eslint --fix"
+			"biome check --write"
 		]
 	},
 	"packageManager": "pnpm@9.0.0",

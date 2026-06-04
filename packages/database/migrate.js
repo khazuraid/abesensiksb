@@ -1,8 +1,8 @@
 // migrate.js — dijalankan sebelum app start di container
 // Membaca bootstrap.sql dan seed-admin.sql, eksekusi ke DATABASE_URL
 const { Pool } = require("pg");
-const fs = require("fs");
-const path = require("path");
+const fs = require("node:fs");
+const path = require("node:path");
 
 async function run() {
 	const pool = new Pool({ connectionString: process.env.DATABASE_URL });

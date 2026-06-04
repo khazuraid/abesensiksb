@@ -100,12 +100,16 @@ export default function AttendanceLogsPage() {
 				</div>
 				<div className="flex flex-wrap gap-3">
 					<button
+						type="button"
 						onClick={handleExport}
 						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
 					>
 						<Download size={18} /> Export Excel
 					</button>
-					<button className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95">
+					<button
+						type="button"
+						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
+					>
 						<FileText size={18} /> Export PDF
 					</button>
 				</div>
@@ -137,7 +141,10 @@ export default function AttendanceLogsPage() {
 				<div className="flex flex-wrap gap-4 w-full lg:w-auto">
 					{/* Search */}
 					<div className="flex flex-col gap-1 w-full sm:w-auto">
-						<label className="font-sans text-[12px] font-semibold text-[#6e797e]">
+						<label
+							htmlFor="search-emp"
+							className="font-sans text-[12px] font-semibold text-[#6e797e]"
+						>
 							Pencarian Pegawai
 						</label>
 						<div className="relative">
@@ -157,7 +164,10 @@ export default function AttendanceLogsPage() {
 
 					{/* Date Range */}
 					<div className="flex flex-col gap-1 w-full sm:w-auto">
-						<label className="font-sans text-[12px] font-semibold text-[#6e797e]">
+						<label
+							htmlFor="date-range"
+							className="font-sans text-[12px] font-semibold text-[#6e797e]"
+						>
 							Rentang Tanggal
 						</label>
 						<div className="flex items-center gap-2">
@@ -167,6 +177,7 @@ export default function AttendanceLogsPage() {
 									size={18}
 								/>
 								<input
+									id="date-range"
 									type="date"
 									value={filterStartDate}
 									onChange={(e) => setFilterStartDate(e.target.value)}
@@ -191,7 +202,10 @@ export default function AttendanceLogsPage() {
 
 					{/* Status Filter */}
 					<div className="flex flex-col gap-1 w-full sm:w-auto">
-						<label className="font-sans text-[12px] font-semibold text-[#6e797e]">
+						<label
+							htmlFor="status-filter"
+							className="font-sans text-[12px] font-semibold text-[#6e797e]"
+						>
 							Status
 						</label>
 						<div className="relative">

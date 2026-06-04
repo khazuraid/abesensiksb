@@ -270,6 +270,7 @@ export default function LeavesPage() {
 												{leave.status === "PENDING" && (
 													<>
 														<button
+															type="button"
 															onClick={() => approveMutation.mutate(leave.id)}
 															title="Setujui"
 															className="p-1.5 text-[#006c49] hover:bg-[#6cf8bb]/30 rounded-lg transition-colors"
@@ -277,6 +278,7 @@ export default function LeavesPage() {
 															<Check size={18} />
 														</button>
 														<button
+															type="button"
 															onClick={() => rejectMutation.mutate(leave.id)}
 															title="Tolak"
 															className="p-1.5 text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded-lg transition-colors"
@@ -286,6 +288,7 @@ export default function LeavesPage() {
 													</>
 												)}
 												<button
+													type="button"
 													onClick={() => {
 														if (confirm("Hapus cuti ini?")) {
 															deleteMutation.mutate(leave.id);

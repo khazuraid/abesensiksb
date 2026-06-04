@@ -124,7 +124,9 @@ export default function ProfilePage() {
 							animate={{ opacity: 1 }}
 							className="adms-card p-6 space-y-6"
 						>
-							<h4 className="text-lg font-bold text-slate-900">Informasi Akun</h4>
+							<h4 className="text-lg font-bold text-slate-900">
+								Informasi Akun
+							</h4>
 							<div className="space-y-4">
 								<div>
 									<label
@@ -161,11 +163,17 @@ export default function ProfilePage() {
 									/>
 								</div>
 								<div>
-									<label className="block text-sm font-medium text-slate-500 mb-1">
+									<label
+										htmlFor="role-field"
+										className="block text-sm font-medium text-slate-500 mb-1"
+									>
 										<Shield size={14} className="inline mr-1" />
 										Role
 									</label>
-									<div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-500">
+									<div
+										id="role-field"
+										className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-500"
+									>
 										{user?.role}
 									</div>
 								</div>
@@ -200,7 +208,9 @@ export default function ProfilePage() {
 							animate={{ opacity: 1 }}
 							className="adms-card p-6 space-y-6"
 						>
-							<h4 className="text-lg font-bold text-slate-900">Ubah Password</h4>
+							<h4 className="text-lg font-bold text-slate-900">
+								Ubah Password
+							</h4>
 							<div className="space-y-4">
 								<div>
 									<label

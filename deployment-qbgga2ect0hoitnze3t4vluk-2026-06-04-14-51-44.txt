@@ -1,0 +1,377 @@
+2026-Jun-04 14:49:44.898007 Docker 29.4.3 with BuildKit and Buildx detected on deployment server (localhost).
+2026-Jun-04 14:49:44.914850 Starting deployment of khazuraid/abesensiksb:main to localhost.
+2026-Jun-04 14:49:45.187160 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-Jun-04 14:49:45.364831 [CMD]: docker stop -t 30 qbgga2ect0hoitnze3t4vluk
+2026-Jun-04 14:49:45.364831 Error response from daemon: No such container: qbgga2ect0hoitnze3t4vluk
+2026-Jun-04 14:49:45.661254 [CMD]: docker run -d --network 'coolify' --name qbgga2ect0hoitnze3t4vluk --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/coollabsio/coolify-helper:1.0.13
+2026-Jun-04 14:49:45.661254 04392d9bf167324a94487f75721a1903db9448c31bbbee717cb20e330bffce00
+2026-Jun-04 14:49:48.902081 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'GIT_SSH_COMMAND="ssh -o ConnectTimeout=30 -p 22 -o Port=22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git ls-remote https://x-access-token:<REDACTED>@github.com/khazuraid/abesensiksb.git refs/heads/main'
+2026-Jun-04 14:49:48.902081 22a8931feb1587a72488cf935d96dbc79810d54b refs/heads/main
+2026-Jun-04 14:49:49.341658 ----------------------------------------
+2026-Jun-04 14:49:49.349239 Importing khazuraid/abesensiksb:main (commit sha 22a8931feb1587a72488cf935d96dbc79810d54b) to /artifacts/qbgga2ect0hoitnze3t4vluk.
+2026-Jun-04 14:49:49.587285 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'git clone --depth=1 --recurse-submodules --shallow-submodules -b '\''main'\'' '\''https://x-access-token:<REDACTED>@github.com/khazuraid/abesensiksb.git'\'' '\''/artifacts/qbgga2ect0hoitnze3t4vluk'\'' && cd '\''/artifacts/qbgga2ect0hoitnze3t4vluk'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git fetch --depth=1 origin '\''22a8931feb1587a72488cf935d96dbc79810d54b'\'' && git -c advice.detachedHead=false checkout '\''22a8931feb1587a72488cf935d96dbc79810d54b'\'' >/dev/null 2>&1 && cd '\''/artifacts/qbgga2ect0hoitnze3t4vluk'\'' && if [ -f .gitmodules ]; then git submodule sync && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git submodule update --init --recursive --depth=1; fi && cd '\''/artifacts/qbgga2ect0hoitnze3t4vluk'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git lfs pull'
+2026-Jun-04 14:49:49.587285 Cloning into '/artifacts/qbgga2ect0hoitnze3t4vluk'...
+2026-Jun-04 14:49:53.424052 From https://github.com/khazuraid/abesensiksb
+2026-Jun-04 14:49:53.424052 * branch 22a8931feb1587a72488cf935d96dbc79810d54b -> FETCH_HEAD
+2026-Jun-04 14:49:54.242440 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'cd /artifacts/qbgga2ect0hoitnze3t4vluk && git log -1 '\''22a8931feb1587a72488cf935d96dbc79810d54b'\'' --pretty=%B'
+2026-Jun-04 14:49:54.242440 feat: complete dashboard redesign, add adms protocol integration, reports modal, and backend fixes
+2026-Jun-04 14:49:54.414724 Image not found (umgmkhs7ghj9ykwmyc2tqh6e:22a8931feb1587a72488cf935d96dbc79810d54b). Building new image.
+2026-Jun-04 14:49:55.432069 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'cat /artifacts/qbgga2ect0hoitnze3t4vluk/apps/api/Dockerfile'
+2026-Jun-04 14:49:55.432069 FROM node:20-alpine
+2026-Jun-04 14:49:55.432069 RUN apk add --no-cache tzdata && corepack enable && corepack prepare pnpm@9 --activate
+2026-Jun-04 14:49:55.432069 WORKDIR /app
+2026-Jun-04 14:49:55.432069
+2026-Jun-04 14:49:55.432069 ENV NODE_ENV=development
+2026-Jun-04 14:49:55.432069
+2026-Jun-04 14:49:55.432069 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-Jun-04 14:49:55.432069 COPY packages/ ./packages/
+2026-Jun-04 14:49:55.432069 COPY apps/api/ ./apps/api/
+2026-Jun-04 14:49:55.432069 COPY biome.json turbo.json ./
+2026-Jun-04 14:49:55.432069
+2026-Jun-04 14:49:55.432069 RUN pnpm install --frozen-lockfile
+2026-Jun-04 14:49:55.432069 RUN pnpm turbo build --filter=api
+2026-Jun-04 14:49:55.432069
+2026-Jun-04 14:49:55.432069 # Cleanup devDeps & build artifacts to reduce image size
+2026-Jun-04 14:49:55.432069 RUN rm -rf apps/api/src packages/*/src .turbo biome.json turbo.json
+2026-Jun-04 14:49:55.432069
+2026-Jun-04 14:49:55.432069 ENV NODE_ENV=production
+2026-Jun-04 14:49:55.432069 ENV PORT=8888
+2026-Jun-04 14:49:55.432069 ENV TZ=Asia/Jakarta
+2026-Jun-04 14:49:55.432069 EXPOSE 8888
+2026-Jun-04 14:49:55.432069 CMD ["node", "apps/api/dist/main.js"]
+2026-Jun-04 14:49:55.720512 Creating build-time .env file in /artifacts (outside Docker context).
+2026-Jun-04 14:49:56.211695 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'cat /artifacts/qbgga2ect0hoitnze3t4vluk/apps/api/Dockerfile'
+2026-Jun-04 14:49:56.211695 FROM node:20-alpine
+2026-Jun-04 14:49:56.211695 RUN apk add --no-cache tzdata && corepack enable && corepack prepare pnpm@9 --activate
+2026-Jun-04 14:49:56.211695 WORKDIR /app
+2026-Jun-04 14:49:56.211695
+2026-Jun-04 14:49:56.211695 ENV NODE_ENV=development
+2026-Jun-04 14:49:56.211695
+2026-Jun-04 14:49:56.211695 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-Jun-04 14:49:56.211695 COPY packages/ ./packages/
+2026-Jun-04 14:49:56.211695 COPY apps/api/ ./apps/api/
+2026-Jun-04 14:49:56.211695 COPY biome.json turbo.json ./
+2026-Jun-04 14:49:56.211695
+2026-Jun-04 14:49:56.211695 RUN pnpm install --frozen-lockfile
+2026-Jun-04 14:49:56.211695 RUN pnpm turbo build --filter=api
+2026-Jun-04 14:49:56.211695
+2026-Jun-04 14:49:56.211695 # Cleanup devDeps & build artifacts to reduce image size
+2026-Jun-04 14:49:56.211695 RUN rm -rf apps/api/src packages/*/src .turbo biome.json turbo.json
+2026-Jun-04 14:49:56.211695
+2026-Jun-04 14:49:56.211695 ENV NODE_ENV=production
+2026-Jun-04 14:49:56.211695 ENV PORT=8888
+2026-Jun-04 14:49:56.211695 ENV TZ=Asia/Jakarta
+2026-Jun-04 14:49:56.211695 EXPOSE 8888
+2026-Jun-04 14:49:56.211695 CMD ["node", "apps/api/dist/main.js"]
+2026-Jun-04 14:49:56.279965 Final Dockerfile:
+2026-Jun-04 14:49:56.667739 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'cat /artifacts/qbgga2ect0hoitnze3t4vluk/apps/api/Dockerfile'
+2026-Jun-04 14:49:56.667739 FROM node:20-alpine
+2026-Jun-04 14:49:56.667739 ARG REDIS_HOST=redis://default:<REDACTED>@r118q9iew08qs6oy5tptkzgr:6379/0
+2026-Jun-04 14:49:56.667739 ARG JWT_SECRET=F6kYn6j5V7wS3p2r9m0t4h8q1s5u9e2o
+2026-Jun-04 14:49:56.667739 ARG DATABASE_URL=postgres://absensi:<REDACTED>@axhx8std8awexuzl13ius1lw:5432/adms_db
+2026-Jun-04 14:49:56.667739 ARG TELEGRAM_TOKEN=8995125206:AAExZ_2lqjmPPPeNfMg6XPpVAtv_vG7PewY
+2026-Jun-04 14:49:56.667739 ARG TELEGRAM_CHAT_ID=-8306895212
+2026-Jun-04 14:49:56.667739 ARG CORS_ORIGIN=https://absensi.silapordbd.web.id
+2026-Jun-04 14:49:56.667739 ARG PORT=8888
+2026-Jun-04 14:49:56.667739 ARG TZ=Asia/Jakarta
+2026-Jun-04 14:49:56.667739 ARG COOLIFY_URL=https:<REDACTED>@9 --activate
+2026-Jun-04 14:49:56.667739 WORKDIR /app
+2026-Jun-04 14:49:56.667739
+2026-Jun-04 14:49:56.667739 ENV NODE_ENV=development
+2026-Jun-04 14:49:56.667739
+2026-Jun-04 14:49:56.667739 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-Jun-04 14:49:56.667739 COPY packages/ ./packages/
+2026-Jun-04 14:49:56.667739 COPY apps/api/ ./apps/api/
+2026-Jun-04 14:49:56.667739 COPY biome.json turbo.json ./
+2026-Jun-04 14:49:56.667739
+2026-Jun-04 14:49:56.667739 RUN pnpm install --frozen-lockfile
+2026-Jun-04 14:49:56.667739 RUN pnpm turbo build --filter=api
+2026-Jun-04 14:49:56.667739
+2026-Jun-04 14:49:56.667739 # Cleanup devDeps & build artifacts to reduce image size
+2026-Jun-04 14:49:56.667739 RUN rm -rf apps/api/src packages/*/src .turbo biome.json turbo.json
+2026-Jun-04 14:49:56.667739
+2026-Jun-04 14:49:56.667739 ENV NODE_ENV=production
+2026-Jun-04 14:49:56.667739 ENV PORT=8888
+2026-Jun-04 14:49:56.667739 ENV TZ=Asia/Jakarta
+2026-Jun-04 14:49:56.667739 EXPOSE 8888
+2026-Jun-04 14:49:56.667739 CMD ["node", "apps/api/dist/main.js"]
+2026-Jun-04 14:49:56.675644 ----------------------------------------
+2026-Jun-04 14:49:56.683444 Building docker image started.
+2026-Jun-04 14:49:56.689887 To check the current progress, click on Show Debug Logs.
+2026-Jun-04 14:49:57.090650 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'cat /artifacts/build.sh'
+2026-Jun-04 14:49:57.090650 cd /artifacts/qbgga2ect0hoitnze3t4vluk && set -a && source /artifacts/build-time.env && set +a && DOCKER_BUILDKIT=1 docker build --add-host ac9gqd0d7xop6czim2nltq06:10.0.1.9 --add-host axhx8std8awexuzl13ius1lw:10.0.1.6 --add-host coolify:10.0.1.13 --add-host coolify-db:10.0.1.4 --add-host coolify-realtime:10.0.1.12 --add-host coolify-redis:10.0.1.7 --add-host il1a02vnxhziwzzkuthxec8w:10.0.1.8 --add-host r118q9iew08qs6oy5tptkzgr:10.0.1.2 --network host -f /artifacts/qbgga2ect0hoitnze3t4vluk/apps/api/Dockerfile --progress plain -t umgmkhs7ghj9ykwmyc2tqh6e:22a8931feb1587a72488cf935d96dbc79810d54b --build-arg COOLIFY_URL --build-arg COOLIFY_FQDN --build-arg COOLIFY_BRANCH --build-arg COOLIFY_RESOURCE_UUID --build-arg REDIS_HOST --build-arg JWT_SECRET --build-arg DATABASE_URL --build-arg TELEGRAM_TOKEN --build-arg TELEGRAM_CHAT_ID --build-arg CORS_ORIGIN --build-arg PORT --build-arg TZ --build-arg COOLIFY_BUILD_SECRETS_HASH=4283db84d42d7d70613a0a9d37fe9dc2d4c6bfd597ac7d67df813f79581fe7b3 --build-arg 'COOLIFY_URL' --build-arg 'COOLIFY_FQDN' --build-arg 'COOLIFY_BRANCH' --build-arg 'COOLIFY_RESOURCE_UUID' /artifacts/qbgga2ect0hoitnze3t4vluk
+2026-Jun-04 14:49:57.658455 [CMD]: docker exec qbgga2ect0hoitnze3t4vluk bash -c 'bash /artifacts/build.sh'
+2026-Jun-04 14:49:57.658455 #0 building with "default" instance using docker driver
+2026-Jun-04 14:49:57.658455
+2026-Jun-04 14:49:57.658455 #1 [internal] load build definition from Dockerfile
+2026-Jun-04 14:49:57.658455 #1 transferring dockerfile:
+2026-Jun-04 14:49:57.764069 #1 transferring dockerfile: 1.29kB 0.0s done
+2026-Jun-04 14:49:57.764069 #1 DONE 0.2s
+2026-Jun-04 14:49:57.764069
+2026-Jun-04 14:49:57.764069 #2 [internal] load metadata for docker.io/library/node:20-alpine
+2026-Jun-04 14:50:00.462735 #2 DONE 2.7s
+2026-Jun-04 14:50:00.643975
+2026-Jun-04 14:50:00.655076 #3 [internal] load .dockerignore
+2026-Jun-04 14:50:00.655076 #3 transferring context: 2B done
+2026-Jun-04 14:50:00.655076 #3 DONE 0.1s
+2026-Jun-04 14:50:00.746153 #4 [builder 1/9] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Jun-04 14:50:00.746153 #4 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+2026-Jun-04 14:50:01.071977 #4 ...
+2026-Jun-04 14:50:01.071977
+2026-Jun-04 14:50:01.071977 #5 [internal] load build context
+2026-Jun-04 14:50:01.071977 #5 transferring context: 673.08kB 0.2s done
+2026-Jun-04 14:50:01.071977 #5 DONE 0.3s
+2026-Jun-04 14:50:01.302449 #4 [builder 1/9] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Jun-04 14:50:01.302449 #4 DONE 0.5s
+2026-Jun-04 14:50:01.302449
+2026-Jun-04 14:50:01.302449 #6 [ 2/10] RUN apk add --no-cache tzdata && corepack enable && corepack prepare pnpm@9 --activate
+2026-Jun-04 14:50:02.446370 #6 1.303 (1/1) Installing tzdata (2026b-r0)
+2026-Jun-04 14:50:02.549094 #6 1.406 OK: 11.3 MiB in 19 packages
+2026-Jun-04 14:50:05.234443 #6 4.078 Preparing pnpm@9 for immediate activation...
+2026-Jun-04 14:50:08.268228 #6 DONE 7.1s
+2026-Jun-04 14:50:08.442812 #7 [ 3/10] WORKDIR /app
+2026-Jun-04 14:50:09.511903 #7 DONE 1.2s
+2026-Jun-04 14:50:09.654544 #8 [ 4/10] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-Jun-04 14:50:09.654544 #8 DONE 0.1s
+2026-Jun-04 14:50:09.804823 #9 [ 5/10] COPY packages/ ./packages/
+2026-Jun-04 14:50:09.841501 #9 DONE 0.2s
+2026-Jun-04 14:50:10.022891 #10 [ 6/10] COPY apps/api/ ./apps/api/
+2026-Jun-04 14:50:10.267738 #10 DONE 0.4s
+2026-Jun-04 14:50:10.438880 #11 [ 7/10] COPY biome.json turbo.json ./
+2026-Jun-04 14:50:10.675412 #11 DONE 0.4s
+2026-Jun-04 14:50:10.857442 #12 [ 8/10] RUN pnpm install --frozen-lockfile
+2026-Jun-04 14:50:11.613672 #12 0.916 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-9.0.0.tgz
+2026-Jun-04 14:50:14.583349 #12 3.887 Scope: all 7 workspace projects
+2026-Jun-04 14:50:14.933827 #12 4.237 Lockfile is up to date, resolution step is skipped
+2026-Jun-04 14:50:15.305746 #12 4.608 Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-Jun-04 14:50:16.042810 #12 5.345 Packages: +963
+2026-Jun-04 14:50:16.042810 #12 5.345 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-Jun-04 14:50:16.327019 #12 5.631 Progress: resolved 963, reused 0, downloaded 0, added 0
+2026-Jun-04 14:50:17.209736 #12 6.510
+2026-Jun-04 14:50:17.209736 #12 6.510 ╭──────────────────────────────────────────────────────────────────╮
+2026-Jun-04 14:50:17.209736 #12 6.510 │ │
+2026-Jun-04 14:50:17.209736 #12 6.510 │ Update available! 9.0.0 → 11.5.1. │
+2026-Jun-04 14:50:17.209736 #12 6.510 │ Changelog: https://github.com/pnpm/pnpm/releases/tag/v11.5.1 │
+2026-Jun-04 14:50:17.209736 #12 6.510 │ Run "corepack prepare pnpm@11.5.1 --activate" to update. │
+2026-Jun-04 14:50:17.209736 #12 6.510 │ │
+2026-Jun-04 14:50:17.209736 #12 6.510 │ Follow @pnpmjs for updates: https://twitter.com/pnpmjs │
+2026-Jun-04 14:50:17.209736 #12 6.510 │ │
+2026-Jun-04 14:50:17.209736 #12 6.510 ╰──────────────────────────────────────────────────────────────────╯
+2026-Jun-04 14:50:17.209736 #12 6.510
+2026-Jun-04 14:50:17.458511 #12 6.762 Progress: resolved 963, reused 0, downloaded 1, added 0
+2026-Jun-04 14:50:18.462495 #12 7.764 Progress: resolved 963, reused 0, downloaded 14, added 0
+2026-Jun-04 14:50:19.483759 #12 8.776 Progress: resolved 963, reused 0, downloaded 31, added 18
+2026-Jun-04 14:50:20.468773 #12 9.772 Progress: resolved 963, reused 0, downloaded 42, added 31
+2026-Jun-04 14:50:21.472149 #12 10.77 Progress: resolved 963, reused 0, downloaded 46, added 32
+2026-Jun-04 14:50:22.472746 #12 11.78 Progress: resolved 963, reused 0, downloaded 109, added 109
+2026-Jun-04 14:50:23.474050 #12 12.78 Progress: resolved 963, reused 0, downloaded 122, added 109
+2026-Jun-04 14:50:24.477685 #12 13.78 Progress: resolved 963, reused 0, downloaded 153, added 144
+2026-Jun-04 14:50:25.476394 #12 14.78 Progress: resolved 963, reused 0, downloaded 185, added 173
+2026-Jun-04 14:50:26.510201 #12 15.80 Progress: resolved 963, reused 0, downloaded 231, added 225
+2026-Jun-04 14:50:27.686323 #12 16.81 Progress: resolved 963, reused 0, downloaded 238, added 229
+2026-Jun-04 14:50:28.523653 #12 17.78 Progress: resolved 963, reused 0, downloaded 281, added 271
+2026-Jun-04 14:50:29.511274 #12 18.80 Progress: resolved 963, reused 0, downloaded 295, added 281
+2026-Jun-04 14:50:30.502111 #12 19.79 Progress: resolved 963, reused 0, downloaded 326, added 316
+2026-Jun-04 14:50:31.540929 #12 20.82 Progress: resolved 963, reused 0, downloaded 336, added 329
+2026-Jun-04 14:50:32.512449 #12 21.79 Progress: resolved 963, reused 0, downloaded 362, added 355
+2026-Jun-04 14:50:33.506161 #12 22.80 Progress: resolved 963, reused 0, downloaded 387, added 374
+2026-Jun-04 14:50:34.499073 #12 23.80 Progress: resolved 963, reused 0, downloaded 419, added 413
+2026-Jun-04 14:50:35.505486 #12 24.80 Progress: resolved 963, reused 0, downloaded 455, added 453
+2026-Jun-04 14:50:36.504255 #12 25.81 Progress: resolved 963, reused 0, downloaded 481, added 473
+2026-Jun-04 14:50:36.517292
+2026-Jun-04 14:50:37.511732 #12 26.81 Progress: resolved 963, reused 0, downloaded 500, added 488
+2026-Jun-04 14:50:38.538985 #12 27.84 Progress: resolved 963, reused 0, downloaded 533, added 523
+2026-Jun-04 14:50:39.536543 #12 28.84 Progress: resolved 963, reused 0, downloaded 588, added 581
+2026-Jun-04 14:50:39.551518
+2026-Jun-04 14:50:40.539641 #12 29.84 Progress: resolved 963, reused 0, downloaded 641, added 642
+2026-Jun-04 14:50:41.542294 #12 30.84 Progress: resolved 963, reused 0, downloaded 703, added 697
+2026-Jun-04 14:50:42.563427 #12 31.85 Progress: resolved 963, reused 0, downloaded 763, added 754
+2026-Jun-04 14:50:43.543763 #12 32.85 Progress: resolved 963, reused 0, downloaded 787, added 775
+2026-Jun-04 14:50:44.558314 #12 33.85 Progress: resolved 963, reused 0, downloaded 817, added 807
+2026-Jun-04 14:50:45.551338 #12 34.85 Progress: resolved 963, reused 0, downloaded 855, added 842
+2026-Jun-04 14:50:46.551793 #12 35.86 Progress: resolved 963, reused 0, downloaded 933, added 926
+2026-Jun-04 14:50:47.571181 #12 36.87 Progress: resolved 963, reused 0, downloaded 960, added 950
+2026-Jun-04 14:50:47.929647 #12 37.23 Progress: resolved 963, reused 0, downloaded 962, added 963, done
+2026-Jun-04 14:50:49.412973 #12 38.72 .../node_modules/unrs-resolver postinstall$ napi-postinstall unrs-resolver 1.11.1 check
+2026-Jun-04 14:50:49.656421 #12 38.72 .../esbuild@0.19.12/node_modules/esbuild postinstall$ node install.js
+2026-Jun-04 14:50:49.656421 #12 38.73 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+2026-Jun-04 14:50:49.656421 #12 38.80 .../bcrypt@6.0.0/node_modules/bcrypt install$ node-gyp-build
+2026-Jun-04 14:50:49.656421 #12 38.81 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+2026-Jun-04 14:50:50.144853 #12 39.45 .../node_modules/unrs-resolver postinstall: Done
+2026-Jun-04 14:50:50.289407 #12 39.51 .../esbuild@0.19.12/node_modules/esbuild postinstall: Done
+2026-Jun-04 14:50:50.289407 #12 39.59 .../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-Jun-04 14:50:50.448742 #12 39.67 .../bcrypt@6.0.0/node_modules/bcrypt install: Done
+2026-Jun-04 14:50:50.448742 #12 39.75 .../node_modules/msgpackr-extract install: Done
+2026-Jun-04 14:50:50.565684 #12 39.87 .../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-Jun-04 14:50:50.965898 #12 40.27 .../node_modules/@nestjs/core postinstall: Thanks for installing nest
+2026-Jun-04 14:50:51.132612 #12 40.27 .../node_modules/@nestjs/core postinstall: Please consider donating to our open collective
+2026-Jun-04 14:50:51.132612 #12 40.27 .../node_modules/@nestjs/core postinstall: to help us maintain this package.
+2026-Jun-04 14:50:51.132612 #12 40.27 .../node_modules/@nestjs/core postinstall:
+2026-Jun-04 14:50:51.132612 #12 40.27 .../node_modules/@nestjs/core postinstall: Number of contributors: 0
+2026-Jun-04 14:50:51.132612 #12 40.28 .../node_modules/@nestjs/core postinstall: Number of backers: 1202
+2026-Jun-04 14:50:51.507747 #12 40.81 .../node_modules/@nestjs/core postinstall: Annual budget: $134,912
+2026-Jun-04 14:50:51.507747 #12 40.81 .../node_modules/@nestjs/core postinstall: Current balance: $10,974
+2026-Jun-04 14:50:51.876832 #12 40.81 .../node_modules/@nestjs/core postinstall:
+2026-Jun-04 14:50:51.876832 #12 40.82 .../node_modules/@nestjs/core postinstall: Become a partner: https://opencollective.com/nest/donate
+2026-Jun-04 14:50:51.876832 #12 40.82 .../node_modules/@nestjs/core postinstall:<REDACTED>@nestjs/core postinstall: Done
+2026-Jun-04 14:50:52.963462 #12 42.26
+2026-Jun-04 14:50:52.963462 #12 42.26 devDependencies:
+2026-Jun-04 14:50:52.963462 #12 42.26 + @biomejs/biome 2.4.15
+2026-Jun-04 14:50:52.963462 #12 42.26 + husky 9.1.7
+2026-Jun-04 14:50:52.963462 #12 42.26 + lint-staged 17.0.7
+2026-Jun-04 14:50:52.963462 #12 42.26 + turbo 2.9.12
+2026-Jun-04 14:50:52.963462 #12 42.26
+2026-Jun-04 14:50:53.065765 #12 42.36 . prepare$ husky
+2026-Jun-04 14:50:53.347781 #12 42.65 . prepare: .git can't be found
+2026-Jun-04 14:50:53.505489 #12 42.65 . prepare: Done
+2026-Jun-04 14:50:53.567401 #12 42.86 Done in 39.8s
+2026-Jun-04 14:50:54.186461 #12 DONE 43.5s
+2026-Jun-04 14:50:54.408840
+2026-Jun-04 14:50:54.417860 #13 [ 9/10] RUN pnpm turbo build --filter=api
+2026-Jun-04 14:51:00.408773 #13 6.138
+2026-Jun-04 14:51:00.408773 #13 6.138 Attention:
+2026-Jun-04 14:51:00.408773 #13 6.138 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-Jun-04 14:51:00.408773 #13 6.138 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-Jun-04 14:51:00.408773 #13 6.138 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-Jun-04 14:51:00.408773 #13 6.138 https://turborepo.dev/docs/telemetry
+2026-Jun-04 14:51:00.408773 #13 6.138
+2026-Jun-04 14:51:00.565464 #13 6.152 • turbo 2.9.12
+2026-Jun-04 14:51:00.584847 #13 6.328
+2026-Jun-04 14:51:00.704327 #13 6.328 • Packages in scope: api
+2026-Jun-04 14:51:00.704327 #13 6.328 • Running build in 1 packages
+2026-Jun-04 14:51:00.704327 #13 6.328 • Remote caching disabled
+2026-Jun-04 14:51:00.704327 #13 6.328
+2026-Jun-04 14:51:00.704327 #13 6.438 @adms/database:build: cache miss, executing 9d6fd86d44121ba4
+2026-Jun-04 14:51:00.704327 #13 6.438 @adms/shared-types:build: cache miss, executing fe495874381540f2
+2026-Jun-04 14:51:02.688772 #13 8.429 @adms/database:build:
+2026-Jun-04 14:51:02.688772 #13 8.429 @adms/database:build: > @adms/database@0.0.1 build /app/packages/database
+2026-Jun-04 14:51:02.688772 #13 8.429 @adms/database:build: > tsc
+2026-Jun-04 14:51:02.688772 #13 8.429 @adms/database:build:
+2026-Jun-04 14:51:02.893661 #13 8.638 @adms/shared-types:build:
+2026-Jun-04 14:51:03.048416 #13 8.638 @adms/shared-types:build: > @adms/shared-types@0.0.1 build /app/packages/shared-types
+2026-Jun-04 14:51:03.048416 #13 8.640 @adms/shared-types:build: > tsc
+2026-Jun-04 14:51:03.048416 #13 8.640 @adms/shared-types:build:
+2026-Jun-04 14:51:05.650513 ========================================
+2026-Jun-04 14:51:05.729878 Deployment failed: Command execution failed (exit code 255): docker exec qbgga2ect0hoitnze3t4vluk bash -c 'bash /artifacts/build.sh'
+2026-Jun-04 14:51:05.729878 Error: #0 building with "default" instance using docker driver
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #1 [internal] load build definition from Dockerfile
+2026-Jun-04 14:51:05.729878 #1 transferring dockerfile:
+2026-Jun-04 14:51:05.729878 #1 transferring dockerfile: 1.29kB 0.0s done
+2026-Jun-04 14:51:05.729878 #1 DONE 0.2s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #2 [internal] load metadata for docker.io/library/node:20-alpine
+2026-Jun-04 14:51:05.729878 #2 DONE 2.7s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #3 [internal] load .dockerignore
+2026-Jun-04 14:51:05.729878 #3 transferring context: 2B done
+2026-Jun-04 14:51:05.729878 #3 DONE 0.1s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #4 [builder 1/9] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Jun-04 14:51:05.729878 #4 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+2026-Jun-04 14:51:05.729878 #4 ...
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #5 [internal] load build context
+2026-Jun-04 14:51:05.729878 #5 transferring context: 673.08kB 0.2s done
+2026-Jun-04 14:51:05.729878 #5 DONE 0.3s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #4 [builder 1/9] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+2026-Jun-04 14:51:05.729878 #4 DONE 0.5s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #6 [ 2/10] RUN apk add --no-cache tzdata && corepack enable && corepack prepare pnpm@9 --activate
+2026-Jun-04 14:51:05.729878 #6 1.303 (1/1) Installing tzdata (2026b-r0)
+2026-Jun-04 14:51:05.729878 #6 1.406 OK: 11.3 MiB in 19 packages
+2026-Jun-04 14:51:05.729878 #6 4.078 Preparing pnpm@9 for immediate activation...
+2026-Jun-04 14:51:05.729878 #6 DONE 7.1s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #7 [ 3/10] WORKDIR /app
+2026-Jun-04 14:51:05.729878 #7 DONE 1.2s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #8 [ 4/10] COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+2026-Jun-04 14:51:05.729878 #8 DONE 0.1s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #9 [ 5/10] COPY packages/ ./packages/
+2026-Jun-04 14:51:05.729878 #9 DONE 0.2s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #10 [ 6/10] COPY apps/api/ ./apps/api/
+2026-Jun-04 14:51:05.729878 #10 DONE 0.4s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #11 [ 7/10] COPY biome.json turbo.json ./
+2026-Jun-04 14:51:05.729878 #11 DONE 0.4s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #12 [ 8/10] RUN pnpm install --frozen-lockfile
+2026-Jun-04 14:51:05.729878 #12 0.916 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-9.0.0.tgz
+2026-Jun-04 14:51:05.729878 #12 3.887 Scope:<REDACTED>@11.5.1 --activate" to update. │
+2026-Jun-04 14:51:05.729878 #12 6.510 │ │
+2026-Jun-04 14:51:05.729878 #12 6.510 │ Follow @pnpmjs for updates: https://twitter.com/pnpmjs │
+2026-Jun-04 14:51:05.729878 #12 6.510 │ │
+2026-Jun-04 14:51:05.729878 #12 6.510 ╰──────────────────────────────────────────────────────────────────╯
+2026-Jun-04 14:51:05.729878 #12 6.510
+2026-Jun-04 14:51:05.729878 #12 6.762 Progress:<REDACTED>@0.19.12/node_modules/esbuild postinstall$ node install.js
+2026-Jun-04 14:51:05.729878 #12 38.73 .../node_modules/@nestjs/core postinstall$ opencollective || exit 0
+2026-Jun-04 14:51:05.729878 #12 38.80 .../bcrypt@6.0.0/node_modules/bcrypt install$ node-gyp-build
+2026-Jun-04 14:51:05.729878 #12 38.81 .../node_modules/msgpackr-extract install$ node-gyp-build-optional-packages
+2026-Jun-04 14:51:05.729878 #12 39.45 .../node_modules/unrs-resolver postinstall: Done
+2026-Jun-04 14:51:05.729878 #12 39.51 .../esbuild@0.19.12/node_modules/esbuild postinstall: Done
+2026-Jun-04 14:51:05.729878 #12 39.59 .../esbuild@0.18.20/node_modules/esbuild postinstall$ node install.js
+2026-Jun-04 14:51:05.729878 #12 39.67 .../bcrypt@6.0.0/node_modules/bcrypt install: Done
+2026-Jun-04 14:51:05.729878 #12 39.75 .../node_modules/msgpackr-extract install: Done
+2026-Jun-04 14:51:05.729878 #12 39.87 .../esbuild@0.18.20/node_modules/esbuild postinstall: Done
+2026-Jun-04 14:51:05.729878 #12 40.27 .../node_modules/@nestjs/core postinstall: Thanks for installing nest
+2026-Jun-04 14:51:05.729878 #12 40.27 .../node_modules/@nestjs/core postinstall: Please consider donating to our open collective
+2026-Jun-04 14:51:05.729878 #12 40.27 .../node_modules/@nestjs/core postinstall: to help us maintain this package.
+2026-Jun-04 14:51:05.729878 #12 40.27 .../node_modules/@nestjs/core postinstall:
+2026-Jun-04 14:51:05.729878 #12 40.27 .../node_modules/@nestjs/core postinstall: Number of contributors: 0
+2026-Jun-04 14:51:05.729878 #12 40.28 .../node_modules/@nestjs/core postinstall: Number of backers: 1202
+2026-Jun-04 14:51:05.729878 #12 40.81 .../node_modules/@nestjs/core postinstall: Annual budget: $134,912
+2026-Jun-04 14:51:05.729878 #12 40.81 .../node_modules/@nestjs/core postinstall: Current balance: $10,974
+2026-Jun-04 14:51:05.729878 #12 40.81 .../node_modules/@nestjs/core postinstall:
+2026-Jun-04 14:51:05.729878 #12 40.82 .../node_modules/@nestjs/core postinstall: Become a partner: https://opencollective.com/nest/donate
+2026-Jun-04 14:51:05.729878 #12 40.82 .../node_modules/@nestjs/core postinstall:<REDACTED>@nestjs/core postinstall: Done
+2026-Jun-04 14:51:05.729878 #12 42.26
+2026-Jun-04 14:51:05.729878 #12 42.26 devDependencies:
+2026-Jun-04 14:51:05.729878 #12 42.26 + @biomejs/biome 2.4.15
+2026-Jun-04 14:51:05.729878 #12 42.26 + husky 9.1.7
+2026-Jun-04 14:51:05.729878 #12 42.26 + lint-staged 17.0.7
+2026-Jun-04 14:51:05.729878 #12 42.26 + turbo 2.9.12
+2026-Jun-04 14:51:05.729878 #12 42.26
+2026-Jun-04 14:51:05.729878 #12 42.36 . prepare$ husky
+2026-Jun-04 14:51:05.729878 #12 42.65 . prepare: .git can't be found
+2026-Jun-04 14:51:05.729878 #12 42.65 . prepare: Done
+2026-Jun-04 14:51:05.729878 #12 42.86 Done in 39.8s
+2026-Jun-04 14:51:05.729878 #12 DONE 43.5s
+2026-Jun-04 14:51:05.729878
+2026-Jun-04 14:51:05.729878 #13 [ 9/10] RUN pnpm turbo build --filter=api
+2026-Jun-04 14:51:05.729878 #13 6.138
+2026-Jun-04 14:51:05.729878 #13 6.138 Attention:
+2026-Jun-04 14:51:05.729878 #13 6.138 Turborepo now collects completely anonymous telemetry regarding usage.
+2026-Jun-04 14:51:05.729878 #13 6.138 This information is used to shape the Turborepo roadmap and prioritize features.
+2026-Jun-04 14:51:05.729878 #13 6.138 You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+2026-Jun-04 14:51:05.729878 #13 6.138 https://turborepo.dev/docs/telemetry
+2026-Jun-04 14:51:05.729878 #13 6.138
+2026-Jun-04 14:51:05.729878 #13 6.152 • turbo 2.9.12
+2026-Jun-04 14:51:05.729878 #13 6.328
+2026-Jun-04 14:51:05.729878 #13 6.328 • Packages in scope:<REDACTED>@adms/database:build: cache miss, executing 9d6fd86d44121ba4
+2026-Jun-04 14:51:05.729878 #13 6.438 @adms/shared-types:build: cache miss, executing fe495874381540f2
+2026-Jun-04 14:51:05.729878 #13 8.429 @adms/database:build:
+2026-Jun-04 14:51:05.729878 #13 8.429 @adms/database:build: > @adms/database@0.0.1 build /app/packages/database
+2026-Jun-04 14:51:05.729878 #13 8.429 @adms/database:build: > tsc
+2026-Jun-04 14:51:05.729878 #13 8.429 @adms/database:build:
+2026-Jun-04 14:51:05.729878 #13 8.638 @adms/shared-types:build:
+2026-Jun-04 14:51:05.729878 #13 8.638 @adms/shared-types:build: > @adms/shared-types@0.0.1 build /app/packages/shared-types
+2026-Jun-04 14:51:05.729878 #13 8.640 @adms/shared-types:build: > tsc
+2026-Jun-04 14:51:05.729878 #13 8.640 @adms/shared-types:build:
+2026-Jun-04 14:51:05.782473 Error type: App\Exceptions\DeploymentException
+2026-Jun-04 14:51:05.888468 Error code: 0
+2026-Jun-04 14:51:05.960250 Location: /var/www/html/app/Traits/ExecuteRemoteCommand.php:242
+2026-Jun-04 14:51:06.039024 Stack trace (first 5 lines):
+2026-Jun-04 14:51:06.137754 #0 /var/www/html/app/Traits/ExecuteRemoteCommand.php(106): App\Jobs\ApplicationDeploymentJob->executeCommandWithProcess()
+2026-Jun-04 14:51:06.211263 #1 /var/www/html/vendor/laravel/framework/src/Illuminate/Collections/Traits/EnumeratesValues.php(275): App\Jobs\ApplicationDeploymentJob->{closure:App\Traits\ExecuteRemoteCommand::execute_remote_command():72}()
+2026-Jun-04 14:51:06.251728 #2 /var/www/html/app/Traits/ExecuteRemoteCommand.php(72): Illuminate\Support\Collection->each()
+2026-Jun-04 14:51:06.305364 #3 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(3290): App\Jobs\ApplicationDeploymentJob->execute_remote_command()
+2026-Jun-04 14:51:06.362514 #4 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(898): App\Jobs\ApplicationDeploymentJob->build_image()
+2026-Jun-04 14:51:06.426791 ========================================
+2026-Jun-04 14:51:06.459798 Deployment failed. Removing the new version of your application.
+2026-Jun-04 14:51:10.325064 Gracefully shutting down build container: qbgga2ect0hoitnze3t4vluk
+2026-Jun-04 14:51:12.417579 [CMD]: docker stop -t 30 qbgga2ect0hoitnze3t4vluk
+2026-Jun-04 14:51:12.417579 qbgga2ect0hoitnze3t4vluk
