@@ -29,8 +29,8 @@ interface MonthlyReport {
 }
 
 export default function ReportsPage() {
-	const [month] = useState(new Date().getMonth() + 1);
-	const [year] = useState(new Date().getFullYear());
+	const [month, setMonth] = useState(new Date().getMonth() + 1);
+	const [year, setYear] = useState(new Date().getFullYear());
 	const [search, setSearch] = useState("");
 	const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
 
@@ -39,6 +39,15 @@ export default function ReportsPage() {
 		queryFn: async () => {
 			return (await api.get(`/reports/summary?month=${month}&year=${year}`))
 				.data;
+		},
+	});
+
+	const { data: availablePeriods } = useQuery<
+		{ month: number; year: number }[]
+	>({
+		queryKey: ["available-periods"],
+		queryFn: async () => {
+			return (await api.get(`/reports/available-periods`)).data;
 		},
 	});
 
@@ -79,7 +88,7 @@ export default function ReportsPage() {
 	};
 
 	const monthName = new Date(0, month - 1).toLocaleString("id-ID", {
-		month: "short",
+		month: "long",
 	});
 
 	const stats = {
@@ -132,12 +141,43 @@ export default function ReportsPage() {
 					</p>
 				</div>
 				<div className="flex items-center gap-3">
-					<div className="flex items-center bg-white border border-[#bdc8ce] rounded-lg px-3 py-2 cursor-pointer hover:bg-[#f9f9ff] transition-colors shadow-sm">
-						<CalendarIcon size={18} className="text-[#6e797e] mr-2" />
-						<span className="font-semibold text-[13px] text-[#111c2d]">
-							{monthName} {year}
-						</span>
-						<ChevronDown size={20} className="text-[#6e797e] ml-2" />
+					<div className="relative">
+						<select
+							className="appearance-none bg-white border border-[#bdc8ce] rounded-lg pl-10 pr-10 py-2 cursor-pointer hover:bg-[#f9f9ff] transition-colors shadow-sm font-semibold text-[13px] text-[#111c2d] outline-none focus:ring-2 focus:ring-[#00647c]/20 focus:border-[#00647c]"
+							value={`${month}-${year}`}
+							onChange={(e) => {
+								const [m, y] = e.target.value.split("-");
+								setMonth(Number(m));
+								setYear(Number(y));
+							}}
+						>
+							{availablePeriods?.map((p) => {
+								const mName = new Date(0, p.month - 1).toLocaleString("id-ID", {
+									month: "long",
+								});
+								return (
+									<option
+										key={`${p.month}-${p.year}`}
+										value={`${p.month}-${p.year}`}
+									>
+										{mName} {p.year}
+									</option>
+								);
+							})}
+							{!availablePeriods && (
+								<option value={`${month}-${year}`}>
+									{monthName} {year}
+								</option>
+							)}
+						</select>
+						<CalendarIcon
+							size={18}
+							className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e] pointer-events-none"
+						/>
+						<ChevronDown
+							size={18}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6e797e] pointer-events-none"
+						/>
 					</div>
 					<button
 						type="button"

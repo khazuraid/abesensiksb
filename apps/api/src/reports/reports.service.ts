@@ -1,6 +1,6 @@
 import * as schema from "@adms/database";
 import { Inject, Injectable } from "@nestjs/common";
-import { between, eq } from "drizzle-orm";
+import { between, eq, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Workbook } from "exceljs";
 import { DRIZZLE } from "../database/database.module";
@@ -21,6 +21,24 @@ function getWIBMinutes(d: Date): number {
 @Injectable()
 export class ReportsService {
 	constructor(@Inject(DRIZZLE) private db: NodePgDatabase<typeof schema>) {}
+
+	async getAvailablePeriods() {
+		const result = await this.db.execute(sql`
+			SELECT DISTINCT EXTRACT(MONTH FROM timestamp) as month, EXTRACT(YEAR FROM timestamp) as year
+			FROM attendance_logs
+			ORDER BY year DESC, month DESC
+		`);
+
+		if (result.rows.length === 0) {
+			const now = new Date();
+			return [{ month: now.getMonth() + 1, year: now.getFullYear() }];
+		}
+
+		return result.rows.map((r: any) => ({
+			month: Number(r.month),
+			year: Number(r.year),
+		}));
+	}
 
 	async getDailyRecap(month: number, year: number) {
 		const startDate = new Date(year, month - 1, 1);

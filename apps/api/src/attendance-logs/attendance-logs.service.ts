@@ -140,12 +140,69 @@ export class AttendanceLogsService {
 		const devicesResult = await this.db.select().from(schema.devices);
 		const devicesOnline = devicesResult.filter((d) => d.isOnline).length;
 
+		// Generate Weekly Trend (Last 7 Days)
+		const weeklyTrend = [];
+		const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+		for (let i = 6; i >= 0; i--) {
+			const targetDate = new Date();
+			targetDate.setDate(targetDate.getDate() - i);
+			targetDate.setHours(0, 0, 0, 0);
+
+			const targetTomorrow = new Date(targetDate);
+			targetTomorrow.setDate(targetTomorrow.getDate() + 1);
+
+			const [present] = await this.db
+				.select({ count: count() })
+				.from(schema.attendanceLogs)
+				.where(
+					and(
+						gte(schema.attendanceLogs.timestamp, targetDate),
+						lte(schema.attendanceLogs.timestamp, targetTomorrow),
+						eq(schema.attendanceLogs.type, "IN"),
+						eq(schema.attendanceLogs.status, "PRESENT"),
+					),
+				);
+
+			const [late] = await this.db
+				.select({ count: count() })
+				.from(schema.attendanceLogs)
+				.where(
+					and(
+						gte(schema.attendanceLogs.timestamp, targetDate),
+						lte(schema.attendanceLogs.timestamp, targetTomorrow),
+						eq(schema.attendanceLogs.type, "IN"),
+						eq(schema.attendanceLogs.status, "LATE"),
+					),
+				);
+
+			const [absent] = await this.db
+				.select({ count: count() })
+				.from(schema.attendanceLogs)
+				.where(
+					and(
+						gte(schema.attendanceLogs.timestamp, targetDate),
+						lte(schema.attendanceLogs.timestamp, targetTomorrow),
+						eq(schema.attendanceLogs.type, "IN"),
+						eq(schema.attendanceLogs.status, "ABSENT"),
+					),
+				);
+
+			weeklyTrend.push({
+				name: days[targetDate.getDay()],
+				present: present?.count ?? 0,
+				late: late?.count ?? 0,
+				absent: absent?.count ?? 0,
+			});
+		}
+
 		return {
 			totalEmployees: totalEmployees?.count ?? 0,
 			presentToday: presentToday?.count ?? 0,
 			lateToday: lateToday?.count ?? 0,
 			devicesOnline,
 			devicesTotal: devicesResult.length,
+			weeklyTrend,
 		};
 	}
 }

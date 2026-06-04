@@ -35,6 +35,12 @@ interface DashboardStats {
 	lateToday: number;
 	devicesOnline: number;
 	devicesTotal: number;
+	weeklyTrend?: {
+		name: string;
+		present: number;
+		late: number;
+		absent: number;
+	}[];
 }
 
 interface RecentLog {
@@ -90,14 +96,14 @@ export default function Dashboard() {
 		};
 	}, [socket, queryClient]);
 
-	const trendData = [
-		{ name: "Mon", present: 42, late: 4, absent: 2 },
-		{ name: "Tue", present: 45, late: 2, absent: 1 },
-		{ name: "Wed", present: 43, late: 3, absent: 2 },
-		{ name: "Thu", present: 46, late: 1, absent: 1 },
-		{ name: "Fri", present: 44, late: 4, absent: 0 },
-		{ name: "Sat", present: 12, late: 0, absent: 36 },
-		{ name: "Sun", present: 10, late: 0, absent: 38 },
+	const trendData = stats?.weeklyTrend || [
+		{ name: "Mon", present: 0, late: 0, absent: 0 },
+		{ name: "Tue", present: 0, late: 0, absent: 0 },
+		{ name: "Wed", present: 0, late: 0, absent: 0 },
+		{ name: "Thu", present: 0, late: 0, absent: 0 },
+		{ name: "Fri", present: 0, late: 0, absent: 0 },
+		{ name: "Sat", present: 0, late: 0, absent: 0 },
+		{ name: "Sun", present: 0, late: 0, absent: 0 },
 	];
 
 	const donutData = [
@@ -220,7 +226,12 @@ export default function Dashboard() {
 						</h2>
 					</div>
 					<div className="p-6 h-[300px]">
-						<ResponsiveContainer width="100%" height="100%">
+						<ResponsiveContainer
+							width="100%"
+							height="100%"
+							minWidth={0}
+							minHeight={0}
+						>
 							<AreaChart
 								data={trendData}
 								margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -277,7 +288,12 @@ export default function Dashboard() {
 						</h2>
 					</div>
 					<div className="p-6 h-[300px] flex items-center justify-center relative">
-						<ResponsiveContainer width="100%" height="100%">
+						<ResponsiveContainer
+							width="100%"
+							height="100%"
+							minWidth={0}
+							minHeight={0}
+						>
 							<PieChart>
 								<Pie
 									data={donutData}

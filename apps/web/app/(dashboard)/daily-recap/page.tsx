@@ -57,6 +57,15 @@ export default function DailyRecapPage() {
 			(await api.get(`/reports/daily-recap?month=${month}&year=${year}`)).data,
 	});
 
+	const { data: availablePeriods } = useQuery<
+		{ month: number; year: number }[]
+	>({
+		queryKey: ["available-periods"],
+		queryFn: async () => {
+			return (await api.get(`/reports/available-periods`)).data;
+		},
+	});
+
 	const months = [
 		"Januari",
 		"Februari",
@@ -119,19 +128,6 @@ export default function DailyRecapPage() {
 				type: editingDay.field === "in" ? "IN" : "OUT",
 			});
 		}
-	};
-
-	const prevMonth = () => {
-		if (month === 1) {
-			setMonth(12);
-			setYear(year - 1);
-		} else setMonth(month - 1);
-	};
-	const nextMonth = () => {
-		if (month === 12) {
-			setMonth(1);
-			setYear(year + 1);
-		} else setMonth(month + 1);
 	};
 
 	const filtered = data?.filter(
@@ -281,24 +277,39 @@ export default function DailyRecapPage() {
 					</p>
 				</div>
 				<div className="flex flex-wrap items-center gap-3">
-					<div className="flex items-center bg-white border border-[#bdc8ce] rounded-lg p-1 shadow-sm">
-						<button
-							type="button"
-							onClick={prevMonth}
-							className="p-1.5 text-[#6e797e] hover:text-[#111c2d] hover:bg-[#f9f9ff] rounded-md transition-colors"
+					<div className="relative">
+						<select
+							className="appearance-none bg-white border border-[#bdc8ce] rounded-lg pl-4 pr-10 py-2 cursor-pointer hover:bg-[#f9f9ff] transition-colors shadow-sm font-semibold text-[13px] text-[#111c2d] outline-none focus:ring-2 focus:ring-[#00647c]/20 focus:border-[#00647c]"
+							value={`${month}-${year}`}
+							onChange={(e) => {
+								const [m, y] = e.target.value.split("-");
+								setMonth(Number(m));
+								setYear(Number(y));
+							}}
 						>
-							<ChevronLeft size={16} />
-						</button>
-						<div className="px-4 font-semibold text-[13px] text-[#111c2d] min-w-[120px] text-center">
-							{months[month - 1]} {year}
-						</div>
-						<button
-							type="button"
-							onClick={nextMonth}
-							className="p-1.5 text-[#6e797e] hover:text-[#111c2d] hover:bg-[#f9f9ff] rounded-md transition-colors"
-						>
-							<ChevronRight size={16} />
-						</button>
+							{availablePeriods?.map((p) => {
+								const mName = new Date(0, p.month - 1).toLocaleString("id-ID", {
+									month: "long",
+								});
+								return (
+									<option
+										key={`${p.month}-${p.year}`}
+										value={`${p.month}-${p.year}`}
+									>
+										{mName} {p.year}
+									</option>
+								);
+							})}
+							{!availablePeriods && (
+								<option value={`${month}-${year}`}>
+									{months[month - 1]} {year}
+								</option>
+							)}
+						</select>
+						<ChevronRight
+							size={16}
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6e797e] pointer-events-none rotate-90"
+						/>
 					</div>
 					<div className="flex gap-2">
 						<button
@@ -459,10 +470,10 @@ export default function DailyRecapPage() {
 														setEditingDay({
 															date: dayData.date,
 															field: "in",
-															value: dayData.clockIn?.slice(11, 16) || "",
+															value: dayData.clockIn || "",
 														});
 													}}
-													title={`${dayData.date}\nIn: ${dayData.clockIn?.slice(11, 16) || "-"}\nOut: ${dayData.clockOut?.slice(11, 16) || "-"}`}
+													title={`${dayData.date}\nIn: ${dayData.clockIn || "-"}\nOut: ${dayData.clockOut || "-"}`}
 												>
 													<div
 														className={`w-6 h-6 rounded-full mx-auto flex items-center justify-center text-[10px] font-bold ${colorCls}`}
@@ -528,18 +539,32 @@ export default function DailyRecapPage() {
 									<button
 										type="button"
 										className={`flex-1 py-1.5 rounded-md text-[13px] font-medium transition-colors ${editingDay.field === "in" ? "bg-[#00647c] text-white" : "bg-gray-100 text-[#3e484d]"}`}
-										onClick={() =>
-											setEditingDay({ ...editingDay, field: "in" })
-										}
+										onClick={() => {
+											const dayData = selectedEmployee.days.find(
+												(d) => d.date === editingDay.date,
+											);
+											setEditingDay({
+												...editingDay,
+												field: "in",
+												value: dayData?.clockIn || "",
+											});
+										}}
 									>
 										Jam Masuk
 									</button>
 									<button
 										type="button"
 										className={`flex-1 py-1.5 rounded-md text-[13px] font-medium transition-colors ${editingDay.field === "out" ? "bg-[#00647c] text-white" : "bg-gray-100 text-[#3e484d]"}`}
-										onClick={() =>
-											setEditingDay({ ...editingDay, field: "out" })
-										}
+										onClick={() => {
+											const dayData = selectedEmployee.days.find(
+												(d) => d.date === editingDay.date,
+											);
+											setEditingDay({
+												...editingDay,
+												field: "out",
+												value: dayData?.clockOut || "",
+											});
+										}}
 									>
 										Jam Keluar
 									</button>

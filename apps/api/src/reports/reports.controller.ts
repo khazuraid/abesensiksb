@@ -23,6 +23,11 @@ export class ReportsController {
 		return this.reportsService.getMonthlySummary(month, year);
 	}
 
+	@Get("available-periods")
+	getAvailablePeriods() {
+		return this.reportsService.getAvailablePeriods();
+	}
+
 	@Get("daily-recap")
 	getDailyRecap(
 		@Query("month", ParseIntPipe) month: number,
