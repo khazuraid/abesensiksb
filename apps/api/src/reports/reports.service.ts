@@ -496,9 +496,20 @@ export class ReportsService {
 				"Total Menit Pulang Cepat",
 				emp.totalEarlyOutMinutesSum,
 			]);
-			ws.addRow(["Lupa Absen (Masuk/Pulang)", `${missedPunches}x`, "", "", ""]);
 			ws.addRow([
-				"Total Potongan (Hari)",
+				"Potongan Keterlambatan/Pulang Cepat (Hari)",
+				`(${emp.totalLateMinutesSum} + ${emp.totalEarlyOutMinutesSum}) / 420`,
+				"=",
+				penaltyFromMins,
+			]);
+			ws.addRow([
+				"Lupa Absen Masuk / Pulang",
+				`${missedPunches}x / 2`,
+				"=",
+				penaltyFromPunches,
+			]);
+			ws.addRow([
+				"TOTAL POTONGAN KESELURUHAN (HARI)",
 				`${penaltyFromMins} + ${penaltyFromPunches}`,
 				"=",
 				totalPenaltyDays,
