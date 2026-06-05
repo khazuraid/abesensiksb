@@ -23,8 +23,12 @@ import api from "@/lib/api";
 export default function AttendanceLogsPage() {
 	const [search, setSearch] = useState("");
 	const [filterStatus, setFilterStatus] = useState("");
-	const [filterStartDate, setFilterStartDate] = useState("");
-	const [filterEndDate, setFilterEndDate] = useState("");
+	const getTodayStr = () => {
+		const d = new Date();
+		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+	};
+	const [filterStartDate, setFilterStartDate] = useState(getTodayStr());
+	const [filterEndDate, setFilterEndDate] = useState(getTodayStr());
 	const [photoModal, setPhotoModal] = useState<string | null>(null);
 	const [page, setPage] = useState(1);
 	const [debouncedSearch, setDebouncedSearch] = useState("");

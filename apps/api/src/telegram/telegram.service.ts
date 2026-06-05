@@ -102,7 +102,8 @@ export class TelegramService implements OnModuleInit {
 
 	private async handleMessage(msg: { chat: { id: number }; text: string }) {
 		const chatId = msg.chat.id;
-		const command = msg.text.split(" ")[0].replace(/@\w+/g, "").toLowerCase();
+		const args = msg.text.split(" ");
+		const command = args[0].replace(/@\w+/g, "").toLowerCase();
 
 		switch (command) {
 			case "/start":
@@ -110,6 +111,12 @@ export class TelegramService implements OnModuleInit {
 				return this.sendMainMenu(chatId);
 			case "/dashboard":
 				return this.cmdDashboard(chatId);
+			case "/bind":
+				return this.cmdBind(chatId, args[1]);
+			case "/absenku":
+				return this.cmdAbsenku(chatId);
+			case "/izin":
+				return this.cmdIzin(chatId, args.slice(1).join(" "));
 		}
 	}
 
@@ -821,6 +828,129 @@ Monitoring perangkat dan status sistem.
 				],
 			},
 		});
+	}
+
+	// ─── Self-Service & Commands ───────────────────────────────
+
+	private async cmdBind(chatId: number, nip?: string) {
+		if (!nip) {
+			return this.sendNotification(
+				"⚠️ Format salah.\nGunakan: <code>/bind [NIP]</code>\nContoh: <code>/bind 12345</code>",
+				String(chatId),
+			);
+		}
+
+		const employees = await this.db
+			.select()
+			.from(schema.employees)
+			.where(eq(schema.employees.employeeCode, nip));
+		if (!employees.length) {
+			return this.sendNotification(
+				`❌ Pegawai dengan NIP <b>${nip}</b> tidak ditemukan.`,
+				String(chatId),
+			);
+		}
+
+		await this.db
+			.update(schema.employees)
+			.set({ telegramChatId: String(chatId) })
+			.where(eq(schema.employees.id, employees[0].id));
+		return this.sendNotification(
+			`✅ Berhasil menghubungkan Telegram Anda dengan akun pegawai: <b>${employees[0].name}</b>.\n\nSekarang Anda bisa menggunakan perintah /absenku dan /izin`,
+			String(chatId),
+		);
+	}
+
+	private async cmdAbsenku(chatId: number) {
+		const employees = await this.db
+			.select()
+			.from(schema.employees)
+			.where(eq(schema.employees.telegramChatId, String(chatId)));
+		if (!employees.length) {
+			return this.sendNotification(
+				"⚠️ Akun Telegram Anda belum terhubung dengan akun pegawai.\nGunakan perintah <code>/bind [NIP]</code> terlebih dahulu.",
+				String(chatId),
+			);
+		}
+
+		const emp = employees[0];
+		const now = new Date();
+		const year = now.getFullYear();
+		const month = now.getMonth();
+
+		const logs = await this.db
+			.select()
+			.from(schema.attendanceLogs)
+			.where(
+				and(
+					eq(schema.attendanceLogs.employeeId, emp.id),
+					gte(schema.attendanceLogs.timestamp, new Date(year, month, 1)),
+					lte(schema.attendanceLogs.timestamp, new Date(year, month + 1, 0)),
+				),
+			);
+
+		const presentDays = new Set(logs.map((l) => l.timestamp.getDate())).size;
+		const lateLogs = logs.filter((l) => l.status === "LATE");
+
+		const msg = `👤 <b>Halo, ${emp.name}</b>
+━━━━━━━━━━━━━━━━━━━━━
+📊 <b>Rekap Bulan Ini:</b>
+✅ Kehadiran: <b>${presentDays} hari</b>
+⚠️ Terlambat: <b>${lateLogs.length} kali</b>
+
+Semangat bekerja!`;
+		return this.sendNotification(msg, String(chatId));
+	}
+
+	private async cmdIzin(chatId: number, reason: string) {
+		if (!reason) {
+			return this.sendNotification(
+				"⚠️ Format salah.\nGunakan: <code>/izin [Keterangan]</code>\nContoh: <code>/izin Sakit Demam, butuh istirahat 1 hari</code>",
+				String(chatId),
+			);
+		}
+
+		const employees = await this.db
+			.select()
+			.from(schema.employees)
+			.where(eq(schema.employees.telegramChatId, String(chatId)));
+		if (!employees.length) {
+			return this.sendNotification(
+				"⚠️ Akun Telegram Anda belum terhubung.\nGunakan perintah <code>/bind [NIP]</code> terlebih dahulu.",
+				String(chatId),
+			);
+		}
+
+		const emp = employees[0];
+
+		// In JS, to get local date YYYY-MM-DD:
+		const d = new Date();
+		const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+		await this.db.insert(schema.leaves).values({
+			employeeId: emp.id,
+			type: "PERMISSION",
+			startDate: today,
+			endDate: today,
+			reason: reason,
+			status: "PENDING",
+		});
+
+		// Notif to HR
+		if (this.chatId) {
+			await this.sendNotification(`📨 <b>PENGAJUAN IZIN BARU</b>
+━━━━━━━━━━━━━━━━━━━━━
+👤 Nama: ${emp.name}
+📝 Alasan: ${reason}
+📅 Tanggal: ${today}
+
+<i>*Silakan buka Dashboard Admin untuk proses penyetujuan.</i>`);
+		}
+
+		return this.sendNotification(
+			`✅ <b>Pengajuan Izin Berhasil Dikirim</b>\nAlasan: ${reason}\n\nHR akan segera meninjau pengajuan Anda.`,
+			String(chatId),
+		);
 	}
 
 	// ─── API Helpers ───────────────────────────────────────────

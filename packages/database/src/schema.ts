@@ -65,6 +65,9 @@ export const employees = pgTable("employees", {
 	biometricId: varchar("biometric_id", { length: 50 }).unique(),
 	biometricSyncedAt: timestamp("biometric_synced_at"),
 
+	// Telegram Chat ID for bot interactions (Self-Service)
+	telegramChatId: varchar("telegram_chat_id", { length: 50 }).unique(),
+
 	isActive: boolean("is_active").default(true).notNull(),
 
 	createdAt: timestamp("created_at").defaultNow().notNull(),

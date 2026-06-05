@@ -137,6 +137,8 @@ export class ReportsService {
 			let totalPresent = 0;
 			let totalAbsent = 0;
 			let totalLeave = 0;
+			let totalLateMinutesSum = 0;
+			let totalEarlyOutMinutesSum = 0;
 
 			for (let d = 1; d <= daysInMonth; d++) {
 				const date = new Date(year, month - 1, d);
@@ -263,6 +265,9 @@ export class ReportsService {
 					} else status = "-";
 				}
 
+				totalLateMinutesSum += lateMinutes;
+				totalEarlyOutMinutesSum += earlyOutMinutes;
+
 				days.push({
 					date: dateStr,
 					isWorkDay,
@@ -292,6 +297,8 @@ export class ReportsService {
 				totalEarlyOut,
 				totalAbsent,
 				totalLeave,
+				totalLateMinutesSum,
+				totalEarlyOutMinutesSum,
 			};
 		});
 	}
@@ -458,6 +465,42 @@ export class ReportsService {
 				emp.totalEarlyOut,
 			]);
 			ws.addRow(["Alpa", emp.totalAbsent, "", "Cuti/Izin", emp.totalLeave]);
+			// Custom Calculation:
+			// 1. (Total Late Mins + Total Early Out Mins) / 420 -> Floor
+			// 2. Lupa absen (masuk atau pulang) 2x = 1 hari -> Floor(missed / 2)
+			const totalPenaltyMinutes =
+				emp.totalLateMinutesSum + emp.totalEarlyOutMinutesSum;
+			const penaltyFromMins = Math.floor(totalPenaltyMinutes / 420);
+
+			let missedPunches = 0;
+			for (const day of emp.days) {
+				if (day.isWorkDay && !day.isHoliday && day.status !== "LEAVE") {
+					if (
+						(day.clockIn && !day.clockOut) ||
+						(!day.clockIn && day.clockOut)
+					) {
+						missedPunches++;
+					}
+				}
+			}
+			const penaltyFromPunches = Math.floor(missedPunches / 2);
+			const totalPenaltyDays = penaltyFromMins + penaltyFromPunches;
+
+			ws.addRow([]);
+			ws.addRow([
+				"Total Menit Telat",
+				emp.totalLateMinutesSum,
+				"",
+				"Total Menit Pulang Cepat",
+				emp.totalEarlyOutMinutesSum,
+			]);
+			ws.addRow(["Lupa Absen (Masuk/Pulang)", `${missedPunches}x`, "", "", ""]);
+			ws.addRow([
+				"Total Potongan (Hari)",
+				`${penaltyFromMins} (dari menit) + ${penaltyFromPunches} (dari lupa absen)`,
+				"=",
+				totalPenaltyDays,
+			]);
 		}
 
 		return workbook;
