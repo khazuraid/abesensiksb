@@ -100,10 +100,27 @@ export class TelegramService implements OnModuleInit {
 
 	// ─── Message Handler ───────────────────────────────────────
 
-	private async handleMessage(msg: { chat: { id: number }; text: string }) {
+	private async handleMessage(msg: {
+		chat: { id: number };
+		text: string;
+		reply_to_message?: { text: string };
+	}) {
 		const chatId = msg.chat.id;
 		const args = msg.text.split(" ");
 		const command = args[0].replace(/@\w+/g, "").toLowerCase();
+
+		// Handle Force Reply responses
+		if (msg.reply_to_message) {
+			const prompt = msg.reply_to_message.text;
+			if (prompt.includes("Silakan balas pesan ini dengan NIP Anda")) {
+				return this.cmdBind(chatId, msg.text.trim());
+			}
+			if (
+				prompt.includes("Silakan balas pesan ini dengan alasan/keterangan izin")
+			) {
+				return this.cmdIzin(chatId, msg.text.trim());
+			}
+		}
 
 		switch (command) {
 			case "/start":
@@ -140,6 +157,8 @@ export class TelegramService implements OnModuleInit {
 				return this.editKehadiranMenu(chatId, msgId);
 			case "menu_kepegawaian":
 				return this.editKepegawaianMenu(chatId, msgId);
+			case "menu_pegawai":
+				return this.editPegawaiMenu(chatId, msgId);
 			case "menu_sistem":
 				return this.editSistemMenu(chatId, msgId);
 			case "act_dashboard":
@@ -212,6 +231,18 @@ export class TelegramService implements OnModuleInit {
 					() => this.getDashboardText(),
 					this.backButton("menu_main"),
 				);
+			case "act_bind":
+				return this.sendForceReply(
+					chatId,
+					"🔗 <b>Bind Akun</b>\nSilakan balas pesan ini dengan NIP Anda:",
+				);
+			case "act_absenku":
+				return this.cmdAbsenku(chatId);
+			case "act_izin":
+				return this.sendForceReply(
+					chatId,
+					"🏖️ <b>Pengajuan Izin</b>\nSilakan balas pesan ini dengan alasan/keterangan izin Anda (contoh: Sakit Demam, istirahat 1 hari):",
+				);
 		}
 	}
 
@@ -238,7 +269,10 @@ Selamat datang! Pilih menu di bawah untuk melihat informasi kehadiran dan kepega
 					{ text: "📋 Kehadiran", callback_data: "menu_kehadiran" },
 					{ text: "👥 Kepegawaian", callback_data: "menu_kepegawaian" },
 				],
-				[{ text: "⚙️ Sistem", callback_data: "menu_sistem" }],
+				[
+					{ text: "👤 Menu Pegawai", callback_data: "menu_pegawai" },
+					{ text: "⚙️ Sistem", callback_data: "menu_sistem" },
+				],
 			],
 		};
 	}
@@ -276,6 +310,19 @@ Selamat datang! Pilih menu di bawah untuk melihat informasi kehadiran dan kepega
 		return {
 			inline_keyboard: [
 				[{ text: "📡 Status Perangkat", callback_data: "act_perangkat" }],
+				[{ text: "⬅️ Kembali", callback_data: "menu_main" }],
+			],
+		};
+	}
+
+	private pegawaiMenuKeyboard(): InlineKeyboard {
+		return {
+			inline_keyboard: [
+				[
+					{ text: "🔗 Bind Akun", callback_data: "act_bind" },
+					{ text: "📊 Cek Absenku", callback_data: "act_absenku" },
+				],
+				[{ text: "🏖️ Ajukan Izin", callback_data: "act_izin" }],
 				[{ text: "⬅️ Kembali", callback_data: "menu_main" }],
 			],
 		};
@@ -323,6 +370,15 @@ Informasi pegawai, shift kerja, dan hari libur.
 
 <i>Pilih informasi:</i>`;
 		await this.editMessage(chatId, msgId, text, this.kepegawaianMenuKeyboard());
+	}
+
+	private async editPegawaiMenu(chatId: number, msgId: number) {
+		const text = `<b>👤 Menu Pegawai (Self-Service)</b>
+━━━━━━━━━━━━━━━━━━━━━
+Fitur khusus untuk masing-masing pegawai.
+
+<i>Pilih layanan:</i>`;
+		await this.editMessage(chatId, msgId, text, this.pegawaiMenuKeyboard());
 	}
 
 	private async editSistemMenu(chatId: number, msgId: number) {
@@ -959,6 +1015,18 @@ Semangat bekerja!`;
 	}
 
 	// ─── API Helpers ───────────────────────────────────────────
+
+	private async sendForceReply(chatId: number, text: string) {
+		await this.apiCall("sendMessage", {
+			chat_id: chatId,
+			text,
+			parse_mode: "HTML",
+			reply_markup: {
+				force_reply: true,
+				selective: true,
+			},
+		});
+	}
 
 	private async answerCallback(callbackId: string) {
 		await this.apiCall("answerCallbackQuery", {
