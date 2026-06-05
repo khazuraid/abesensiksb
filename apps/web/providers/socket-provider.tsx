@@ -21,14 +21,14 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
 	useEffect(() => {
 		// Asumsi backend jalan di port 8888 dan diakses di production via url yang sama
-		const socketInstance = io(
-			process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888",
-			{
-				transports: ["websocket"],
-				reconnectionAttempts: 5,
-				reconnectionDelay: 1000,
-			},
-		);
+		const apiUrl = (
+			process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888"
+		).replace(/\/api\/?$/, "");
+		const socketInstance = io(apiUrl, {
+			transports: ["websocket"],
+			reconnectionAttempts: 5,
+			reconnectionDelay: 1000,
+		});
 
 		socketInstance.on("connect", () => {
 			console.log("Connected to WebSocket backend");

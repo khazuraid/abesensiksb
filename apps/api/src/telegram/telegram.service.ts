@@ -560,7 +560,7 @@ Monitoring perangkat dan status sistem.
 			.select({
 				id: schema.employees.id,
 				name: schema.employees.name,
-				shiftId: schema.employees.shiftId,
+				shiftIds: schema.employees.shiftIds,
 			})
 			.from(schema.employees)
 			.where(eq(schema.employees.isActive, true));

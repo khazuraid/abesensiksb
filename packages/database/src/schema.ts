@@ -58,9 +58,8 @@ export const employees = pgTable("employees", {
 	position: varchar("position", { length: 100 }),
 	branch: varchar("branch", { length: 100 }),
 
-	shiftId: integer("shift_id").references(() => shifts.id, {
-		onDelete: "set null",
-	}),
+	// Array of shift IDs that apply to this employee
+	shiftIds: jsonb("shift_ids").$type<number[]>().default([]).notNull(),
 
 	// USERID pada mesin biometrik (PIN). Null = belum tersinkron
 	biometricId: varchar("biometric_id", { length: 50 }).unique(),
@@ -310,10 +309,6 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
 	user: one(users, {
 		fields: [employees.userId],
 		references: [users.id],
-	}),
-	shift: one(shifts, {
-		fields: [employees.shiftId],
-		references: [shifts.id],
 	}),
 	attendanceLogs: many(attendanceLogs),
 }));

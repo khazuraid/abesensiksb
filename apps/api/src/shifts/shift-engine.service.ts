@@ -1,12 +1,12 @@
 import * as schema from "@adms/database";
 import { Inject, Injectable } from "@nestjs/common";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
 
 interface EvaluateAttendanceInput {
 	employeeId: number;
-	shiftId: number | null | undefined;
+	shiftIds?: number[] | null;
 	timestamp: Date;
 	type: "IN" | "OUT";
 }
@@ -46,16 +46,27 @@ export class ShiftEngineService {
 		const dayOfWeek = input.timestamp.getDay();
 		let shift: typeof schema.shifts.$inferSelect | undefined;
 
-		if (input.shiftId) {
-			const result = await this.db
+		if (input.shiftIds && input.shiftIds.length > 0) {
+			const results = await this.db
 				.select()
 				.from(schema.shifts)
-				.where(eq(schema.shifts.id, input.shiftId));
-			shift = result[0];
+				.where(
+					and(
+						inArray(schema.shifts.id, input.shiftIds),
+						eq(schema.shifts.isActive, true),
+					),
+				);
+			// Cari shift yang berlaku untuk hari ini
+			shift = results.find((s) =>
+				(s.workDays || [1, 2, 3, 4, 5]).includes(dayOfWeek),
+			);
+			if (!shift && results.length > 0) {
+				shift = results[0]; // fallback ke shift pertama jika tidak ada yang cocok hari ini
+			}
 		}
 
-		if (!shift?.isActive) {
-			// Auto-match berdasarkan workDays
+		if (!shift) {
+			// Auto-match berdasarkan workDays untuk semua shift aktif jika tidak punya shiftIds
 			const allShifts = await this.db
 				.select()
 				.from(schema.shifts)

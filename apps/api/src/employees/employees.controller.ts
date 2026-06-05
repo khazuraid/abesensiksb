@@ -117,12 +117,12 @@ export class EmployeesController {
 	 */
 	@Patch("bulk/shift")
 	async bulkAssignShift(
-		@Body() body: { employeeIds: number[]; shiftId: number },
+		@Body() body: { employeeIds: number[]; shiftIds: number[] },
 		@Req() req: Request,
 	) {
 		const result = await this.employeesService.bulkAssignShift(
 			body.employeeIds,
-			body.shiftId,
+			body.shiftIds,
 		);
 		const user = req.user as { id: number };
 		void this.auditLogsService.record({
@@ -132,7 +132,7 @@ export class EmployeesController {
 			details: {
 				bulk: true,
 				employeeIds: body.employeeIds,
-				shiftId: body.shiftId,
+				shiftIds: body.shiftIds,
 			},
 		});
 		return result;

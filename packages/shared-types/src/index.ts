@@ -20,7 +20,7 @@ export const EmployeeSchema = z.object({
 	department: z.string().nullable().optional(),
 	position: z.string().nullable().optional(),
 	branch: z.string().nullable().optional(),
-	shiftId: z.number().nullable().optional(),
+	shiftIds: z.array(z.number()).default([]),
 	biometricId: z.string().nullable().optional(),
 	biometricSyncedAt: z.date().nullable().optional(),
 	isActive: z.boolean().default(true),

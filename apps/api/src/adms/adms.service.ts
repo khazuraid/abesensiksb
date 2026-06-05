@@ -144,7 +144,7 @@ export class ADMSService {
 				// Hitung status (LATE/PRESENT) berdasarkan shift
 				const status = await this.shiftEngine.evaluateAttendance({
 					employeeId: employee.id,
-					shiftId: employee.shiftId,
+					shiftIds: employee.shiftIds,
 					timestamp,
 					type,
 				});

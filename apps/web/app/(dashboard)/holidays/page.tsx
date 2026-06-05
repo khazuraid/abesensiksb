@@ -27,7 +27,7 @@ export default function HolidaysPage() {
 		},
 	});
 
-	const holidays = response?.data || [];
+	const holidays: Holiday[] = response?.data || [];
 	const meta = response?.meta;
 
 	const syncMutation = useMutation({

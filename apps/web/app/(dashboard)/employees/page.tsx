@@ -3,6 +3,7 @@
 import type {
 	CreateEmployee,
 	Employee,
+	Shift,
 	UpdateEmployee,
 } from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,12 +11,15 @@ import { motion } from "framer-motion";
 import {
 	ChevronLeft,
 	ChevronRight,
+	Download,
 	Edit2,
 	Filter,
+	Fingerprint,
 	Search,
 	Trash2,
 	UploadCloud,
 	UserPlus,
+	X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import EmployeeForm from "@/components/employee-form";
@@ -28,6 +32,9 @@ export default function EmployeesPage() {
 	const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
 		null,
 	);
+	const [selectedIds, setSelectedIds] = useState<number[]>([]);
+	const [isBulkShiftOpen, setIsBulkShiftOpen] = useState(false);
+	const [bulkShiftIds, setBulkShiftIds] = useState<number[]>([]);
 
 	useEffect(() => {
 		const urlParams = new URLSearchParams(window.location.search);
@@ -39,6 +46,14 @@ export default function EmployeesPage() {
 		queryKey: ["employees"],
 		queryFn: async () => {
 			const res = await api.get("/employees");
+			return res.data;
+		},
+	});
+
+	const { data: shifts } = useQuery<Shift[]>({
+		queryKey: ["shifts"],
+		queryFn: async () => {
+			const res = await api.get("/shifts");
 			return res.data;
 		},
 	});
@@ -68,8 +83,30 @@ export default function EmployeesPage() {
 		mutationFn: async (id: number) => {
 			await api.delete(`/employees/${id}`);
 		},
+		onSuccess: (_, id) => {
+			queryClient.invalidateQueries({ queryKey: ["employees"] });
+			setSelectedIds((prev) => prev.filter((prevId) => prevId !== id));
+		},
+	});
+
+	const bulkShiftMutation = useMutation({
+		mutationFn: async () => {
+			await api.patch("/employees/bulk/shift", {
+				employeeIds: selectedIds,
+				shiftIds: bulkShiftIds,
+			});
+		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["employees"] });
+			setIsBulkShiftOpen(false);
+			setSelectedIds([]);
+			setBulkShiftIds([]);
+			alert("Berhasil memperbarui shift pegawai terpilih.");
+		},
+		onError: (err: any) => {
+			alert(
+				"Gagal update shift: " + (err?.response?.data?.message || err?.message),
+			);
 		},
 	});
 
@@ -128,6 +165,34 @@ export default function EmployeesPage() {
 				</div>
 			</div>
 
+			{/* Bulk Actions Bar */}
+			{selectedIds.length > 0 && (
+				<div className="bg-[#00647c] text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
+					<div className="flex items-center gap-2 text-[14px] font-semibold">
+						<span className="bg-white/20 px-2 py-0.5 rounded-md">
+							{selectedIds.length}
+						</span>
+						Pegawai Terpilih
+					</div>
+					<div className="flex gap-2">
+						<button
+							type="button"
+							onClick={() => setIsBulkShiftOpen(true)}
+							className="px-3 py-1.5 bg-white text-[#00647c] rounded-lg text-[13px] font-bold hover:bg-[#f9f9ff] active:scale-95 transition-all"
+						>
+							Atur Shift
+						</button>
+						<button
+							type="button"
+							onClick={() => setSelectedIds([])}
+							className="px-3 py-1.5 border border-white/20 text-white rounded-lg text-[13px] font-medium hover:bg-white/10 active:scale-95 transition-all"
+						>
+							Batal
+						</button>
+					</div>
+				</div>
+			)}
+
 			{/* Data Table Container */}
 			<div className="bg-white border border-black/5 rounded-xl shadow-sm flex flex-col flex-1 overflow-hidden">
 				{/* Toolbar */}
@@ -178,6 +243,23 @@ export default function EmployeesPage() {
 					<table className="w-full text-left border-collapse min-w-[800px]">
 						<thead className="sticky top-0 bg-[#f9f9ff] shadow-sm z-10 border-b border-black/5">
 							<tr>
+								<th className="py-3 px-4 font-sans text-[12px] font-semibold text-[#6e797e] whitespace-nowrap w-12">
+									<input
+										type="checkbox"
+										checked={
+											filteredEmployees.length > 0 &&
+											selectedIds.length === filteredEmployees.length
+										}
+										onChange={(e) => {
+											if (e.target.checked) {
+												setSelectedIds(filteredEmployees.map((e) => e.id));
+											} else {
+												setSelectedIds([]);
+											}
+										}}
+										className="w-4 h-4 rounded border-[#bdc8ce] text-[#00647c] focus:ring-[#00647c]/50 cursor-pointer"
+									/>
+								</th>
 								<th className="py-3 px-4 font-sans text-[12px] font-semibold text-[#6e797e] whitespace-nowrap">
 									NIP
 								</th>
@@ -202,13 +284,13 @@ export default function EmployeesPage() {
 							{isLoading ? (
 								[1, 2, 3].map((k) => (
 									<tr key={k} className="animate-pulse">
-										<td colSpan={6} className="px-4 py-4 h-12 bg-white" />
+										<td colSpan={7} className="px-4 py-4 h-12 bg-white" />
 									</tr>
 								))
 							) : filteredEmployees?.length === 0 ? (
 								<tr>
 									<td
-										colSpan={6}
+										colSpan={7}
 										className="py-16 text-center text-[#6e797e] text-sm"
 									>
 										Tidak ada data pegawai yang ditemukan.
@@ -218,8 +300,30 @@ export default function EmployeesPage() {
 								filteredEmployees?.map((emp, index) => (
 									<tr
 										key={emp.id}
-										className={`group hover:bg-[#dee8ff]/30 transition-colors h-12 ${index % 2 === 1 ? "bg-[#f0f3ff]/30" : ""}`}
+										className={`group hover:bg-[#dee8ff]/30 transition-colors h-12 ${
+											selectedIds.includes(emp.id)
+												? "bg-[#dee8ff]/50"
+												: index % 2 === 1
+													? "bg-[#f0f3ff]/30"
+													: ""
+										}`}
 									>
+										<td className="py-2 px-4">
+											<input
+												type="checkbox"
+												checked={selectedIds.includes(emp.id)}
+												onChange={(e) => {
+													if (e.target.checked) {
+														setSelectedIds([...selectedIds, emp.id]);
+													} else {
+														setSelectedIds(
+															selectedIds.filter((id) => id !== emp.id),
+														);
+													}
+												}}
+												className="w-4 h-4 rounded border-[#bdc8ce] text-[#00647c] focus:ring-[#00647c]/50 cursor-pointer"
+											/>
+										</td>
 										<td className="py-2 px-4 font-mono text-[13px] text-[#3e484d]">
 											{emp.employeeCode}
 										</td>
@@ -292,6 +396,89 @@ export default function EmployeesPage() {
 					onSubmit={handleSubmit}
 					initialData={selectedEmployee || undefined}
 				/>
+			)}
+
+			{isBulkShiftOpen && (
+				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111c2d]/20 backdrop-blur-sm">
+					<div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+						<div className="px-6 py-5 border-b border-black/5 flex items-center justify-between bg-[#f9f9ff]">
+							<h3 className="text-xl font-bold text-[#111c2d] font-display">
+								Atur Shift Pegawai
+							</h3>
+							<button
+								type="button"
+								onClick={() => setIsBulkShiftOpen(false)}
+								className="p-2 hover:bg-black/5 rounded-full text-[#6e797e] hover:text-[#111c2d] transition-all"
+							>
+								<X size={20} />
+							</button>
+						</div>
+
+						<div className="p-6 space-y-4">
+							<p className="text-[14px] text-[#3e484d]">
+								Anda akan mengubah shift untuk{" "}
+								<strong>{selectedIds.length}</strong> pegawai. Pilih shift yang
+								baru:
+							</p>
+
+							<div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar border rounded-xl p-2 border-black/5">
+								{shifts?.map((shift) => (
+									<label
+										key={shift.id}
+										className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-all ${
+											bulkShiftIds.includes(shift.id)
+												? "border-[#00647c] bg-[#f0f3ff]"
+												: "border-transparent hover:border-[#bdc8ce] hover:bg-black/5"
+										}`}
+									>
+										<input
+											type="checkbox"
+											checked={bulkShiftIds.includes(shift.id)}
+											onChange={(e) => {
+												if (e.target.checked) {
+													setBulkShiftIds([...bulkShiftIds, shift.id]);
+												} else {
+													setBulkShiftIds(
+														bulkShiftIds.filter((id) => id !== shift.id),
+													);
+												}
+											}}
+											className="mt-0.5 w-4 h-4 rounded border-[#bdc8ce] text-[#00647c] focus:ring-[#00647c]/50 cursor-pointer"
+										/>
+										<div className="flex flex-col">
+											<span className="text-[13px] font-semibold text-[#111c2d]">
+												{shift.name}
+											</span>
+											<span className="text-[12px] text-[#6e797e]">
+												{shift.startTime} - {shift.endTime}
+											</span>
+										</div>
+									</label>
+								))}
+							</div>
+
+							<div className="pt-4 flex gap-3">
+								<button
+									type="button"
+									onClick={() => setIsBulkShiftOpen(false)}
+									className="flex-1 px-6 py-2.5 rounded-xl font-semibold border border-[#bdc8ce] bg-white text-[#3e484d] hover:bg-[#f9f9ff] transition-all text-[14px]"
+								>
+									Batal
+								</button>
+								<button
+									type="button"
+									onClick={() => bulkShiftMutation.mutate()}
+									disabled={bulkShiftMutation.isPending}
+									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-[14px] disabled:opacity-50"
+								>
+									{bulkShiftMutation.isPending
+										? "Menyimpan..."
+										: "Terapkan Shift"}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
 			)}
 		</motion.div>
 	);

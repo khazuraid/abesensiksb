@@ -50,7 +50,7 @@ export class ReportsService {
 				id: schema.employees.id,
 				name: schema.employees.name,
 				employeeCode: schema.employees.employeeCode,
-				shiftId: schema.employees.shiftId,
+				shiftIds: schema.employees.shiftIds,
 			})
 			.from(schema.employees)
 			.where(eq(schema.employees.isActive, true));
@@ -92,8 +92,12 @@ export class ReportsService {
 
 			// Cari shift berdasarkan hari dan tanggal berlaku
 			const getShiftForDay = (dow: number, dateStr: string) => {
+				const empShifts = shifts.filter(
+					(s) => emp.shiftIds && emp.shiftIds.includes(s.id),
+				);
+
 				// Prioritas: shift dengan tanggal berlaku yang cocok
-				const dated = shifts.find(
+				const dated = empShifts.find(
 					(s) =>
 						s.isActive &&
 						s.workDays?.includes(dow) &&
@@ -105,7 +109,7 @@ export class ReportsService {
 				if (dated) return dated;
 				// Fallback: shift tanpa tanggal yang cocok hari-nya
 				return (
-					shifts.find(
+					empShifts.find(
 						(s) =>
 							s.isActive &&
 							s.workDays?.includes(dow) &&
@@ -155,26 +159,33 @@ export class ReportsService {
 				let inLog: (typeof dayLogs)[0] | undefined;
 				let outLog: (typeof dayLogs)[0] | undefined;
 
-				if (dayLogs.length === 1) {
-					const log = dayLogs[0];
-					if (shift) {
-						const startMinutes = parseTime(shift.startTime);
-						const endMinutes = parseTime(shift.endTime);
+				if (shift && dayLogs.length > 0) {
+					const startMinutes = parseTime(shift.startTime);
+					const endMinutes = parseTime(shift.endTime);
+
+					const inLogs = dayLogs.filter((log) => {
 						const scanMinutes = getWIBMinutes(log.timestamp);
-						if (
+						return (
 							Math.abs(scanMinutes - startMinutes) <=
 							Math.abs(scanMinutes - endMinutes)
-						) {
-							inLog = log;
-						} else {
-							outLog = log;
-						}
-					} else {
-						inLog = log;
-					}
-				} else if (dayLogs.length > 1) {
+						);
+					});
+
+					const outLogs = dayLogs.filter((log) => {
+						const scanMinutes = getWIBMinutes(log.timestamp);
+						return (
+							Math.abs(scanMinutes - startMinutes) >
+							Math.abs(scanMinutes - endMinutes)
+						);
+					});
+
+					inLog = inLogs[0];
+					outLog = outLogs[outLogs.length - 1];
+				} else if (dayLogs.length > 0) {
 					inLog = dayLogs[0];
-					outLog = dayLogs[dayLogs.length - 1];
+					if (dayLogs.length > 1) {
+						outLog = dayLogs[dayLogs.length - 1];
+					}
 				}
 
 				let lateMinutes = 0;

@@ -70,11 +70,11 @@ export class EmployeesService {
 		return { message: "Employee deleted successfully" };
 	}
 
-	async bulkAssignShift(employeeIds: number[], shiftId: number) {
+	async bulkAssignShift(employeeIds: number[], shiftIds: number[]) {
 		await this.db
 			.update(schema.employees)
-			.set({ shiftId, updatedAt: new Date() })
+			.set({ shiftIds, updatedAt: new Date() })
 			.where(inArray(schema.employees.id, employeeIds));
-		return { message: `Shift assigned to ${employeeIds.length} employees` };
+		return { message: `Shifts assigned to ${employeeIds.length} employees` };
 	}
 }

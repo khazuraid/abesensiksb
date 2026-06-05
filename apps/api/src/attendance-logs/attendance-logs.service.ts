@@ -53,12 +53,13 @@ export class AttendanceLogsService {
 		}
 		if (filter.search) {
 			const searchPattern = `%${filter.search}%`;
-			conditions.push(
-				or(
-					ilike(schema.employees.name, searchPattern),
-					ilike(schema.employees.employeeCode, searchPattern),
-				),
+			const searchOr = or(
+				ilike(schema.employees.name, searchPattern),
+				ilike(schema.employees.employeeCode, searchPattern),
 			);
+			if (searchOr) {
+				conditions.push(searchOr);
+			}
 		}
 
 		const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -98,6 +99,10 @@ export class AttendanceLogsService {
 			const [totalCountResult] = await this.db
 				.select({ count: count() })
 				.from(schema.attendanceLogs)
+				.leftJoin(
+					schema.employees,
+					eq(schema.attendanceLogs.employeeId, schema.employees.id),
+				)
 				.where(where);
 
 			const total = totalCountResult?.count ?? 0;

@@ -13,6 +13,8 @@ import {
 	Router,
 	Users,
 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
 	Area,
@@ -61,6 +63,7 @@ interface Device {
 }
 
 export default function Dashboard() {
+	const router = useRouter();
 	const queryClient = useQueryClient();
 	const { socket, isConnected } = useSocket();
 
@@ -339,6 +342,7 @@ export default function Dashboard() {
 						</h2>
 						<button
 							type="button"
+							onClick={() => router.push("/logs")}
 							className="adms-button-outline !py-1.5 !px-3 !text-xs"
 						>
 							Filter
@@ -473,12 +477,12 @@ export default function Dashboard() {
 					</div>
 
 					<div className="p-3 border-t border-black/5 text-center bg-[#f9f9ff]">
-						<a
+						<Link
 							className="font-mono text-[10px] tracking-widest text-[#00647c] hover:text-[#007f9d] transition-colors uppercase font-bold"
 							href="/devices"
 						>
 							View All Devices
-						</a>
+						</Link>
 					</div>
 				</div>
 			</div>

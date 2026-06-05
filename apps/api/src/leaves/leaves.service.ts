@@ -22,12 +22,13 @@ export class LeavesService {
 		}
 		if (filter.search) {
 			const searchPattern = `%${filter.search}%`;
-			conditions.push(
-				or(
-					ilike(schema.employees.name, searchPattern),
-					ilike(schema.employees.employeeCode, searchPattern),
-				),
+			const searchOr = or(
+				ilike(schema.employees.name, searchPattern),
+				ilike(schema.employees.employeeCode, searchPattern),
 			);
+			if (searchOr) {
+				conditions.push(searchOr);
+			}
 		}
 
 		const where = conditions.length > 0 ? and(...conditions) : undefined;

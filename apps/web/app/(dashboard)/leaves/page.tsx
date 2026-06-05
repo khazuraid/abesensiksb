@@ -46,7 +46,7 @@ export default function LeavesPage() {
 		},
 	});
 
-	const leaves = response?.data || [];
+	const leaves: Leave[] = response?.data || [];
 	const meta = response?.meta;
 
 	const { data: employees } = useQuery<Employee[]>({

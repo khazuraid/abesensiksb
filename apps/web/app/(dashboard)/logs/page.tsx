@@ -23,6 +23,7 @@ import api from "@/lib/api";
 export default function AttendanceLogsPage() {
 	const [search, setSearch] = useState("");
 	const [filterStatus, setFilterStatus] = useState("");
+	const [filterStartDate, setFilterStartDate] = useState("");
 	const [filterEndDate, setFilterEndDate] = useState("");
 	const [photoModal, setPhotoModal] = useState<string | null>(null);
 	const [page, setPage] = useState(1);
@@ -66,7 +67,7 @@ export default function AttendanceLogsPage() {
 		refetchInterval: 10000,
 	});
 
-	const logs = response?.data || [];
+	const logs: any[] = response?.data || [];
 	const meta = response?.meta;
 
 	const formatDate = (date: string | Date) =>
