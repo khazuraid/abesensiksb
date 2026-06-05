@@ -466,11 +466,11 @@ export class ReportsService {
 			]);
 			ws.addRow(["Alpa", emp.totalAbsent, "", "Cuti/Izin", emp.totalLeave]);
 			// Custom Calculation:
-			// 1. (Total Late Mins + Total Early Out Mins) / 420 -> Decimal
-			// 2. Lupa absen (masuk atau pulang) 2x = 1 hari -> Decimal
+			// 1. (Total Late Mins + Total Early Out Mins) / 420 -> Round to integer
+			// 2. Lupa absen (masuk atau pulang) 2x = 1 hari -> Round to integer
 			const totalPenaltyMinutes =
 				emp.totalLateMinutesSum + emp.totalEarlyOutMinutesSum;
-			const penaltyFromMins = Number((totalPenaltyMinutes / 420).toFixed(2));
+			const penaltyFromMins = Math.round(totalPenaltyMinutes / 420);
 
 			let missedPunches = 0;
 			for (const day of emp.days) {
@@ -483,10 +483,8 @@ export class ReportsService {
 					}
 				}
 			}
-			const penaltyFromPunches = Number((missedPunches / 2).toFixed(2));
-			const totalPenaltyDays = Number(
-				(penaltyFromMins + penaltyFromPunches).toFixed(2),
-			);
+			const penaltyFromPunches = Math.floor(missedPunches / 2);
+			const totalPenaltyDays = penaltyFromMins + penaltyFromPunches;
 
 			ws.addRow([]);
 			ws.addRow([

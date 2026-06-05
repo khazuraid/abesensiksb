@@ -222,6 +222,11 @@ export class TelegramService implements OnModuleInit {
 ━━━━━━━━━━━━━━━━━━━━━
 Selamat datang! Pilih menu di bawah untuk melihat informasi kehadiran dan kepegawaian.
 
+<b>Perintah Pegawai:</b>
+/bind [NIP] - Hubungkan akun
+/absenku - Cek absen pribadi
+/izin [Alasan] - Ajukan izin
+
 <i>Pilih kategori:</i>`;
 	}
 
