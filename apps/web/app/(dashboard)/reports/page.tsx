@@ -481,6 +481,9 @@ export default function ReportsPage() {
 													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
 														Terlambat
 													</th>
+													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
+														Pulang Cepat
+													</th>
 												</tr>
 											</thead>
 											<tbody className="divide-y divide-black/5 text-[13px]">
@@ -541,6 +544,11 @@ export default function ReportsPage() {
 																		? `${day.lateMinutes} mnt`
 																		: "-"}
 																</td>
+																<td className="px-4 py-3 text-[#ba1a1a]">
+																	{day.earlyOutMinutes > 0
+																		? `${day.earlyOutMinutes} mnt`
+																		: "-"}
+																</td>
 															</tr>
 														);
 													},
@@ -548,6 +556,96 @@ export default function ReportsPage() {
 											</tbody>
 										</table>
 									</div>
+
+									{/* Total Calculation Section */}
+									{(() => {
+										const totalLate =
+											selectedEmployeeDetail.totalLateMinutesSum || 0;
+										const totalEarly =
+											selectedEmployeeDetail.totalEarlyOutMinutesSum || 0;
+										const penaltyMins = Math.round(
+											(totalLate + totalEarly) / 420,
+										);
+
+										let missed = 0;
+										// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+										selectedEmployeeDetail.days.forEach((d: any) => {
+											if (d.isWorkDay && !d.isHoliday && d.status !== "LEAVE") {
+												if (
+													(d.clockIn && !d.clockOut) ||
+													(!d.clockIn && d.clockOut)
+												) {
+													missed++;
+												}
+											}
+										});
+										const penaltyPunch = Math.floor(missed / 2);
+										const totalPenalty = penaltyMins + penaltyPunch;
+
+										return (
+											<div className="bg-white rounded-lg border border-[#00647c]/20 overflow-hidden mt-6">
+												<div className="bg-[#f0f3ff] px-5 py-3 border-b border-[#00647c]/10">
+													<h4 className="font-semibold text-[14px] text-[#00647c]">
+														Rangkuman Potongan Kinerja
+													</h4>
+												</div>
+												<div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-[13px]">
+													<div className="space-y-3">
+														<div className="flex justify-between items-center">
+															<span className="text-[#6e797e]">
+																Total Menit Terlambat
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{totalLate} mnt
+															</span>
+														</div>
+														<div className="flex justify-between items-center">
+															<span className="text-[#6e797e]">
+																Total Menit Pulang Cepat
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{totalEarly} mnt
+															</span>
+														</div>
+														<div className="flex justify-between items-center pt-3 border-t border-black/5">
+															<span className="text-[#111c2d] font-semibold">
+																Akumulasi Waktu (÷ 420)
+															</span>
+															<span className="font-bold text-[#ba1a1a] bg-[#ba1a1a]/10 px-2 py-1 rounded">
+																{penaltyMins} Hari
+															</span>
+														</div>
+													</div>
+													<div className="space-y-3">
+														<div className="flex justify-between items-center">
+															<span className="text-[#6e797e]">
+																Lupa Absen (Masuk/Pulang)
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{missed} kali
+															</span>
+														</div>
+														<div className="flex justify-between items-center pt-3 border-t border-black/5 mt-auto">
+															<span className="text-[#111c2d] font-semibold">
+																Potongan Lupa Absen (÷ 2)
+															</span>
+															<span className="font-bold text-[#ba1a1a] bg-[#ba1a1a]/10 px-2 py-1 rounded">
+																{penaltyPunch} Hari
+															</span>
+														</div>
+													</div>
+												</div>
+												<div className="bg-[#e7eeff] px-5 py-4 border-t border-[#00647c]/20 flex justify-between items-center">
+													<span className="font-bold text-[#00647c] uppercase tracking-wide text-[12px]">
+														TOTAL POTONGAN TPP
+													</span>
+													<span className="font-black text-[18px] text-[#ba1a1a]">
+														{totalPenalty} Hari
+													</span>
+												</div>
+											</div>
+										);
+									})()}
 								</div>
 							) : (
 								<div className="text-center py-10 text-[#6e797e]">
