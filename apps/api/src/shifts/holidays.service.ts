@@ -112,14 +112,26 @@ export class HolidaysService {
 	async syncFromExternal(year?: number): Promise<{ synced: number }> {
 		const targetYear = year || new Date().getFullYear();
 
-		const result = await this.db
+		const settingsResult = await this.db
 			.select()
 			.from(schema.settings)
-			.where(eq(schema.settings.key, "HOLIDAY_API_URL"));
+			.where(
+				or(
+					eq(schema.settings.key, "HOLIDAY_API_URL"),
+					eq(schema.settings.key, "HOLIDAY_API_KEY"),
+				),
+			);
 
-		let url = result[0]?.value;
+		const urlSetting = settingsResult.find(
+			(s) => s.key === "HOLIDAY_API_URL",
+		)?.value;
+		const keySetting = settingsResult.find(
+			(s) => s.key === "HOLIDAY_API_KEY",
+		)?.value;
+
+		let url = urlSetting;
 		if (!url) {
-			url = `https://libur.deno.dev/api?year=${targetYear}`;
+			url = `https://use.api.co.id/holidays/indonesia/?year=${targetYear}`;
 		} else {
 			url = url.replace("{year}", targetYear.toString());
 			if (!url.includes("year=") && !url.includes("{year}")) {
@@ -129,14 +141,25 @@ export class HolidaysService {
 			}
 		}
 
+		const apiKey = keySetting || process.env.HOLIDAY_API_KEY;
+		if (!apiKey) {
+			throw new BadRequestException(
+				"API Key untuk api.co.id belum diatur. Silakan tambahkan HOLIDAY_API_KEY di pengaturan atau file .env",
+			);
+		}
+
 		this.logger.log(`Syncing holidays from ${url}`);
 
-		const response = await fetch(url);
+		const response = await fetch(url, {
+			headers: {
+				"x-api-co-id": apiKey,
+			},
+		});
+
 		if (!response.ok) {
-			const errorText = await response.text().catch(() => "");
-			if (response.status === 403 && errorText.includes("QUOTA_EXCEEDED")) {
+			if (response.status === 401) {
 				throw new BadRequestException(
-					"API Hari Libur (libur.deno.dev) sedang gangguan (Quota Exceeded). Silakan coba lagi besok atau tambahkan libur secara manual.",
+					"API Key untuk api.co.id tidak valid (401 Unauthorized).",
 				);
 			}
 			throw new BadRequestException(
@@ -144,7 +167,17 @@ export class HolidaysService {
 			);
 		}
 
-		const data = (await response.json()) as ExternalHoliday[];
+		const json = await response.json();
+
+		// Mendukung dua format: array langsung (API lama) atau format api.co.id (json.data)
+		const data = Array.isArray(json) ? json : json.data;
+
+		if (!Array.isArray(data)) {
+			throw new BadRequestException(
+				"Format respons dari API Hari Libur tidak dikenali.",
+			);
+		}
+
 		let synced = 0;
 
 		for (const item of data) {
