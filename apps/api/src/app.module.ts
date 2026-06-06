@@ -15,6 +15,7 @@ import { DatabaseModule } from "./database/database.module";
 import { DevicesModule } from "./devices/devices.module";
 import { EmployeesModule } from "./employees/employees.module";
 import { EventsModule } from "./events/events.module";
+import { JaspelModule } from "./jaspel/jaspel.module";
 import { LeavesModule } from "./leaves/leaves.module";
 import { ReportsModule } from "./reports/reports.module";
 import { SettingsModule } from "./settings/settings.module";
@@ -72,6 +73,7 @@ import { UsersModule } from "./users/users.module";
 		SettingsModule,
 		LeavesModule,
 		EventsModule,
+		JaspelModule,
 	],
 	controllers: [AppController],
 	providers: [AppService],

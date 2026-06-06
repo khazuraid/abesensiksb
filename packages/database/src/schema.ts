@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
 	boolean,
 	date,
+	doublePrecision,
 	index,
 	integer,
 	jsonb,
@@ -314,6 +315,8 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
 		references: [users.id],
 	}),
 	attendanceLogs: many(attendanceLogs),
+	jaspelVariables: one(employeeJaspelVariables),
+	jaspelDistributions: many(jaspelDistributions),
 }));
 
 export const shiftsRelations = relations(shifts, ({ many }) => ({
@@ -343,3 +346,87 @@ export const attendanceLogsRelations = relations(attendanceLogs, ({ one }) => ({
 		references: [devices.id],
 	}),
 }));
+
+/**
+ * JASA PELAYANAN (JASPEL) / REMUNERATION TABLES
+ */
+
+export const jaspelFunds = pgTable(
+	"jaspel_funds",
+	{
+		id: serial("id").primaryKey(),
+		month: integer("month").notNull(),
+		year: integer("year").notNull(),
+		totalFund: integer("total_fund").notNull(), // Disimpan dalam Rupiah utuh
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(t) => [index("idx_jaspel_funds_month_year").on(t.month, t.year)],
+);
+
+export const employeeJaspelVariables = pgTable("employee_jaspel_variables", {
+	id: serial("id").primaryKey(),
+	employeeId: integer("employee_id")
+		.notNull()
+		.unique()
+		.references(() => employees.id, { onDelete: "cascade" }),
+	basicIndex: doublePrecision("basic_index").default(0).notNull(),
+	positionIndex: doublePrecision("position_index").default(0).notNull(),
+	riskIndex: doublePrecision("risk_index").default(0).notNull(),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const jaspelDistributions = pgTable(
+	"jaspel_distributions",
+	{
+		id: serial("id").primaryKey(),
+		month: integer("month").notNull(),
+		year: integer("year").notNull(),
+		employeeId: integer("employee_id")
+			.notNull()
+			.references(() => employees.id, { onDelete: "cascade" }),
+
+		// Data histori (supaya tidak berubah jika variabel diedit)
+		basicIndex: doublePrecision("basic_index").notNull(),
+		positionIndex: doublePrecision("position_index").notNull(),
+		riskIndex: doublePrecision("risk_index").notNull(),
+
+		// Variabel Kehadiran (diambil saat hitung)
+		totalLateMins: integer("total_late_mins").notNull(),
+		totalEarlyMins: integer("total_early_mins").notNull(),
+		missedPunches: integer("missed_punches").notNull(),
+		penaltyDays: integer("penalty_days").notNull(),
+
+		// Skor Akhir
+		totalIndex: doublePrecision("total_index").notNull(),
+		finalPoint: doublePrecision("final_point").notNull(),
+		finalAmount: integer("final_amount").notNull(), // Uang jaspel
+
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(t) => [
+		index("idx_jaspel_dist_month_year").on(t.month, t.year),
+		index("idx_jaspel_dist_employee").on(t.employeeId),
+	],
+);
+
+export const employeeJaspelVariablesRelations = relations(
+	employeeJaspelVariables,
+	({ one }) => ({
+		employee: one(employees, {
+			fields: [employeeJaspelVariables.employeeId],
+			references: [employees.id],
+		}),
+	}),
+);
+
+export const jaspelDistributionsRelations = relations(
+	jaspelDistributions,
+	({ one }) => ({
+		employee: one(employees, {
+			fields: [jaspelDistributions.employeeId],
+			references: [employees.id],
+		}),
+	}),
+);

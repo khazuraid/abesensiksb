@@ -2,6 +2,7 @@
 
 import Cookies from "js-cookie";
 import {
+	Calculator,
 	CalendarDays,
 	CalendarOff,
 	ClipboardList,
@@ -30,6 +31,7 @@ const navItems = [
 	{ icon: CalendarDays, label: "Hari Libur", href: "/holidays" },
 	{ icon: FileText, label: "Laporan", href: "/reports" },
 	{ icon: ClipboardList, label: "Rekap Harian", href: "/daily-recap" },
+	{ icon: Calculator, label: "Jasa Pelayanan", href: "/jaspel" },
 	{ icon: Settings, label: "Pengaturan", href: "/settings" },
 ];
 
