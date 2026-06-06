@@ -436,216 +436,219 @@ export default function ReportsPage() {
 							</button>
 						</div>
 
-						<div className="p-6 overflow-y-auto bg-white flex-1">
+						<div className="p-0 overflow-y-auto bg-[#f9f9ff] flex-1">
 							{isLoadingDaily ? (
 								<div className="flex justify-center items-center py-20">
 									<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#00647c]" />
 								</div>
 							) : selectedEmployeeDetail ? (
-								<div className="space-y-6">
-									<div className="grid grid-cols-2 gap-4">
-										<div>
-											<p className="text-[12px] text-[#6e797e] font-semibold uppercase tracking-wider">
-												Nama Pegawai
-											</p>
-											<p className="text-[#111c2d] font-medium text-[15px]">
-												{selectedEmployeeDetail.name}
-											</p>
-										</div>
-										<div>
-											<p className="text-[12px] text-[#6e797e] font-semibold uppercase tracking-wider">
-												Bulan / Tahun
-											</p>
-											<p className="text-[#111c2d] font-medium text-[15px]">
-												{monthName} {year}
-											</p>
-										</div>
-									</div>
-
-									<div className="border border-black/5 rounded-lg overflow-hidden">
-										<table className="w-full text-left border-collapse">
-											<thead>
-												<tr className="bg-[#f0f3ff] border-b border-black/5">
-													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-														Tanggal
-													</th>
-													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-														Status
-													</th>
-													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-														Jam Masuk
-													</th>
-													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-														Jam Pulang
-													</th>
-													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-														Terlambat
-													</th>
-													<th className="px-4 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-														Pulang Cepat
-													</th>
-												</tr>
-											</thead>
-											<tbody className="divide-y divide-black/5 text-[13px]">
-												{selectedEmployeeDetail.days.map(
-													/* biome-ignore lint/suspicious/noExplicitAny: complex object */
-													(day: any, _i: number) => {
-														let statusColor = "text-[#3e484d]";
-														let statusLabel = "-";
-
-														if (day.isHoliday) {
-															statusLabel = "Libur";
-															statusColor = "text-[#894e00]";
-														} else if (!day.isWorkDay) {
-															statusLabel = "Off";
-														} else {
-															switch (day.status) {
-																case "PRESENT":
-																	statusLabel = "Hadir";
-																	statusColor = "text-[#006c49]";
-																	break;
-																case "LATE":
-																	statusLabel = "Telat";
-																	statusColor = "text-[#894e00]";
-																	break;
-																case "EARLY_OUT":
-																	statusLabel = "Pulang Cepat";
-																	statusColor = "text-[#894e00]";
-																	break;
-																case "ABSENT":
-																	statusLabel = "Alpa";
-																	statusColor = "text-[#ba1a1a]";
-																	break;
-																case "LEAVE":
-																	statusLabel = "Cuti/Izin";
-																	statusColor = "text-[#00647c]";
-																	break;
-															}
-														}
-
-														return (
-															<tr key={day.date} className="hover:bg-[#f9f9ff]">
-																<td className="px-4 py-3 font-medium">
-																	{day.date}
-																</td>
-																<td
-																	className={`px-4 py-3 font-semibold ${statusColor}`}
-																>
-																	{statusLabel}
-																</td>
-																<td className="px-4 py-3">
-																	{day.clockIn || "-"}
-																</td>
-																<td className="px-4 py-3">
-																	{day.clockOut || "-"}
-																</td>
-																<td className="px-4 py-3 text-[#ba1a1a]">
-																	{day.lateMinutes > 0
-																		? `${day.lateMinutes} mnt`
-																		: "-"}
-																</td>
-																<td className="px-4 py-3 text-[#ba1a1a]">
-																	{day.earlyOutMinutes > 0
-																		? `${day.earlyOutMinutes} mnt`
-																		: "-"}
-																</td>
-															</tr>
-														);
-													},
-												)}
-											</tbody>
-										</table>
-									</div>
-
-									{/* Total Calculation Section */}
-									{(() => {
-										const totalLate =
-											selectedEmployeeDetail.totalLateMinutesSum || 0;
-										const totalEarly =
-											selectedEmployeeDetail.totalEarlyOutMinutesSum || 0;
-										const penaltyMins = Math.round(
-											(totalLate + totalEarly) / 420,
-										);
-
-										let missed = 0;
-										// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-										selectedEmployeeDetail.days.forEach((d: any) => {
-											if (d.isWorkDay && !d.isHoliday && d.status !== "LEAVE") {
-												if (
-													(d.clockIn && !d.clockOut) ||
-													(!d.clockIn && d.clockOut)
-												) {
-													missed++;
-												}
-											}
-										});
-										const penaltyPunch = Math.floor(missed / 2);
-										const totalPenalty = penaltyMins + penaltyPunch;
-
-										return (
-											<div className="bg-white rounded-lg border border-[#00647c]/20 overflow-hidden mt-6">
-												<div className="bg-[#f0f3ff] px-5 py-3 border-b border-[#00647c]/10">
-													<h4 className="font-semibold text-[14px] text-[#00647c]">
-														Rangkuman Potongan Kinerja
-													</h4>
-												</div>
-												<div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-6 text-[13px]">
-													<div className="space-y-3">
-														<div className="flex justify-between items-center">
-															<span className="text-[#6e797e]">
-																Total Menit Terlambat
-															</span>
-															<span className="font-semibold text-[#111c2d]">
-																{totalLate} mnt
-															</span>
-														</div>
-														<div className="flex justify-between items-center">
-															<span className="text-[#6e797e]">
-																Total Menit Pulang Cepat
-															</span>
-															<span className="font-semibold text-[#111c2d]">
-																{totalEarly} mnt
-															</span>
-														</div>
-														<div className="flex justify-between items-center pt-3 border-t border-black/5">
-															<span className="text-[#111c2d] font-semibold">
-																Akumulasi Waktu (÷ 420)
-															</span>
-															<span className="font-bold text-[#ba1a1a] bg-[#ba1a1a]/10 px-2 py-1 rounded">
-																{penaltyMins} Hari
-															</span>
-														</div>
-													</div>
-													<div className="space-y-3">
-														<div className="flex justify-between items-center">
-															<span className="text-[#6e797e]">
-																Lupa Absen (Masuk/Pulang)
-															</span>
-															<span className="font-semibold text-[#111c2d]">
-																{missed} kali
-															</span>
-														</div>
-														<div className="flex justify-between items-center pt-3 border-t border-black/5 mt-auto">
-															<span className="text-[#111c2d] font-semibold">
-																Potongan Lupa Absen (÷ 2)
-															</span>
-															<span className="font-bold text-[#ba1a1a] bg-[#ba1a1a]/10 px-2 py-1 rounded">
-																{penaltyPunch} Hari
-															</span>
-														</div>
-													</div>
-												</div>
-												<div className="bg-[#e7eeff] px-5 py-4 border-t border-[#00647c]/20 flex justify-between items-center">
-													<span className="font-bold text-[#00647c] uppercase tracking-wide text-[12px]">
-														TOTAL POTONGAN TPP
-													</span>
-													<span className="font-black text-[18px] text-[#ba1a1a]">
-														{totalPenalty} Hari
-													</span>
-												</div>
+								<div className="flex flex-col md:flex-row h-full">
+									{/* Sidebar Ringkasan (Kiri) */}
+									<div className="w-full md:w-80 bg-white border-r border-black/5 p-6 flex flex-col gap-6 shrink-0">
+										<div className="text-center">
+											<div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-[#00647c] to-[#004e61] text-white flex items-center justify-center font-bold text-[28px] shadow-md mb-4">
+												{selectedEmployeeDetail.name
+													.split(" ")
+													.map((n: string) => n[0])
+													.join("")
+													.slice(0, 2)
+													.toUpperCase()}
 											</div>
-										);
-									})()}
+											<h4 className="text-[18px] font-bold text-[#111c2d] leading-tight">
+												{selectedEmployeeDetail.name}
+											</h4>
+											<p className="text-[#6e797e] text-[13px] font-medium mt-1">
+												Bulan: {monthName} {year}
+											</p>
+										</div>
+
+										{(() => {
+											const totalLate =
+												selectedEmployeeDetail.totalLateMinutesSum || 0;
+											const totalEarly =
+												selectedEmployeeDetail.totalEarlyOutMinutesSum || 0;
+											const penaltyMins = Math.round(
+												(totalLate + totalEarly) / 420,
+											);
+
+											let missed = 0;
+											// biome-ignore lint/suspicious/noExplicitAny: complex day type
+											selectedEmployeeDetail.days.forEach((d: any) => {
+												if (
+													d.isWorkDay &&
+													!d.isHoliday &&
+													d.status !== "LEAVE"
+												) {
+													if (
+														(d.clockIn && !d.clockOut) ||
+														(!d.clockIn && d.clockOut)
+													) {
+														missed++;
+													}
+												}
+											});
+											const penaltyPunch = Math.floor(missed / 2);
+											const totalAbsent =
+												selectedEmployeeDetail.totalAbsent || 0;
+											const totalLeave = selectedEmployeeDetail.totalLeave || 0;
+
+											const totalPenalty =
+												penaltyMins + penaltyPunch + totalAbsent + totalLeave;
+
+											return (
+												<div className="flex flex-col gap-4 mt-2">
+													<div className="bg-[#f0f3ff] rounded-xl p-4 border border-[#00647c]/10 relative overflow-hidden">
+														<div className="absolute top-0 right-0 w-16 h-16 bg-[#00647c]/5 rounded-bl-full -mr-2 -mt-2" />
+														<p className="text-[12px] font-bold text-[#00647c] uppercase tracking-wider mb-3">
+															Total Potongan
+														</p>
+														<div className="flex items-baseline gap-2">
+															<span className="text-[32px] font-black text-[#111c2d] leading-none">
+																{totalPenalty}
+															</span>
+															<span className="text-[14px] font-medium text-[#6e797e]">
+																Hari
+															</span>
+														</div>
+													</div>
+
+													<div className="space-y-3">
+														<div className="flex justify-between items-center text-[13px]">
+															<span className="text-[#6e797e]">
+																Akumulasi Jam (÷ 420)
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{penaltyMins} hr
+															</span>
+														</div>
+														<div className="flex justify-between items-center text-[13px]">
+															<span className="text-[#6e797e]">
+																Lupa Absen (÷ 2)
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{penaltyPunch} hr
+															</span>
+														</div>
+														<div className="flex justify-between items-center text-[13px]">
+															<span className="text-[#6e797e]">
+																Alpa (Tidak Hadir)
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{totalAbsent} hr
+															</span>
+														</div>
+														<div className="flex justify-between items-center text-[13px]">
+															<span className="text-[#6e797e]">
+																Cuti / Izin
+															</span>
+															<span className="font-semibold text-[#111c2d]">
+																{totalLeave} hr
+															</span>
+														</div>
+													</div>
+												</div>
+											);
+										})()}
+									</div>
+
+									{/* Tabel Detail (Kanan) */}
+									<div className="flex-1 p-6">
+										<div className="bg-white border border-black/5 rounded-xl overflow-hidden shadow-sm">
+											<table className="w-full text-left border-collapse">
+												<thead>
+													<tr className="bg-[#f8f9fa] border-b border-black/5">
+														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
+															Tanggal
+														</th>
+														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
+															Status
+														</th>
+														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
+															Waktu
+														</th>
+														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
+															Penalti (Mnt)
+														</th>
+													</tr>
+												</thead>
+												<tbody className="divide-y divide-black/5 text-[13px]">
+													{selectedEmployeeDetail.days.map(
+														// biome-ignore lint/suspicious/noExplicitAny: complex object
+														(day: any) => {
+															let statusColor = "text-[#3e484d] bg-[#f0f3ff]";
+															let statusLabel = "-";
+
+															if (day.isHoliday) {
+																statusLabel = "Libur";
+																statusColor = "text-[#894e00] bg-[#fff8e6]";
+															} else if (!day.isWorkDay) {
+																statusLabel = "Off";
+															} else {
+																switch (day.status) {
+																	case "PRESENT":
+																		statusLabel = "Hadir";
+																		statusColor = "text-[#006c49] bg-[#e6fbf2]";
+																		break;
+																	case "LATE":
+																		statusLabel = "Telat";
+																		statusColor = "text-[#894e00] bg-[#fff8e6]";
+																		break;
+																	case "EARLY_OUT":
+																		statusLabel = "Pulang Cepat";
+																		statusColor = "text-[#894e00] bg-[#fff8e6]";
+																		break;
+																	case "ABSENT":
+																		statusLabel = "Alpa";
+																		statusColor =
+																			"text-[#ba1a1a] bg-[#ffdad6]/50";
+																		break;
+																	case "LEAVE":
+																		statusLabel = "Cuti/Izin";
+																		statusColor = "text-[#00647c] bg-[#e6f4f8]";
+																		break;
+																}
+															}
+
+															return (
+																<tr
+																	key={day.date}
+																	className="hover:bg-[#f9f9ff] transition-colors"
+																>
+																	<td className="px-5 py-4 font-medium text-[#111c2d]">
+																		{day.date}
+																	</td>
+																	<td className="px-5 py-4">
+																		<span
+																			className={`inline-flex px-2.5 py-1 rounded font-semibold text-[11px] ${statusColor}`}
+																		>
+																			{statusLabel}
+																		</span>
+																	</td>
+																	<td className="px-5 py-4 text-center">
+																		<div className="flex items-center justify-center gap-2 text-[#3e484d] font-medium">
+																			<span>{day.clockIn || "--:--"}</span>
+																			<span className="text-[#bdc8ce]">-</span>
+																			<span>{day.clockOut || "--:--"}</span>
+																		</div>
+																	</td>
+																	<td className="px-5 py-4 text-right">
+																		{day.lateMinutes > 0 ||
+																		day.earlyOutMinutes > 0 ? (
+																			<span className="text-[#ba1a1a] font-semibold">
+																				{day.lateMinutes + day.earlyOutMinutes}
+																			</span>
+																		) : (
+																			<span className="text-[#bdc8ce]">-</span>
+																		)}
+																	</td>
+																</tr>
+															);
+														},
+													)}
+												</tbody>
+											</table>
+										</div>
+									</div>
 								</div>
 							) : (
 								<div className="text-center py-10 text-[#6e797e]">

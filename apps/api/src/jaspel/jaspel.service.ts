@@ -155,7 +155,14 @@ export class JaspelService {
 				}
 			}
 			const penaltyFromPunches = Math.floor(missedPunches / 2);
-			const penaltyDays = penaltyFromMins + penaltyFromPunches;
+
+			// Tambahkan potongan dari Alpa (Tidak Hadir) secara penuh
+			// Tambahkan juga potongan Cuti jika diperlukan (sementara saya hitung masuk potongan)
+			const totalAbsent = emp.totalAbsent || 0;
+			const totalLeave = emp.totalLeave || 0;
+
+			const penaltyDays =
+				penaltyFromMins + penaltyFromPunches + totalAbsent + totalLeave;
 
 			// Kehadiran maksimal adalah WORKING_DAYS
 			const effectiveDays = Math.max(0, WORKING_DAYS - penaltyDays);
