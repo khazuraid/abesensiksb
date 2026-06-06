@@ -1,6 +1,12 @@
 import * as schema from "@adms/database";
 import type { CreateHoliday, UpdateHoliday } from "@adms/shared-types";
-import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+	BadRequestException,
+	Inject,
+	Injectable,
+	Logger,
+	NotFoundException,
+} from "@nestjs/common";
 import { and, asc, count, eq, ilike, or, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { DRIZZLE } from "../database/database.module";
@@ -127,7 +133,15 @@ export class HolidaysService {
 
 		const response = await fetch(url);
 		if (!response.ok) {
-			throw new Error(`Failed to fetch holidays: ${response.statusText}`);
+			const errorText = await response.text().catch(() => "");
+			if (response.status === 403 && errorText.includes("QUOTA_EXCEEDED")) {
+				throw new BadRequestException(
+					"API Hari Libur (libur.deno.dev) sedang gangguan (Quota Exceeded). Silakan coba lagi besok atau tambahkan libur secara manual.",
+				);
+			}
+			throw new BadRequestException(
+				`Gagal mengambil data dari API Hari Libur (${response.status}): ${response.statusText}`,
+			);
 		}
 
 		const data = (await response.json()) as ExternalHoliday[];

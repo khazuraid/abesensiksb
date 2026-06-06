@@ -34,7 +34,19 @@ export default function HolidaysPage() {
 		mutationFn: async (year: number) => {
 			return (await api.post(`/holidays/sync?year=${year}`)).data;
 		},
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["holidays"] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["holidays"] });
+			alert("Berhasil sinkronisasi hari libur.");
+		},
+		onError: (err: unknown) => {
+			const error = err as {
+				response?: { data?: { message?: string } };
+				message?: string;
+			};
+			alert(
+				error.response?.data?.message || error.message || "Gagal sinkronisasi",
+			);
+		},
 	});
 
 	const createMutation = useMutation({
