@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import {
 	Calculator,
 	CheckCircle2,
@@ -69,7 +70,11 @@ export default function JaspelPage() {
 	};
 
 	return (
-		<div className="max-w-[1200px] mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+		<motion.div
+			initial={{ opacity: 0, y: 10 }}
+			animate={{ opacity: 1, y: 0 }}
+			className="flex flex-col gap-6"
+		>
 			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
 				<div>
 					<h1 className="text-[24px] sm:text-[28px] font-bold text-[#111c2d] tracking-tight">
@@ -367,7 +372,7 @@ export default function JaspelPage() {
 					</div>
 				</div>
 			)}
-		</div>
+		</motion.div>
 	);
 }
 

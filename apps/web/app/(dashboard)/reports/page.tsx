@@ -415,13 +415,12 @@ export default function ReportsPage() {
 				</div>
 			</div>
 
-			{/* Modal Detail Harian */}
 			{selectedEmployee && (
 				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
 					<motion.div
 						initial={{ opacity: 0, scale: 0.95 }}
 						animate={{ opacity: 1, scale: 1 }}
-						className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+						className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] mt-4 flex flex-col overflow-hidden"
 					>
 						<div className="px-6 py-4 border-b border-black/5 flex justify-between items-center bg-[#f9f9ff]">
 							<h3 className="font-semibold text-[18px] text-[#111c2d]">
