@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 const navItems = [
 	{ icon: LayoutDashboard, label: "Dashboard", href: "/" },
@@ -35,6 +36,12 @@ const navItems = [
 export function Sidebar() {
 	const pathname = usePathname();
 	const router = useRouter();
+	const [isOpen, setIsOpen] = useState(false);
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: close sidebar on route change
+	useEffect(() => {
+		setIsOpen(false);
+	}, [pathname]);
 
 	if (pathname === "/login") return null;
 
@@ -47,8 +54,18 @@ export function Sidebar() {
 
 	return (
 		<>
+			{/* Mobile Backdrop */}
+			{isOpen && (
+				<div
+					className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
+					onClick={() => setIsOpen(false)}
+				/>
+			)}
+
 			{/* SideNavBar Component */}
-			<nav className="hidden md:flex bg-white/80 text-[#00647c] font-semibold text-[12px] fixed left-0 top-0 h-full w-[260px] backdrop-blur-[12px] border-r border-black/5 shadow-lg flex-col py-6 z-50">
+			<nav
+				className={`fixed left-0 top-0 h-full w-[260px] bg-white/95 text-[#00647c] font-semibold text-[12px] backdrop-blur-[12px] border-r border-black/5 shadow-2xl md:shadow-lg flex flex-col py-6 z-50 transition-transform duration-300 ease-in-out ${isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+			>
 				{/* Header */}
 				<div className="px-6 mb-8 flex items-center gap-2">
 					<div className="w-8 h-8 rounded-full bg-[#00647c] flex items-center justify-center text-white">
@@ -109,19 +126,22 @@ export function Sidebar() {
 			</nav>
 
 			{/* Mobile Menu Trigger (Visible only on mobile) */}
-			<div className="md:hidden fixed top-0 w-full bg-white/80 backdrop-blur-md border-b border-black/5 z-40 px-4 py-3 flex items-center gap-4">
-				<button
-					type="button"
-					className="text-[#3e484d] hover:bg-[#3e484d]/10 p-2 rounded-full transition-colors active:scale-95"
-				>
-					<Menu size={24} />
-				</button>
-				<div className="font-display text-[20px] font-bold flex items-center gap-2">
-					<div className="w-6 h-6 rounded-full bg-[#00647c] flex items-center justify-center text-white">
-						<Clock size={14} strokeWidth={2.5} />
+			<div className="md:hidden fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-black/5 z-40 px-4 py-3 flex items-center justify-between shadow-sm">
+				<div className="flex items-center gap-3">
+					<button
+						type="button"
+						onClick={() => setIsOpen(true)}
+						className="text-[#3e484d] hover:bg-[#3e484d]/10 p-2 rounded-full transition-colors active:scale-95"
+					>
+						<Menu size={24} />
+					</button>
+					<div className="font-display text-[18px] font-bold flex items-center gap-2">
+						<div className="w-6 h-6 rounded-full bg-[#00647c] flex items-center justify-center text-white">
+							<Clock size={14} strokeWidth={2.5} />
+						</div>
+						<span className="text-[#111c2d]">ADMS</span>{" "}
+						<span className="text-[#006c49]">PRO</span>
 					</div>
-					<span className="text-[#111c2d]">ADMS</span>{" "}
-					<span className="text-[#006c49]">PRO</span>
 				</div>
 			</div>
 		</>
