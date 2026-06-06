@@ -20,6 +20,7 @@ export default function SettingsPage() {
 		TELEGRAM_NOTIFY_ATTENDANCE: "true",
 		TELEGRAM_NOTIFY_DEVICE_OFFLINE: "true",
 		HOLIDAY_API_URL: "",
+		HOLIDAY_API_KEY: "",
 	});
 
 	const { data: settings } = useQuery<Setting[]>({
@@ -142,12 +143,34 @@ export default function SettingsPage() {
 							onChange={(e) =>
 								setForm({ ...form, HOLIDAY_API_URL: e.target.value })
 							}
-							placeholder="Masukkan URL API Hari Libur"
+							placeholder="https://use.api.co.id/holidays/indonesia/?year={year}"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow placeholder:text-[#6e797e]"
 						/>
 						<p className="font-sans text-[11px] text-[#6e797e] mt-1">
-							Endpoint API untuk menarik kalender hari libur nasional (contoh:
-							https://api-harilibur.mengkodingkan.com/api)
+							Endpoint API untuk hari libur. Biarkan kosong jika ingin
+							menggunakan URL bawaan (api.co.id)
+						</p>
+					</div>
+
+					{/* Holiday API Key */}
+					<div className="space-y-2">
+						<label
+							htmlFor="holiday-api-key"
+							className="block font-sans text-[11px] font-semibold text-[#111c2d] uppercase tracking-wider"
+						>
+							Holiday API Key
+						</label>
+						<input
+							type="password"
+							value={form.HOLIDAY_API_KEY}
+							onChange={(e) =>
+								setForm({ ...form, HOLIDAY_API_KEY: e.target.value })
+							}
+							placeholder="Masukkan API Key (jika menggunakan api.co.id)"
+							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow font-mono tracking-widest placeholder:text-[#6e797e] placeholder:tracking-normal placeholder:font-sans"
+						/>
+						<p className="font-sans text-[11px] text-[#6e797e] mt-1">
+							API Key yang didapatkan dari dashboard penyedia API (x-api-co-id)
 						</p>
 					</div>
 
