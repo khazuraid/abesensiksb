@@ -36,7 +36,6 @@ ENV NODE_ENV=production \
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder /app/apps/worker/package.json ./apps/worker/
 COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder /app/apps/worker/node_modules ./apps/worker/node_modules

@@ -1,52 +1,47 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: adms_postgres
+  absensi:
+    container_name: adms
+    build:
+      context: .
+      target: all-in-one
+      args:
+        NEXT_PUBLIC_WORKER_URL: ${WORKER_PUBLIC_URL:-}
+    image: absensi:latest
     restart: unless-stopped
     environment:
-      POSTGRES_USER: adms
-      POSTGRES_PASSWORD: adms123
-      POSTGRES_DB: adms_db
+      DB_USER: ${DB_USER:-adms}
+      DB_PASSWORD: ${DB_PASSWORD:-adms123}
+      DB_NAME: ${DB_NAME:-adms_db}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi}
+      ADMS_SECRET_KEY: ${ADMS_SECRET_KEY:?ADMS_SECRET_KEY wajib diisi}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:8080}
+      CORS_ORIGIN: ${WEB_PUBLIC_URL:-http://localhost:8080}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL wajib diisi}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD wajib diisi}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrator}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      NODE_ENV: production
+      TZ: Asia/Jakarta
     ports:
-      - "5432:5432"
+      - "8080:8080"
+      - "8888:8888"
     volumes:
-      - adms_postgres_data:/var/lib/postgresql/data
-
-  pgbouncer:
-    image: edoburu/pgbouncer:latest
-    container_name: adms_pgbouncer
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: postgres://adms:adms123@postgres:5432/adms_db
-      MAX_CLIENT_CONN: 1000
-      DEFAULT_POOL_SIZE: 100
-      POOL_MODE: transaction
-    ports:
-      - "6432:5432"
-    depends_on:
-      - postgres
-
-  redis:
-    image: redis:7-alpine
-    container_name: adms_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-
-  minio:
-    image: minio/minio:latest
-    container_name: adms_minio
-    restart: unless-stopped
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - adms_minio_data:/data
+      - postgres_data:/var/lib/postgresql/data
+      - redis_data:/var/lib/redis
+      - uploads:/app/apps/web/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${DB_USER:-adms} -d $${DB_NAME:-adms_db} && redis-cli -h 127.0.0.1 ping | grep -q PONG && wget -q -O - http://127.0.0.1:8080/api/health-db >/dev/null && wget -q -O - http://127.0.0.1:8888/health/ready >/dev/null"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 45s
 
 volumes:
-  adms_postgres_data:
-  adms_minio_data:
+  postgres_data:
+    name: adms_postgres_data
+  redis_data:
+    name: adms_redis_data
+  uploads:
+    name: adms_uploads

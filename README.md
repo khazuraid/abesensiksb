@@ -31,4 +31,4 @@ pnpm audit --prod --audit-level high
 
 Tes server mencakup auth/cookie, request hardening, RBAC/error envelope, parity resource REST/ADMS, serta autentikasi Socket.IO/webhook.
 
-Deployment: lihat `DEPLOYMENT.md` dan `docker-compose.prod.yml`.
+Deployment: lihat `DEPLOYMENT.md` dan `docker-compose.yml`.

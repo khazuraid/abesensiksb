@@ -14,8 +14,8 @@ Pendekatan ini memenuhi instalasi satu-container. Untuk skala besar/high availab
 cp .env.example .env
 # Isi DB_PASSWORD, JWT_SECRET, ADMS_SECRET_KEY,
 # ADMIN_EMAIL, dan ADMIN_PASSWORD.
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml ps
+docker compose up -d --build
+docker compose ps
 ```
 
 Aplikasi: `http://localhost:8080`. Realtime worker: `http://localhost:8888`.
@@ -47,9 +47,9 @@ docker exec -i adms pg_restore -U adms -d adms_db --clean --if-exists < backup.d
 ## Update
 
 ```bash
-docker compose -f docker-compose.prod.yml build
-docker compose -f docker-compose.prod.yml up -d
-docker compose -f docker-compose.prod.yml logs -f absensi
+docker compose build
+docker compose up -d
+docker compose logs -f absensi
 ```
 
 ## Verifikasi

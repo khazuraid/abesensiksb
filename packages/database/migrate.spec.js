@@ -6,7 +6,7 @@ const test = require("node:test");
 const migrate = readFileSync(resolve(__dirname, "migrate.js"), "utf8");
 const patch = readFileSync(resolve(__dirname, "patch.sql"), "utf8");
 const compose = readFileSync(
-	resolve(__dirname, "../../docker-compose.prod.yml"),
+	resolve(__dirname, "../../docker-compose.yml"),
 	"utf8",
 );
 const dockerfile = readFileSync(resolve(__dirname, "../../Dockerfile"), "utf8");
@@ -36,6 +36,7 @@ test("all-in-one deployment runs fail-closed migration before runtimes", () => {
 		/ENTRYPOINT \["\/usr\/local\/bin\/docker-all-in-one"\]/,
 	);
 	assert.match(dockerfile, /COPY scripts\/docker-all-in-one\.sh/);
+	assert.doesNotMatch(dockerfile, /apps\/web\/public/);
 	const entrypoint = readFileSync(
 		resolve(__dirname, "../../scripts/docker-all-in-one.sh"),
 		"utf8",
