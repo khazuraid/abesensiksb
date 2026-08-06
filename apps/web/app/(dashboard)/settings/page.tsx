@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Bot, Check, MessageCircle, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import api from "@/lib/api";
 
 interface Setting {
@@ -12,34 +12,36 @@ interface Setting {
 	value: string | null;
 }
 
+const toSettingValues = (settings: Setting[] = []) =>
+	Object.fromEntries(
+		settings.map((setting) => [setting.key, setting.value ?? ""]),
+	);
+
+const defaults = {
+	TELEGRAM_TOKEN: "",
+	TELEGRAM_CHAT_ID: "",
+	TELEGRAM_NOTIFY_ATTENDANCE: "true",
+	TELEGRAM_NOTIFY_DEVICE_OFFLINE: "true",
+	HOLIDAY_API_URL: "",
+	HOLIDAY_API_KEY: "",
+};
+
 export default function SettingsPage() {
 	const queryClient = useQueryClient();
-	const [form, setForm] = useState({
-		TELEGRAM_TOKEN: "",
-		TELEGRAM_CHAT_ID: "",
-		TELEGRAM_NOTIFY_ATTENDANCE: "true",
-		TELEGRAM_NOTIFY_DEVICE_OFFLINE: "true",
-		HOLIDAY_API_URL: "",
-		HOLIDAY_API_KEY: "",
-	});
+	const [changes, setForm] = useState<Partial<typeof defaults>>({});
 
 	const { data: settings } = useQuery<Setting[]>({
 		queryKey: ["settings"],
 		queryFn: async () => (await api.get("/settings")).data,
 	});
 
-	useEffect(() => {
-		if (settings) {
-			const map: Record<string, string> = {};
-			for (const s of settings) {
-				map[s.key] = s.value || "";
-			}
-			setForm((prev) => ({ ...prev, ...map }));
-		}
-	}, [settings]);
+	const form = useMemo(() => {
+		const stored = toSettingValues(settings);
+		return { ...defaults, ...stored, ...changes };
+	}, [settings, changes]);
 
 	const saveMutation = useMutation({
-		mutationFn: async (data: typeof form) => {
+		mutationFn: async (data: typeof defaults) => {
 			return (await api.put("/settings", data)).data;
 		},
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["settings"] }),
@@ -63,7 +65,7 @@ export default function SettingsPage() {
 
 			<div className="adms-card p-0 overflow-hidden">
 				{/* Card Header */}
-				<div className="p-6 border-b border-black/5 flex items-center gap-4 bg-[#e7eeff]/30">
+				<div className="p-4 sm:p-6 border-b border-black/5 flex items-center gap-4 bg-[#e7eeff]/30">
 					<div className="w-12 h-12 rounded-lg bg-[#dee8ff] flex items-center justify-center text-[#00647c]">
 						<Bot size={28} strokeWidth={1.5} />
 					</div>
@@ -78,7 +80,7 @@ export default function SettingsPage() {
 				</div>
 
 				{/* Form Content */}
-				<div className="p-6 space-y-8">
+				<div className="p-4 space-y-8 sm:p-6">
 					{/* Bot Token */}
 					<div className="space-y-2">
 						<label
@@ -91,7 +93,7 @@ export default function SettingsPage() {
 							type="password"
 							value={form.TELEGRAM_TOKEN}
 							onChange={(e) =>
-								setForm({ ...form, TELEGRAM_TOKEN: e.target.value })
+								setForm({ ...changes, TELEGRAM_TOKEN: e.target.value })
 							}
 							placeholder="Masukkan Bot Token"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow font-mono tracking-widest placeholder:text-[#6e797e] placeholder:tracking-normal placeholder:font-sans"
@@ -116,7 +118,7 @@ export default function SettingsPage() {
 							type="text"
 							value={form.TELEGRAM_CHAT_ID}
 							onChange={(e) =>
-								setForm({ ...form, TELEGRAM_CHAT_ID: e.target.value })
+								setForm({ ...changes, TELEGRAM_CHAT_ID: e.target.value })
 							}
 							placeholder="Masukkan Chat ID"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow placeholder:text-[#6e797e]"
@@ -141,7 +143,7 @@ export default function SettingsPage() {
 							type="text"
 							value={form.HOLIDAY_API_URL}
 							onChange={(e) =>
-								setForm({ ...form, HOLIDAY_API_URL: e.target.value })
+								setForm({ ...changes, HOLIDAY_API_URL: e.target.value })
 							}
 							placeholder="https://use.api.co.id/holidays/indonesia/?year={year}"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow placeholder:text-[#6e797e]"
@@ -164,7 +166,7 @@ export default function SettingsPage() {
 							type="password"
 							value={form.HOLIDAY_API_KEY}
 							onChange={(e) =>
-								setForm({ ...form, HOLIDAY_API_KEY: e.target.value })
+								setForm({ ...changes, HOLIDAY_API_KEY: e.target.value })
 							}
 							placeholder="Masukkan API Key (jika menggunakan api.co.id)"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow font-mono tracking-widest placeholder:text-[#6e797e] placeholder:tracking-normal placeholder:font-sans"
@@ -190,7 +192,7 @@ export default function SettingsPage() {
 									checked={form.TELEGRAM_NOTIFY_ATTENDANCE === "true"}
 									onChange={(e) =>
 										setForm({
-											...form,
+											...changes,
 											TELEGRAM_NOTIFY_ATTENDANCE: e.target.checked
 												? "true"
 												: "false",
@@ -215,7 +217,7 @@ export default function SettingsPage() {
 									checked={form.TELEGRAM_NOTIFY_DEVICE_OFFLINE === "true"}
 									onChange={(e) =>
 										setForm({
-											...form,
+											...changes,
 											TELEGRAM_NOTIFY_DEVICE_OFFLINE: e.target.checked
 												? "true"
 												: "false",
@@ -245,12 +247,12 @@ export default function SettingsPage() {
 				</div>
 
 				{/* Card Footer / Actions */}
-				<div className="p-6 border-t border-black/5 bg-[#f9f9ff] flex justify-end">
+				<div className="sticky bottom-0 p-4 sm:p-6 border-t border-black/5 bg-[#f9f9ff] flex justify-end pb-[max(1rem,env(safe-area-inset-bottom))]">
 					<button
 						type="button"
 						onClick={() => saveMutation.mutate(form)}
 						disabled={saveMutation.isPending}
-						className="adms-button !bg-[#00647c] !text-white hover:!bg-[#007f9d]"
+						className="adms-button w-full !bg-[#00647c] !text-white hover:!bg-[#007f9d] sm:w-auto"
 					>
 						<Save size={18} />
 						{saveMutation.isPending ? "Menyimpan..." : "Simpan Pengaturan"}

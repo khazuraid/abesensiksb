@@ -1,367 +1,97 @@
-# 🚀 Tutorial Deploy ke VPS dengan Coolify via GitHub
+# Deployment satu container
 
-## Prasyarat
+Produksi/self-hosted menjalankan satu container `adms` berisi:
 
-- VPS (Ubuntu 22.04+) dengan minimal 2GB RAM
-- Domain yang sudah pointing ke IP VPS
-- Akun GitHub dengan repo ini sudah di-push
+- Next.js UI + REST/ADMS API pada port `8080`.
+- Worker BullMQ, Telegram, cron, dan Socket.IO pada port `8888`.
+- PostgreSQL 16 dan Redis 7 internal; tidak diekspos ke host.
 
----
+Pendekatan ini memenuhi instalasi satu-container. Untuk skala besar/high availability, pisahkan DB dan Redis.
 
-## 1. Install Coolify di VPS
-
-SSH ke VPS lalu jalankan:
+## Menjalankan
 
 ```bash
-curl -fsSL https://cdn.coollabs.io/coolify/install.sh | bash
+cp .env.example .env
+# Isi DB_PASSWORD, JWT_SECRET, ADMS_SECRET_KEY,
+# ADMIN_EMAIL, dan ADMIN_PASSWORD.
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps
 ```
 
-Setelah selesai, akses Coolify di `http://IP_VPS:8000` dan buat akun admin.
+Aplikasi: `http://localhost:8080`. Realtime worker: `http://localhost:8888`.
 
----
+Compose menjalankan migrasi dan membuat administrator awal otomatis sebelum web/worker aktif. Setelah boot pertama, `ADMIN_EMAIL` dan `ADMIN_PASSWORD` diabaikan jika ADMIN sudah tersedia.
 
-## 2. Push Kode ke GitHub
+## Data persisten
+
+Pertahankan ketiga volume ini saat update/prune:
+
+- `adms_postgres_data`
+- `adms_redis_data`
+- `adms_uploads`
+
+Jangan gunakan `docker compose down -v` kecuali memang ingin menghapus seluruh data.
+
+Backup PostgreSQL:
 
 ```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/USERNAME/absensi.git
-git push -u origin main
+docker exec adms pg_dump -U adms -d adms_db -Fc > backup.dump
 ```
 
----
-
-## 3. Buat Dockerfile
-
-Buat file `Dockerfile` di root project:
-
-```dockerfile
-# === BUILD STAGE ===
-FROM node:20-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
-COPY packages/ ./packages/
-COPY apps/ ./apps/
-
-RUN pnpm install --frozen-lockfile
-RUN pnpm turbo build
-
-# === API STAGE ===
-FROM node:20-alpine AS api
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
-COPY --from=builder /app/packages/ ./packages/
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/apps/api/dist/ ./apps/api/dist/
-
-RUN pnpm install --prod --frozen-lockfile
-
-WORKDIR /app/apps/api
-EXPOSE 3333
-CMD ["node", "dist/main.js"]
-
-# === WEB STAGE ===
-FROM node:20-alpine AS web
-RUN corepack enable && corepack prepare pnpm@latest --activate
-WORKDIR /app
-
-COPY --from=builder /app/apps/web/.next/standalone ./
-COPY --from=builder /app/apps/web/.next/static ./.next/static
-COPY --from=builder /app/apps/web/public ./public
-
-EXPOSE 3000
-CMD ["node", "server.js"]
-```
-
----
-
-## 4. Buat docker-compose.prod.yml
-
-```yaml
-services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-adms}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-adms_db}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U adms"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-
-  api:
-    build:
-      context: .
-      target: api
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    environment:
-      DATABASE_URL: postgres://${DB_USER:-adms}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-adms_db}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: ${WEB_URL}
-      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
-      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
-      ADMS_SECRET_KEY: ${ADMS_SECRET_KEY:-}
-      PORT: 3333
-    ports:
-      - "3333:3333"
-
-  web:
-    build:
-      context: .
-      target: web
-    restart: unless-stopped
-    depends_on:
-      - api
-    environment:
-      NEXT_PUBLIC_API_URL: ${API_URL}
-    ports:
-      - "3000:3000"
-
-volumes:
-  postgres_data:
-```
-
----
-
-## 5. Setup di Coolify
-
-### 5.1 Hubungkan GitHub
-
-1. Buka Coolify → **Settings** → **GitHub**
-2. Klik **Connect** → Authorize Coolify ke repo GitHub
-3. Pilih repository `absensi`
-
-### 5.2 Buat Project
-
-1. **Projects** → **New Project** → Beri nama "ADMS Absensi"
-2. Klik project → **New Resource**
-
-### 5.3 Deploy Database (PostgreSQL)
-
-1. **New Resource** → **Database** → **PostgreSQL**
-2. Set password yang kuat
-3. Catat connection string: `postgres://adms:PASSWORD@postgres:5432/adms_db`
-
-### 5.4 Deploy Redis
-
-1. **New Resource** → **Database** → **Redis**
-2. Biarkan default
-
-### 5.5 Deploy API
-
-1. **New Resource** → **Application** → Pilih repo GitHub
-2. **Build Pack**: Docker
-3. **Dockerfile Location**: `./Dockerfile`
-4. **Docker Build Target**: `api`
-5. **Port**: `3333`
-6. **Domain**: `api.domain.com`
-
-**Environment Variables:**
-```
-DATABASE_URL=postgres://absensi:rHHnr9QpPKSmaxgEffctxo35EvbEDMAhhgGqxgwq2kEbsqP5bSASK6YyCNMm3Cay@postgres-internal:5432/adms_db
-REDIS_HOST=redis://default:wsprYOrXRxNUt1gOsAVzfoOjBlQ7DwypQ6OAvB3oYMrHLkKY4FPrsJZzKKIT56ps@r118q9iew08qs6oy5tptkzgr:6379/0
-JWT_SECRET=F6kYn6j5V7wS3p2r9m0t4h8q1s5u9e2o
-CORS_ORIGIN=https://absensi.domain.com
-TELEGRAM_TOKEN=8423654730:AAGzXJbN86kP4vXF78zR-0B49T72X50pWl4
-TELEGRAM_CHAT_ID=-1003025671345
-ADMS_SECRET_KEY=KPB6969
-PORT=8888
-```
-
-### 5.6 Deploy Web (Frontend)
-
-1. **New Resource** → **Application** → Pilih repo GitHub
-2. **Build Pack**: Docker
-3. **Dockerfile Location**: `./Dockerfile`
-4. **Docker Build Target**: `web`
-5. **Port**: `3000`
-6. **Domain**: `absensi.domain.com`
-
-**Environment Variables:**
-```
-NEXT_PUBLIC_API_URL=https://api.domain.com/api
-```
-
----
-
-## 6. Setup Auto-Deploy
-
-Coolify otomatis deploy saat ada push ke branch `main`:
-
-1. Di Coolify, buka resource → **Settings**
-2. Pastikan **Auto Deploy** = ON
-3. Branch: `main`
-
-Sekarang setiap `git push origin main` akan trigger deploy otomatis.
-
----
-
-## 7. Migrasi Database
-
-Setelah deploy pertama, jalankan migrasi:
+Restore:
 
 ```bash
-# SSH ke VPS
-ssh user@IP_VPS
-
-# Masuk ke container API
-docker exec -it CONTAINER_API sh
-
-# Jalankan migrasi
-cd /app/packages/database
-npx drizzle-kit push
+docker exec -i adms pg_restore -U adms -d adms_db --clean --if-exists < backup.dump
 ```
 
-Atau tambahkan di Dockerfile API sebelum CMD:
-```dockerfile
-RUN cd /app/packages/database && npx drizzle-kit push
+## Update
+
+```bash
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+docker compose -f docker-compose.prod.yml logs -f absensi
 ```
 
----
+## Verifikasi
 
-## 8. Setting Mesin ADMS
-
-Di mesin ZKTeco, set ADMS server:
-
-```
-Server Address: https://api.domain.com
-Port: 443
+```bash
+docker ps --filter name=adms
+curl -I http://localhost:8080/login
+curl http://localhost:8888/health/ready
 ```
 
-Mesin akan otomatis connect dan push data.
+Container sehat hanya jika PostgreSQL, Redis, web, dan worker seluruhnya siap.
 
----
+## Environment
 
-## 9. SSL/HTTPS
+Wajib:
 
-Coolify otomatis generate SSL certificate via Let's Encrypt untuk domain yang sudah di-set. Pastikan:
+```env
+DB_PASSWORD=<password-kuat>
+JWT_SECRET=<random-minimal-64-karakter>
+ADMS_SECRET_KEY=<random-panjang>
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=<minimal-12-karakter>
+WEB_PUBLIC_URL=http://localhost:8080
+WORKER_PUBLIC_URL=http://localhost:8888
+```
 
-1. Domain A record pointing ke IP VPS
-2. Port 80 dan 443 terbuka di firewall
+`JWT_SECRET` dipakai bersama oleh web dan worker. `WORKER_PUBLIC_URL` ditanam saat build untuk Socket.IO; gunakan URL HTTPS publik worker ketika dipasang di server/domain.
 
----
+## Mesin ADMS
 
-## 10. Monitoring
+```text
+Server Address: http(s)://domain-web
+Port: 8080 atau 443 melalui reverse proxy
+Path: /iclock
+```
 
-### Uptime Kuma (Opsional)
-
-1. Di Coolify → **New Resource** → **Service** → **Uptime Kuma**
-2. Tambahkan monitor:
-   - `https://api.domain.com/api` (API health)
-   - `https://absensi.domain.com` (Web)
-
----
-
-## Struktur Domain
-
-| Service | Domain | Port Internal |
-|---------|--------|---------------|
-| Web (Frontend) | `absensi.domain.com` | 3000 |
-| API (Backend) | `api.domain.com` | 3333 |
-| Mesin ADMS | `api.domain.com/iclock` | 3333 |
-
----
+Jika `ADMS_SECRET_KEY` aktif, mesin harus mengirim `key=<ADMS_SECRET_KEY>`.
 
 ## Troubleshooting
 
-### API tidak bisa connect ke database
-```bash
-# Cek apakah postgres running
-docker ps | grep postgres
-
-# Cek logs
-docker logs CONTAINER_API
-```
-
-### Mesin tidak connect
-- Pastikan port 443 terbuka
-- Pastikan `ADMS_SECRET_KEY` di .env sama dengan yang di-set di mesin (query param `key`)
-- Cek log: `docker logs CONTAINER_API | grep iclock`
-
-### Build gagal
-```bash
-# Build manual di VPS
-cd /path/to/repo
-docker build --target api -t adms-api .
-docker build --target web -t adms-web .
-```
-
----
-
-## 11. Hardening Keamanan (PENTING)
-
-### 11.1 Postgres jangan di-expose ke publik
-
-Kalau di log Postgres muncul pola seperti ini:
-```
-FATAL: unsupported frontend protocol 0.0/255.255/2.0
-LOG:  invalid length of startup packet
-FATAL: password authentication failed for user "wog"
-FATAL: password authentication failed for user "postgres"
-FATAL: canceling authentication due to timeout
-```
-Itu artinya port 5432 **ter-expose ke internet** dan sedang di-scan/brute-force oleh bot.
-
-**Fix di Coolify:**
-1. Buka resource **PostgreSQL** di dashboard Coolify.
-2. Tab **Settings / Network** → matikan toggle **"Public"** atau **"Make it publicly available"**.
-3. Pastikan API connect via hostname internal Docker network (`postgres-internal`), bukan IP publik.
-4. Restart resource Postgres.
-
-Hal yang sama berlaku untuk Redis (port 6379). Database tidak boleh di-expose ke internet kecuali ada alasan kuat dan firewall/IP allowlist.
-
-### 11.2 Verifikasi network internal Coolify
-
-`DATABASE_URL` di env API harusnya:
-```
-postgres://<user>:<password>@postgres-internal:5432/<db_name>
-```
-Bukan IP publik VPS atau `localhost`. Coolify auto-generate hostname internal saat create database resource — copy dari panel "Connect" di resource Postgres.
-
-### 11.3 ADMS secret key
-
-`ADMS_SECRET_KEY` melindungi endpoint `/iclock/*` dari spam. Mesin harus kirim `?key=<value>` di setiap request. Kalau tidak di-set, endpoint terbuka untuk siapa saja yang tahu URL-nya — risiko data palsu di-inject.
-
-### 11.4 Cek log Postgres untuk attempt mencurigakan
-
-Setelah di-private-kan, log scanner harusnya hilang. Verifikasi dengan:
-```bash
-# Di Coolify dashboard → resource Postgres → Logs
-# Atau via SSH:
-docker logs <postgres_container> --tail 200 | grep -E "FATAL|invalid length"
-```
-Yang masih boleh muncul: koneksi sukses dari API, dan checkpoint normal. Yang TIDAK boleh muncul: protocol mismatch dari IP eksternal.
-
-### 11.5 Log analysis cepat
-
-| Log | Arti | Tindakan |
-|-----|------|----------|
-| `Role "X" does not exist` | Bot brute-force username | Privatkan port |
-| `password authentication failed` | Salah password atau brute-force | Privatkan port + cek env API |
-| `unsupported frontend protocol` | HTTP/scanner nyasar ke port DB | Privatkan port |
-| `canceling authentication due to timeout` | Client hang / network issue | Cek koneksi API ↔ DB |
-| `invalid length of startup packet` | Probe non-Postgres | Privatkan port |
-| `database system is ready to accept connections` | Normal startup | OK |
-| `checkpoint complete` | Normal background task | OK |
-
+- Container restart: `docker logs adms --tail 200`.
+- Socket gagal: pastikan port/domain `8888` tersedia dan proxy mendukung WebSocket.
+- Login gagal setelah update: jangan mengganti `JWT_SECRET` tanpa sengaja.
+- DB kosong: periksa volume `adms_postgres_data` terpasang.
+- Jangan expose PostgreSQL/Redis; keduanya hanya listen pada `127.0.0.1` di dalam container.

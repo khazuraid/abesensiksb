@@ -1,181 +1,151 @@
 "use client";
 
-import {
-	Bell,
-	Headset,
-	HelpCircle,
-	LogOut,
-	Moon,
-	Search,
-	Settings,
-	Sun,
-	User,
-} from "lucide-react";
+import { Bell, Search, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import api from "@/lib/api";
 import { useSocket } from "@/providers/socket-provider";
 
 export function Topbar() {
 	const router = useRouter();
-	const { socket } = useSocket();
+	const { socket, isConnected } = useSocket();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [notifications, setNotifications] = useState<
-		{ id: string; title: string; desc: string; time: string }[]
+		{ id: string; title: string; description: string; time: string }[]
 	>([]);
-	const [showNotifMenu, setShowNotifMenu] = useState(false);
-	const [showProfileMenu, setShowProfileMenu] = useState(false);
-	const profileMenuRef = useRef<HTMLDivElement>(null);
-	const notifMenuRef = useRef<HTMLDivElement>(null);
-	const { theme, setTheme } = useTheme();
+	const [showNotifications, setShowNotifications] = useState(false);
+	const [user, setUser] = useState<{ name?: string; role?: string } | null>(
+		null,
+	);
+
+	useEffect(() => {
+		api
+			.get("/auth/me")
+			.then(({ data }) => setUser(data))
+			.catch(() => undefined);
+	}, []);
 
 	useEffect(() => {
 		if (!socket) return;
-
-		/* biome-ignore lint/suspicious/noExplicitAny: generic ws payload */
-		const handleNewLog = (data: any) => {
-			const notif = {
-				id: Math.random().toString(),
-				title: `Absen Masuk: ${data.employee?.name || "Karyawan"}`,
-				desc: `Telah melakukan absensi pada ${new Date(data.timestamp).toLocaleTimeString()}`,
-				time: new Date().toLocaleTimeString([], {
-					hour: "2-digit",
-					minute: "2-digit",
-				}),
-			};
-			setNotifications((prev) => [notif, ...prev]);
-			toast.success(notif.title, { description: notif.desc });
-		};
-
-		const handleDeviceStatus = (data: {
-			deviceId: string;
-			isOnline: boolean;
+		const onNewLog = (data: {
+			employee?: { name?: string };
+			timestamp: string | Date;
 		}) => {
-			const title = data.isOnline ? "Perangkat Online" : "Perangkat Offline";
-			const desc = data.isOnline
-				? `Device ID: ${data.deviceId} terhubung kembali.`
-				: `Device ID: ${data.deviceId} kehilangan koneksi.`;
-			const notif = {
-				id: Math.random().toString(),
-				title,
-				desc,
-				time: new Date().toLocaleTimeString([], {
+			const notification = {
+				id: crypto.randomUUID(),
+				title: `Absensi: ${data.employee?.name ?? "Pegawai"}`,
+				description: `Tercatat pukul ${new Date(data.timestamp).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`,
+				time: new Date().toLocaleTimeString("id-ID", {
 					hour: "2-digit",
 					minute: "2-digit",
 				}),
 			};
-			setNotifications((prev) => [notif, ...prev]);
-			if (data.isOnline) {
-				toast.success(title, { description: desc });
-			} else {
-				toast.error(title, { description: desc });
-			}
+			setNotifications((previous) => [notification, ...previous]);
+			toast.success(notification.title, {
+				description: notification.description,
+			});
 		};
-
-		socket.on("onNewLog", handleNewLog);
-		socket.on("onDeviceStatusChange", handleDeviceStatus);
-
+		const onDeviceStatus = (data: { deviceId: string; isOnline: boolean }) => {
+			const title = data.isOnline
+				? "Perangkat kembali online"
+				: "Perangkat offline";
+			const notification = {
+				id: crypto.randomUUID(),
+				title,
+				description: `Perangkat ${data.deviceId}`,
+				time: new Date().toLocaleTimeString("id-ID", {
+					hour: "2-digit",
+					minute: "2-digit",
+				}),
+			};
+			setNotifications((previous) => [notification, ...previous]);
+			(data.isOnline ? toast.success : toast.error)(title, {
+				description: notification.description,
+			});
+		};
+		socket.on("onNewLog", onNewLog);
+		socket.on("onDeviceStatusChange", onDeviceStatus);
 		return () => {
-			socket.off("onNewLog", handleNewLog);
-			socket.off("onDeviceStatusChange", handleDeviceStatus);
+			socket.off("onNewLog", onNewLog);
+			socket.off("onDeviceStatusChange", onDeviceStatus);
 		};
 	}, [socket]);
 
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (
-				profileMenuRef.current &&
-				!profileMenuRef.current.contains(event.target as Node)
-			) {
-				setShowProfileMenu(false);
-			}
-			if (
-				notifMenuRef.current &&
-				!notifMenuRef.current.contains(event.target as Node)
-			) {
-				setShowNotifMenu(false);
-			}
-		};
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, []);
-
-	const handleSearch = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (searchQuery.trim()) {
-			router.push(`/employees?search=${encodeURIComponent(searchQuery)}`);
-		}
-	};
-
 	return (
-		<header className="hidden md:flex bg-white/80 text-[#00647c] font-sans text-[14px] fixed top-0 right-0 w-[calc(100%-260px)] h-16 z-40 backdrop-blur-[12px] border-b border-black/5 shadow-sm justify-between items-center px-8">
-			{/* Left: Search Bar */}
+		<header className="fixed left-[252px] right-0 top-0 z-30 hidden h-16 items-center justify-between border-b border-border bg-white/95 px-7 backdrop-blur-sm md:flex">
 			<form
-				onSubmit={handleSearch}
-				className="flex items-center bg-[#dee8ff]/30 border border-black/5 rounded-full px-4 py-1.5 w-[300px] focus-within:border-[#00647c]/50 focus-within:ring-1 focus-within:ring-[#00647c]/50 transition-all shadow-sm"
+				onSubmit={(event) => {
+					event.preventDefault();
+					if (searchQuery.trim()) {
+						router.push(
+							`/employees?search=${encodeURIComponent(searchQuery.trim())}`,
+						);
+					}
+				}}
+				className="flex w-[360px] items-center gap-2 rounded-md border border-border bg-[#f3f6f4] px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10"
 			>
-				<Search size={18} className="text-[#6e797e] mr-2" />
+				<Search size={16} className="text-[#7b8782]" />
 				<input
-					className="bg-transparent border-none outline-none text-[13px] text-[#111c2d] w-full placeholder-[#6e797e] focus:ring-0 p-0"
-					placeholder="Search logs, employees..."
-					type="text"
+					aria-label="Cari pegawai"
+					className="h-10 w-full border-0 bg-transparent px-1 text-[13px] text-[#14211d] outline-none placeholder:text-[#75827d]"
+					placeholder="Cari pegawai..."
 					value={searchQuery}
-					onChange={(e) => setSearchQuery(e.target.value)}
+					onChange={(event) => setSearchQuery(event.target.value)}
 				/>
 			</form>
 
-			{/* Right: Actions */}
 			<div className="flex items-center gap-2">
-				<div className="relative" ref={notifMenuRef}>
+				<div
+					className={`flex items-center gap-2 border-r border-border pr-4 text-[11px] font-semibold ${isConnected ? "text-[#23734b]" : "text-[#a9433d]"}`}
+				>
+					<span
+						className={`h-1.5 w-1.5 rounded-full ${isConnected ? "bg-[#1e6a45]" : "bg-[#a63d37]"}`}
+					/>
+					{isConnected ? "Realtime aktif" : "Realtime terputus"}
+				</div>
+				<div className="relative">
 					<button
 						type="button"
-						onClick={() => setShowNotifMenu(!showNotifMenu)}
-						className="text-[#3e484d] hover:bg-[#3e484d]/10 transition-colors p-2 rounded-full relative cursor-pointer active:scale-95"
-						title="Notifications"
+						aria-label="Notifikasi"
+						aria-expanded={showNotifications}
+						onClick={() => setShowNotifications((visible) => !visible)}
+						className="relative flex h-9 w-9 items-center justify-center rounded text-[#53605b] hover:bg-[#eef1ee]"
 					>
-						<Bell size={20} strokeWidth={2} />
+						<Bell size={17} />
 						{notifications.length > 0 && (
-							<span className="absolute top-2 right-2 w-2 h-2 bg-[#00647c] dark:bg-[#6bd2ff] rounded-full animate-pulse"></span>
+							<span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[#a63d37]" />
 						)}
 					</button>
-
-					{showNotifMenu && (
-						<div className="absolute right-0 mt-2 w-[320px] bg-white border border-black/10 rounded-xl shadow-lg py-1 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
-							<div className="px-4 py-3 border-b border-black/5 bg-[#f9f9ff] flex justify-between items-center">
-								<h3 className="font-semibold text-[13px] text-[#111c2d]">
-									Notifikasi
-								</h3>
-								{notifications.length > 0 && (
-									<button
-										type="button"
-										onClick={() => setNotifications([])}
-										className="text-[11px] text-[#00647c] hover:underline font-medium"
-									>
-										Tandai sudah dibaca
-									</button>
-								)}
+					{showNotifications && (
+						<div className="absolute right-0 top-11 w-[360px] overflow-hidden rounded-lg border border-border bg-white shadow-[0_20px_54px_rgba(20,33,29,.14)]">
+							<div className="flex items-center justify-between border-b border-[#d8deda] px-4 py-3">
+								<strong className="text-xs">Notifikasi</strong>
+								<button
+									type="button"
+									onClick={() => setNotifications([])}
+									className="text-[10px] font-semibold text-[#086a60]"
+								>
+									Bersihkan
+								</button>
 							</div>
-							<div className="max-h-[300px] overflow-y-auto">
+							<div className="max-h-80 overflow-y-auto" aria-live="polite">
 								{notifications.length === 0 ? (
-									<div className="p-6 text-center text-[#6e797e] text-[13px]">
-										Belum ada notifikasi baru
-									</div>
+									<p className="p-6 text-center text-xs text-[#64716c]">
+										Belum ada notifikasi.
+									</p>
 								) : (
-									notifications.map((notif) => (
+									notifications.map((notification) => (
 										<div
-											key={notif.id}
-											className="p-3 border-b border-black/5 hover:bg-slate-50 transition-colors"
+											key={notification.id}
+											className="border-b border-[#e7ebe8] px-4 py-3 last:border-0"
 										>
-											<p className="text-[13px] font-semibold text-[#111c2d] leading-tight">
-												{notif.title}
+											<p className="text-xs font-semibold">
+												{notification.title}
 											</p>
-											<p className="text-[12px] text-[#6e797e] mt-1 line-clamp-2">
-												{notif.desc}
-											</p>
-											<p className="text-[10px] text-[#bdc8ce] mt-1">
-												{notif.time}
+											<p className="mt-1 text-[11px] text-[#64716c]">
+												{notification.description} · {notification.time}
 											</p>
 										</div>
 									))
@@ -184,91 +154,16 @@ export function Topbar() {
 						</div>
 					)}
 				</div>
-				<button
-					type="button"
-					onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-					className="text-[#3e484d] dark:text-[#bfc8cc] hover:bg-[#3e484d]/10 dark:hover:bg-white/10 transition-colors p-2 rounded-full cursor-pointer active:scale-95"
-					title="Toggle Theme"
+				<Link
+					href="/profile"
+					aria-label="Profil"
+					className="flex h-9 items-center gap-2 rounded px-2 text-xs font-medium text-[#315c54] hover:bg-[#eef1ee]"
 				>
-					{theme === "dark" ? (
-						<Sun size={20} strokeWidth={2} />
-					) : (
-						<Moon size={20} strokeWidth={2} />
-					)}
-				</button>
-				<Link href="/settings">
-					<button
-						type="button"
-						className="text-[#3e484d] hover:bg-[#3e484d]/10 transition-colors p-2 rounded-full cursor-pointer active:scale-95"
-						title="Settings"
-					>
-						<Settings size={20} strokeWidth={2} />
-					</button>
+					<span className="flex h-7 w-7 items-center justify-center rounded bg-[#e1eeea] text-[#086a60]">
+						<User size={15} />
+					</span>
+					{user?.name || user?.role || "Profil"}
 				</Link>
-				<button
-					type="button"
-					onClick={() => toast.info("Pusat bantuan akan segera tersedia.")}
-					className="text-[#3e484d] hover:bg-[#3e484d]/10 transition-colors p-2 rounded-full cursor-pointer active:scale-95"
-					title="Help"
-				>
-					<HelpCircle size={20} strokeWidth={2} />
-				</button>
-
-				<div className="w-px h-6 bg-black/5 mx-2"></div>
-
-				<button
-					type="button"
-					onClick={() =>
-						toast.success("Support dihubungi. Silakan tinggalkan pesan.")
-					}
-					className="flex items-center gap-2 text-[#111c2d] hover:text-[#00647c] hover:bg-[#3e484d]/10 px-3 py-1.5 rounded-lg transition-colors cursor-pointer active:scale-95 font-semibold text-[12px]"
-				>
-					<Headset size={18} />
-					Support
-				</button>
-
-				{/* Profile Image & Dropdown */}
-				<div className="relative ml-2" ref={profileMenuRef}>
-					<div
-						onClick={() => setShowProfileMenu(!showProfileMenu)}
-						className="h-8 w-8 rounded-full bg-[#dee8ff] border border-black/5 overflow-hidden cursor-pointer flex items-center justify-center text-[#00647c] font-bold text-[12px] hover:ring-2 hover:ring-[#00647c]/50 transition-all"
-					>
-						A
-					</div>
-
-					{showProfileMenu && (
-						<div className="absolute right-0 mt-2 w-48 bg-white border border-black/10 rounded-xl shadow-lg py-1 z-50 overflow-hidden animate-in fade-in zoom-in duration-200">
-							<div className="px-4 py-3 border-b border-black/5 mb-1 bg-[#dee8ff]/30">
-								<p className="text-[13px] font-bold text-[#00647c]">
-									Admin Dashboard
-								</p>
-								<p className="text-[11px] text-[#6e797e] mt-0.5">
-									admin@adms.com
-								</p>
-							</div>
-							<Link href="/profile">
-								<button
-									type="button"
-									onClick={() => setShowProfileMenu(false)}
-									className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-[#3e484d] hover:bg-[#dee8ff]/50 hover:text-[#00647c] flex items-center gap-2 transition-colors"
-								>
-									<User size={15} /> My Profile
-								</button>
-							</Link>
-							<div className="h-px w-full bg-black/5 my-1"></div>
-							<button
-								type="button"
-								onClick={() => {
-									setShowProfileMenu(false);
-									router.push("/login");
-								}}
-								className="w-full text-left px-4 py-2.5 text-[13px] font-medium text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-							>
-								<LogOut size={15} /> Sign Out
-							</button>
-						</div>
-					)}
-				</div>
 			</div>
 		</header>
 	);

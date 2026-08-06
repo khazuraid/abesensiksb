@@ -7,12 +7,18 @@ export default function DashboardLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="flex min-h-screen relative selection:bg-[#00647c]/30 selection:text-[#00647c] bg-[#f9f9ff]">
+		<div className="flex min-h-dvh bg-background text-foreground">
+			<a href="#main-content" className="skip-link">
+				Lewati ke konten
+			</a>
 			<Sidebar />
-			{/* Content Wrapper aligned to right of sidebar */}
-			<div className="flex-1 flex flex-col min-h-screen md:ml-[260px] w-full pt-16">
+			<div className="flex min-h-dvh min-w-0 w-full flex-1 flex-col md:ml-[252px] md:pt-16">
 				<Topbar />
-				<main className="flex-1 w-full max-w-[1440px] mx-auto p-4 md:p-6 pb-12 relative z-10">
+				<main
+					id="main-content"
+					tabIndex={-1}
+					className="app-main min-w-0 flex-1 w-full p-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:p-5 md:p-7 md:pb-12"
+				>
 					{children}
 				</main>
 			</div>

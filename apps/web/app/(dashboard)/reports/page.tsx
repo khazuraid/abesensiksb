@@ -14,8 +14,12 @@ import {
 	UserX,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import PaginationControls, {
+	type PageMeta,
+} from "@/components/pagination-controls";
 import api from "@/lib/api";
+import { useModalAccessibility } from "@/lib/use-modal-accessibility";
 
 interface MonthlyReport {
 	id: string;
@@ -28,19 +32,56 @@ interface MonthlyReport {
 	totalLeave: number;
 }
 
+interface DailyReportDay {
+	date: string;
+	isWorkDay: boolean;
+	isHoliday: boolean;
+	status: string;
+	clockIn: string | null;
+	clockOut: string | null;
+	lateMinutes: number;
+	earlyOutMinutes: number;
+}
+
+interface DailyReportEmployee {
+	id: number;
+	name: string;
+	totalLateMinutesSum: number;
+	totalEarlyOutMinutesSum: number;
+	totalAbsent: number;
+	totalLeave: number;
+	days: DailyReportDay[];
+}
+
 export default function ReportsPage() {
 	const [month, setMonth] = useState(new Date().getMonth() + 1);
 	const [year, setYear] = useState(new Date().getFullYear());
 	const [search, setSearch] = useState("");
+	const [page, setPage] = useState(1);
 	const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null);
+	const detailDialogRef = useRef<HTMLDivElement>(null);
+	const closeDetail = useCallback(() => setSelectedEmployee(null), []);
+	useModalAccessibility(
+		detailDialogRef,
+		closeDetail,
+		Boolean(selectedEmployee),
+	);
 
-	const { data: reportData, isLoading } = useQuery<MonthlyReport[]>({
-		queryKey: ["monthly-report", month, year],
+	const {
+		data: reportResponse,
+		isLoading,
+		isFetching,
+	} = useQuery<{ data: MonthlyReport[]; meta: PageMeta }>({
+		queryKey: ["monthly-report", month, year, page, search],
 		queryFn: async () => {
-			return (await api.get(`/reports/summary?month=${month}&year=${year}`))
-				.data;
+			return (
+				await api.get(
+					`/reports/summary?month=${month}&year=${year}&page=${page}&limit=10&search=${encodeURIComponent(search)}`,
+				)
+			).data;
 		},
 	});
+	const reportData = reportResponse?.data;
 
 	const { data: availablePeriods } = useQuery<
 		{ month: number; year: number }[]
@@ -51,25 +92,25 @@ export default function ReportsPage() {
 		},
 	});
 
-	const filteredData =
-		reportData?.filter(
-			(d) =>
-				d.name.toLowerCase().includes(search.toLowerCase()) ||
-				d.employeeCode.toLowerCase().includes(search.toLowerCase()),
-		) || [];
+	const filteredData = reportData ?? [];
 
-	const { data: dailyRecapData, isLoading: isLoadingDaily } = useQuery({
-		queryKey: ["daily-recap", month, year],
+	const { data: dailyRecapResponse, isLoading: isLoadingDaily } = useQuery<{
+		data: DailyReportEmployee[];
+	}>({
+		queryKey: ["daily-recap-detail", month, year, selectedEmployee],
 		queryFn: async () => {
-			return (await api.get(`/reports/daily-recap?month=${month}&year=${year}`))
-				.data;
+			return (
+				await api.get(
+					`/reports/daily-recap?month=${month}&year=${year}&employeeId=${selectedEmployee}&page=1&limit=1`,
+				)
+			).data;
 		},
 		enabled: !!selectedEmployee,
 	});
+	const dailyRecapData = dailyRecapResponse?.data;
 
 	const selectedEmployeeDetail = dailyRecapData?.find(
-		/* biome-ignore lint/suspicious/noExplicitAny: too complex */
-		(emp: any) => emp.id === selectedEmployee,
+		(emp) => emp.id === Number(selectedEmployee),
 	);
 
 	const handleExport = async () => {
@@ -140,8 +181,8 @@ export default function ReportsPage() {
 						{year}.
 					</p>
 				</div>
-				<div className="flex items-center gap-3">
-					<div className="relative">
+				<div className="grid w-full grid-cols-1 gap-2 min-[390px]:grid-cols-2 md:flex md:w-auto md:items-center md:gap-3">
+					<div className="relative min-w-0">
 						<select
 							className="appearance-none bg-white border border-[#bdc8ce] rounded-lg pl-10 pr-10 py-2 cursor-pointer hover:bg-[#f9f9ff] transition-colors shadow-sm font-semibold text-[13px] text-[#111c2d] outline-none focus:ring-2 focus:ring-[#00647c]/20 focus:border-[#00647c]"
 							value={`${month}-${year}`}
@@ -275,12 +316,18 @@ export default function ReportsPage() {
 							type="text"
 							placeholder="Cari nama atau NIK..."
 							value={search}
-							onChange={(e) => setSearch(e.target.value)}
+							onChange={(e) => {
+								setSearch(e.target.value);
+								setPage(1);
+							}}
 							className="w-full sm:w-64 bg-white border border-[#bdc8ce] rounded-lg py-2 pl-10 pr-4 text-[13px] text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-all"
 						/>
 					</div>
 				</div>
 
+				<div className="mobile-scroll-hint">
+					Geser tabel untuk melihat seluruh metrik
+				</div>
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse min-w-[800px]">
 						<thead>
@@ -401,7 +448,7 @@ export default function ReportsPage() {
 													type="button"
 													onClick={() => setSelectedEmployee(row.id)}
 													title="Lihat Detail Harian"
-													className="text-[#00647c] hover:text-[#007f9d] p-1.5 rounded-lg hover:bg-[#dee8ff]/50 transition-colors opacity-0 group-hover:opacity-100"
+													className="text-[#00647c] hover:text-[#007f9d] p-1.5 rounded-lg hover:bg-[#dee8ff]/50 transition-colors opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
 												>
 													<Eye size={20} />
 												</button>
@@ -413,17 +460,31 @@ export default function ReportsPage() {
 						</tbody>
 					</table>
 				</div>
+				<PaginationControls
+					meta={reportResponse?.meta}
+					onPageChange={setPage}
+					disabled={isFetching}
+				/>
 			</div>
 
 			{selectedEmployee && (
-				<div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+				<div
+					ref={detailDialogRef}
+					className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="report-detail-title"
+				>
 					<motion.div
 						initial={{ opacity: 0, scale: 0.95 }}
 						animate={{ opacity: 1, scale: 1 }}
-						className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[80vh] mt-4 flex flex-col overflow-hidden"
+						className="bg-white rounded-t-xl sm:rounded-md shadow-xl w-full max-w-4xl max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[90dvh] flex flex-col overflow-hidden"
 					>
 						<div className="px-6 py-4 border-b border-black/5 flex justify-between items-center bg-[#f9f9ff]">
-							<h3 className="font-semibold text-[18px] text-[#111c2d]">
+							<h3
+								id="report-detail-title"
+								className="font-semibold text-[18px] text-[#111c2d]"
+							>
 								Detail Riwayat Harian
 							</h3>
 							<button
@@ -471,8 +532,7 @@ export default function ReportsPage() {
 											);
 
 											let missed = 0;
-											// biome-ignore lint/suspicious/noExplicitAny: complex day type
-											selectedEmployeeDetail.days.forEach((d: any) => {
+											selectedEmployeeDetail.days.forEach((d) => {
 												if (
 													d.isWorkDay &&
 													!d.isHoliday &&
@@ -551,29 +611,31 @@ export default function ReportsPage() {
 									</div>
 
 									{/* Tabel Detail (Kanan) */}
-									<div className="flex-1 p-6">
+									<div className="min-w-0 flex-1 p-4 sm:p-6">
 										<div className="bg-white border border-black/5 rounded-xl overflow-hidden shadow-sm">
-											<table className="w-full text-left border-collapse">
-												<thead>
-													<tr className="bg-[#f8f9fa] border-b border-black/5">
-														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-															Tanggal
-														</th>
-														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-															Status
-														</th>
-														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-															Waktu
-														</th>
-														<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
-															Penalti (Mnt)
-														</th>
-													</tr>
-												</thead>
-												<tbody className="divide-y divide-black/5 text-[13px]">
-													{selectedEmployeeDetail.days.map(
-														// biome-ignore lint/suspicious/noExplicitAny: complex object
-														(day: any) => {
+											<div className="mobile-scroll-hint">
+												Geser tabel untuk melihat detail waktu
+											</div>
+											<div className="overflow-x-auto">
+												<table className="w-full text-left border-collapse">
+													<thead>
+														<tr className="bg-[#f8f9fa] border-b border-black/5">
+															<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
+																Tanggal
+															</th>
+															<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
+																Status
+															</th>
+															<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
+																Waktu
+															</th>
+															<th className="px-5 py-3.5 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
+																Penalti (Mnt)
+															</th>
+														</tr>
+													</thead>
+													<tbody className="divide-y divide-black/5 text-[13px]">
+														{selectedEmployeeDetail.days.map((day) => {
 															let statusColor = "text-[#3e484d] bg-[#f0f3ff]";
 															let statusLabel = "-";
 
@@ -642,10 +704,10 @@ export default function ReportsPage() {
 																	</td>
 																</tr>
 															);
-														},
-													)}
-												</tbody>
-											</table>
+														})}
+													</tbody>
+												</table>
+											</div>
 										</div>
 									</div>
 								</div>

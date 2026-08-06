@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Calendar, CloudSync, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import PaginationControls from "@/components/pagination-controls";
 import api from "@/lib/api";
 
 interface Holiday {
@@ -100,7 +101,7 @@ export default function HolidaysPage() {
 						Kelola hari libur nasional dan cuti bersama.
 					</p>
 				</div>
-				<div className="flex gap-3">
+				<div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:gap-3">
 					<button
 						type="button"
 						onClick={() => syncMutation.mutate(currentYear)}
@@ -108,7 +109,9 @@ export default function HolidaysPage() {
 						className="adms-button-outline disabled:opacity-50"
 					>
 						<CloudSync size={18} />
-						{syncMutation.isPending ? "Syncing..." : `Sync ${currentYear}`}
+						{syncMutation.isPending
+							? "Menyinkronkan..."
+							: `Sinkron ${currentYear}`}
 					</button>
 					<button
 						type="button"
@@ -165,6 +168,9 @@ export default function HolidaysPage() {
 			)}
 
 			<div className="adms-card p-0 overflow-hidden">
+				<div className="mobile-scroll-hint">
+					Geser tabel untuk melihat keterangan
+				</div>
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse">
 						<thead>
@@ -227,7 +233,7 @@ export default function HolidaysPage() {
 													if (confirm("Hapus hari libur ini?"))
 														deleteMutation.mutate(h.id);
 												}}
-												className="p-2 text-[#6e797e] hover:bg-[#ba1a1a]/10 hover:text-[#ba1a1a] rounded-lg transition-all opacity-0 group-hover:opacity-100"
+												className="p-2 text-[#6e797e] hover:bg-[#ba1a1a]/10 hover:text-[#ba1a1a] rounded-lg transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
 											>
 												<Trash2 size={18} />
 											</button>
@@ -239,46 +245,11 @@ export default function HolidaysPage() {
 					</table>
 				</div>
 
-				{/* Pagination Controls */}
-				{meta && meta.totalPages > 1 && (
-					<div className="p-4 border-t border-black/5 flex items-center justify-between bg-[#f9f9ff]">
-						<div className="text-[12px] text-[#6e797e] font-medium">
-							Menampilkan Halaman {meta.page} dari {meta.totalPages}
-						</div>
-						<div className="flex items-center gap-2">
-							<button
-								type="button"
-								onClick={() => setPage((p) => Math.max(1, p - 1))}
-								disabled={page === 1}
-								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
-							>
-								Sebelumnya
-							</button>
-							<div className="flex gap-1">
-								{Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(
-									(pageNum) => (
-										<button
-											key={pageNum}
-											type="button"
-											onClick={() => setPage(pageNum)}
-											className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${page === pageNum ? "bg-[#00647c] text-white" : "bg-white border border-black/10 text-[#3e484d] hover:bg-[#dee8ff]/50"}`}
-										>
-											{pageNum}
-										</button>
-									),
-								)}
-							</div>
-							<button
-								type="button"
-								onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-								disabled={page === meta.totalPages}
-								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
-							>
-								Selanjutnya
-							</button>
-						</div>
-					</div>
-				)}
+				<PaginationControls
+					meta={meta}
+					onPageChange={setPage}
+					disabled={isLoading}
+				/>
 			</div>
 		</motion.div>
 	);

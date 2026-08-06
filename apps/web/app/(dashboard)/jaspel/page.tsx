@@ -11,7 +11,39 @@ import {
 	Users,
 } from "lucide-react";
 import { useState } from "react";
+import PaginationControls, {
+	type PageMeta,
+} from "@/components/pagination-controls";
 import api from "../../../lib/api";
+
+interface JaspelVariable {
+	employeeId: number;
+	name: string;
+	employeeCode: string;
+	basicIndex: number;
+	positionIndex: number;
+	riskIndex: number;
+}
+
+interface JaspelDistribution {
+	employeeId: number;
+	name: string;
+	employeeCode: string;
+	penaltyDays: number;
+	totalIndex: number;
+	finalPoint: number;
+	finalAmount: number;
+}
+
+interface JaspelDistributions {
+	fund?: {
+		totalFund: number;
+		status: "DRAFT" | "REVIEWED" | "FINAL" | "LOCKED";
+		formulaVersion: string;
+	};
+	distributions: JaspelDistribution[];
+	meta: PageMeta;
+}
 
 export default function JaspelPage() {
 	const queryClient = useQueryClient();
@@ -21,27 +53,39 @@ export default function JaspelPage() {
 	const [month, setMonth] = useState(new Date().getMonth() + 1);
 	const [year, setYear] = useState(new Date().getFullYear());
 	const [totalFundInput, setTotalFundInput] = useState<string>("");
+	const [variablesPage, setVariablesPage] = useState(1);
+	const [distributionsPage, setDistributionsPage] = useState(1);
 
 	// Variables Queries
-	const { data: variables, isLoading: isVariablesLoading } = useQuery({
-		queryKey: ["jaspel-variables"],
+	const {
+		data: variablesResponse,
+		isLoading: isVariablesLoading,
+		isFetching: isVariablesFetching,
+	} = useQuery<{ data: JaspelVariable[]; meta: PageMeta }>({
+		queryKey: ["jaspel-variables", variablesPage],
 		queryFn: async () => {
-			const res = await api.get("/jaspel/variables");
+			const res = await api.get(
+				`/jaspel/variables?page=${variablesPage}&limit=10`,
+			);
 			return res.data;
 		},
 	});
+	const variables = variablesResponse?.data;
 
 	// Distributions Queries
-	const { data: distributionsData, isLoading: isDistributionsLoading } =
-		useQuery({
-			queryKey: ["jaspel-distributions", month, year],
-			queryFn: async () => {
-				const res = await api.get(
-					`/jaspel/distributions?month=${month}&year=${year}`,
-				);
-				return res.data;
-			},
-		});
+	const {
+		data: distributionsData,
+		isLoading: isDistributionsLoading,
+		isFetching: isDistributionsFetching,
+	} = useQuery<JaspelDistributions>({
+		queryKey: ["jaspel-distributions", month, year, distributionsPage],
+		queryFn: async () => {
+			const res = await api.get(
+				`/jaspel/distributions?month=${month}&year=${year}&page=${distributionsPage}&limit=10`,
+			);
+			return res.data;
+		},
+	});
 
 	// Calculate Mutation
 	const calculateMutation = useMutation({
@@ -62,11 +106,27 @@ export default function JaspelPage() {
 
 	const handleCalculate = () => {
 		const fund = Number(totalFundInput.replace(/\D/g, ""));
-		if (fund > 0) {
-			calculateMutation.mutate(fund);
-		} else {
-			alert("Masukkan nominal dana yang valid!");
-		}
+		if (fund > 0) calculateMutation.mutate(fund);
+	};
+	const transition = useMutation({
+		mutationFn: async (action: "review" | "finalize" | "lock") =>
+			api.patch(`/jaspel/${action}`, { month, year }),
+		onSuccess: () =>
+			queryClient.invalidateQueries({
+				queryKey: ["jaspel-distributions", month, year],
+			}),
+	});
+	const handleExport = async () => {
+		const response = await api.get(
+			`/jaspel/export?month=${month}&year=${year}`,
+			{ responseType: "blob" },
+		);
+		const url = URL.createObjectURL(response.data);
+		const link = document.createElement("a");
+		link.href = url;
+		link.download = `Jaspel-${month}-${year}.xlsx`;
+		link.click();
+		URL.revokeObjectURL(url);
 	};
 
 	return (
@@ -87,7 +147,7 @@ export default function JaspelPage() {
 			</div>
 
 			{/* Tabs */}
-			<div className="flex bg-white rounded-lg p-1 border border-black/5 w-fit shadow-sm">
+			<div className="grid w-full grid-cols-2 rounded-lg border border-black/5 bg-white p-1 shadow-sm sm:w-fit">
 				<button
 					type="button"
 					onClick={() => setActiveTab("variables")}
@@ -124,6 +184,9 @@ export default function JaspelPage() {
 							Atur bobot Poin Pendidikan/Dasar, Poin Jabatan, dan Poin Risiko
 							untuk setiap pegawai.
 						</p>
+					</div>
+					<div className="mobile-scroll-hint">
+						Geser tabel untuk mengatur seluruh indeks
 					</div>
 					<div className="overflow-x-auto">
 						<table className="w-full text-left border-collapse">
@@ -168,14 +231,18 @@ export default function JaspelPage() {
 										</td>
 									</tr>
 								) : (
-									// biome-ignore lint/suspicious/noExplicitAny: complex employee type
-									variables?.map((emp: any) => (
+									variables?.map((emp) => (
 										<VariableRow key={emp.employeeId} employee={emp} />
 									))
 								)}
 							</tbody>
 						</table>
 					</div>
+					<PaginationControls
+						meta={variablesResponse?.meta}
+						onPageChange={setVariablesPage}
+						disabled={isVariablesFetching}
+					/>
 				</div>
 			) : (
 				<div className="space-y-6">
@@ -256,6 +323,33 @@ export default function JaspelPage() {
 									)}
 									Hitung Jaspel
 								</button>
+								{distributionsData?.fund?.status === "DRAFT" && (
+									<button
+										type="button"
+										className="adms-button"
+										onClick={() => transition.mutate("review")}
+									>
+										Review
+									</button>
+								)}
+								{distributionsData?.fund?.status === "REVIEWED" && (
+									<button
+										type="button"
+										className="adms-button"
+										onClick={() => transition.mutate("finalize")}
+									>
+										Finalisasi
+									</button>
+								)}
+								{distributionsData?.fund?.status === "FINAL" && (
+									<button
+										type="button"
+										className="adms-button"
+										onClick={() => transition.mutate("lock")}
+									>
+										Kunci
+									</button>
+								)}
 							</div>
 						</div>
 					</div>
@@ -274,18 +368,24 @@ export default function JaspelPage() {
 										{new Intl.NumberFormat("id-ID").format(
 											distributionsData.fund.totalFund,
 										)}
+										· {distributionsData.fund.status} ·{" "}
+										{distributionsData.fund.formulaVersion}
 									</p>
 								)}
 							</div>
-							{distributionsData?.distributions?.length > 0 && (
+							{(distributionsData?.distributions?.length ?? 0) > 0 && (
 								<button
 									type="button"
+									onClick={handleExport}
 									className="flex items-center gap-2 px-4 py-2 bg-white border border-[#00647c]/30 text-[#00647c] rounded-md text-[13px] font-medium hover:bg-[#f0f3ff] transition-colors shadow-sm"
 								>
 									<FileDown className="w-4 h-4" />
 									Export Excel
 								</button>
 							)}
+						</div>
+						<div className="mobile-scroll-hint">
+							Geser tabel untuk melihat rincian pembagian
 						</div>
 						<div className="overflow-x-auto">
 							<table className="w-full text-left border-collapse">
@@ -329,8 +429,7 @@ export default function JaspelPage() {
 											</td>
 										</tr>
 									) : (
-										// biome-ignore lint/suspicious/noExplicitAny: complex dist type
-										distributionsData?.distributions?.map((dist: any) => (
+										distributionsData?.distributions?.map((dist) => (
 											<tr key={dist.employeeId} className="hover:bg-[#f9f9ff]">
 												<td className="px-5 py-4">
 													<p className="font-medium text-[#111c2d] text-[14px]">
@@ -369,6 +468,11 @@ export default function JaspelPage() {
 								</tbody>
 							</table>
 						</div>
+						<PaginationControls
+							meta={distributionsData?.meta}
+							onPageChange={setDistributionsPage}
+							disabled={isDistributionsFetching}
+						/>
 					</div>
 				</div>
 			)}
@@ -376,8 +480,7 @@ export default function JaspelPage() {
 	);
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: complex employee type
-function VariableRow({ employee }: { employee: any }) {
+function VariableRow({ employee }: { employee: JaspelVariable }) {
 	const queryClient = useQueryClient();
 	const [basic, setBasic] = useState(employee.basicIndex);
 	const [position, setPosition] = useState(employee.positionIndex);
@@ -413,7 +516,7 @@ function VariableRow({ employee }: { employee: any }) {
 					<input
 						type="number"
 						value={basic}
-						onChange={(e) => setBasic(e.target.value)}
+						onChange={(e) => setBasic(Number(e.target.value))}
 						className="w-20 px-2 py-1 border border-black/20 rounded text-[13px]"
 					/>
 				) : (
@@ -425,7 +528,7 @@ function VariableRow({ employee }: { employee: any }) {
 					<input
 						type="number"
 						value={position}
-						onChange={(e) => setPosition(e.target.value)}
+						onChange={(e) => setPosition(Number(e.target.value))}
 						className="w-20 px-2 py-1 border border-black/20 rounded text-[13px]"
 					/>
 				) : (
@@ -437,7 +540,7 @@ function VariableRow({ employee }: { employee: any }) {
 					<input
 						type="number"
 						value={risk}
-						onChange={(e) => setRisk(e.target.value)}
+						onChange={(e) => setRisk(Number(e.target.value))}
 						className="w-20 px-2 py-1 border border-black/20 rounded text-[13px]"
 					/>
 				) : (

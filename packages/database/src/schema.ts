@@ -1,6 +1,7 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	date,
 	doublePrecision,
 	index,
@@ -12,6 +13,7 @@ import {
 	text,
 	time,
 	timestamp,
+	uniqueIndex,
 	varchar,
 } from "drizzle-orm/pg-core";
 
@@ -26,6 +28,19 @@ export const attendanceStatusEnum = pgEnum("attendance_status", [
 	"EARLY_OUT",
 ]);
 
+export const correctionStatusEnum = pgEnum("correction_status", [
+	"PENDING",
+	"PROCESSING",
+	"APPROVED",
+	"REJECTED",
+]);
+export const jaspelStatusEnum = pgEnum("jaspel_status", [
+	"DRAFT",
+	"REVIEWED",
+	"FINAL",
+	"LOCKED",
+]);
+
 export const users = pgTable("users", {
 	id: serial("id").primaryKey(),
 
@@ -37,6 +52,7 @@ export const users = pgTable("users", {
 	name: varchar("name", { length: 255 }).notNull(),
 
 	role: roleEnum("role").notNull().default("USER"),
+	sessionVersion: integer("session_version").notNull().default(0),
 
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -181,6 +197,11 @@ export const attendanceLogs = pgTable(
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(table) => [
+		uniqueIndex("uq_attendance_employee_timestamp_type").on(
+			table.employeeId,
+			table.timestamp,
+			table.type,
+		),
 		index("idx_attendance_employee_timestamp").on(
 			table.employeeId,
 			table.timestamp,
@@ -188,6 +209,26 @@ export const attendanceLogs = pgTable(
 		index("idx_attendance_timestamp").on(table.timestamp),
 	],
 );
+
+export const attendanceCorrections = pgTable("attendance_corrections", {
+	id: serial("id").primaryKey(),
+	attendanceLogId: integer("attendance_log_id")
+		.notNull()
+		.references(() => attendanceLogs.id, { onDelete: "cascade" }),
+	requestedBy: integer("requested_by")
+		.notNull()
+		.references(() => users.id, { onDelete: "restrict" }),
+	reviewedBy: integer("reviewed_by").references(() => users.id, {
+		onDelete: "set null",
+	}),
+	oldTimestamp: timestamp("old_timestamp").notNull(),
+	newTimestamp: timestamp("new_timestamp").notNull(),
+	reason: text("reason").notNull(),
+	status: correctionStatusEnum("status").default("PENDING").notNull(),
+	reviewNote: text("review_note"),
+	createdAt: timestamp("created_at").defaultNow().notNull(),
+	updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 export const commandStatusEnum = pgEnum("command_status", [
 	"PENDING",
@@ -234,22 +275,29 @@ export const leaveTypeEnum = pgEnum("leave_type", [
 	"OTHER",
 ]);
 
-export const leaves = pgTable("leaves", {
-	id: serial("id").primaryKey(),
-	employeeId: integer("employee_id")
-		.notNull()
-		.references(() => employees.id, { onDelete: "cascade" }),
-	type: leaveTypeEnum("type").notNull(),
-	startDate: date("start_date").notNull(),
-	endDate: date("end_date").notNull(),
-	reason: text("reason"),
-	status: leaveStatusEnum("status").default("PENDING").notNull(),
-	approvedBy: integer("approved_by").references(() => users.id, {
-		onDelete: "set null",
-	}),
-	createdAt: timestamp("created_at").defaultNow().notNull(),
-	updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
+export const leaves = pgTable(
+	"leaves",
+	{
+		id: serial("id").primaryKey(),
+		employeeId: integer("employee_id")
+			.notNull()
+			.references(() => employees.id, { onDelete: "cascade" }),
+		type: leaveTypeEnum("type").notNull(),
+		startDate: date("start_date").notNull(),
+		endDate: date("end_date").notNull(),
+		reason: text("reason"),
+		rejectionReason: text("rejection_reason"),
+		status: leaveStatusEnum("status").default("PENDING").notNull(),
+		approvedBy: integer("approved_by").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+		updatedAt: timestamp("updated_at").defaultNow().notNull(),
+	},
+	(table) => [
+		check("chk_leaves_date_range", sql`${table.startDate} <= ${table.endDate}`),
+	],
+);
 
 /**
  * Hari libur / cuti perusahaan untuk Work Calendar
@@ -358,10 +406,25 @@ export const jaspelFunds = pgTable(
 		month: integer("month").notNull(),
 		year: integer("year").notNull(),
 		totalFund: integer("total_fund").notNull(), // Disimpan dalam Rupiah utuh
+		status: jaspelStatusEnum("status").default("DRAFT").notNull(),
+		formulaVersion: varchar("formula_version", { length: 50 })
+			.default("RBFI-2026.1")
+			.notNull(),
+		ruleSnapshot: jsonb("rule_snapshot")
+			.$type<Record<string, unknown>>()
+			.default({})
+			.notNull(),
+		reviewedBy: integer("reviewed_by").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		finalizedBy: integer("finalized_by").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		lockedAt: timestamp("locked_at"),
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 		updatedAt: timestamp("updated_at").defaultNow().notNull(),
 	},
-	(t) => [index("idx_jaspel_funds_month_year").on(t.month, t.year)],
+	(t) => [uniqueIndex("uq_jaspel_funds_month_year").on(t.month, t.year)],
 );
 
 export const employeeJaspelVariables = pgTable("employee_jaspel_variables", {
@@ -406,8 +469,48 @@ export const jaspelDistributions = pgTable(
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},
 	(t) => [
-		index("idx_jaspel_dist_month_year").on(t.month, t.year),
+		uniqueIndex("uq_jaspel_dist_period_employee").on(
+			t.month,
+			t.year,
+			t.employeeId,
+		),
 		index("idx_jaspel_dist_employee").on(t.employeeId),
+	],
+);
+
+export const workerCronRuns = pgTable(
+	"worker_cron_runs",
+	{
+		jobName: varchar("job_name", { length: 100 }).notNull(),
+		periodKey: varchar("period_key", { length: 100 }).notNull(),
+		status: varchar("status", { length: 20 }).notNull().default("RUNNING"),
+		startedAt: timestamp("started_at").defaultNow().notNull(),
+		completedAt: timestamp("completed_at"),
+	},
+	(table) => [
+		uniqueIndex("uq_worker_cron_runs_job_period").on(
+			table.jobName,
+			table.periodKey,
+		),
+	],
+);
+
+export const attendanceEffectCheckpoints = pgTable(
+	"attendance_effect_checkpoints",
+	{
+		employeeId: integer("employee_id").notNull(),
+		timestamp: timestamp("timestamp").notNull(),
+		type: attendanceTypeEnum("type").notNull(),
+		effectName: varchar("effect_name", { length: 255 }).notNull(),
+		completedAt: timestamp("completed_at").defaultNow().notNull(),
+	},
+	(table) => [
+		uniqueIndex("uq_attendance_effect_checkpoint").on(
+			table.employeeId,
+			table.timestamp,
+			table.type,
+			table.effectName,
+		),
 	],
 );
 

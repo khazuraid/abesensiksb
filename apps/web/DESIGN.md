@@ -1,44 +1,66 @@
-# Design System: ADMS Enterprise
+# ADMS — Calm Clinical Operations
 
 ## 1. Visual Theme & Atmosphere
-A highly dense, dark-mode cockpit interface for enterprise attendance management. The atmosphere is mechanical, precise, and high-tech—resembling a server control room. It employs heavy asymmetric bento-box layouts, severe contrasts, and zero-gravity glassmorphism surfaces suspended over a deep void.
+ADMS adalah ruang kerja operasional untuk penggunaan berulang, bukan situs pemasaran. Arah visual tenang, klinis, terpercaya, dan presisi: latar off-white dingin, permukaan putih bersih, struktur garis halus, satu aksen hijau kesehatan. Kepadatan informasi tinggi tetapi tetap mudah dipindai. Tidak ada dekorasi yang tidak membantu keputusan operator.
 
-## 2. Color Palette & Roles
-- **Void Background** (`#09090b`) — The absolute background (Zinc 950)
-- **Glass Surface** (`rgba(24, 24, 27, 0.5)`) — Card and container fill (Zinc 900 / 50% opacity)
-- **Primary Ink** (`#fafafa`) — Primary text, display headings (Zinc 50)
-- **Muted Steel** (`#a1a1aa`) — Secondary text, metadata, table headers (Zinc 400)
-- **Whisper Border** (`rgba(255, 255, 255, 0.1)`) — Structural lines, card borders
-- **Cyan Accent** (`#06b6d4`) — Primary CTA, active states, focus rings (Cyan 500)
-- **Emerald Accent** (`#10b981`) — Success states, online indicators
-- **Rose Alert** (`#f43f5e`) — Offline devices, late arrivals
+## 2. Color
+- Canvas: `#F3F6F4`
+- Surface: `#FFFFFF`
+- Subtle surface: `#EAF0ED`
+- Primary ink: `#14211D`
+- Secondary ink: `#53635D`
+- Border: `#D5DED9`
+- Strong border: `#AEBDB6`
+- Primary: `#087066`
+- Primary hover: `#05584F`
+- Success: `#23734B`
+- Warning: `#946617`
+- Danger: `#A9433D`
 
-*(No purple, no neon gradients, no pure black `#000000`)*
+Gunakan warna semantik melalui token. Hijau adalah satu-satunya aksen produk. Status selalu memakai teks atau ikon selain warna.
 
-## 3. Typography Rules
-- **Display:** `Outfit` — Track-tight, controlled scale, weight-driven hierarchy
-- **Body:** `Inter` — Relaxed leading, neutral secondary color
-- **Mono:** `JetBrains Mono` — For SNs, timestamps, raw ADMS payload logs, and high-density numbers
+## 3. Typography
+- UI/body: `Inter`, fallback `Helvetica Neue`, Arial, sans-serif.
+- Data: `SFMono-Regular`, Consolas, monospace; gunakan tabular figures.
+- Body desktop `14px`; mobile `16px` untuk input dan teks penting.
+- Display hierarchy berbasis weight 600–700, tracking rapat, bukan ukuran yang berlebihan.
+- Label selalu sentence case kecuali label navigasi kecil yang memakai uppercase dan tracking luas.
 
-## 4. Component Stylings
-* **Cards:** Glassmorphic (`backdrop-blur-xl`). 1px whisper border. Sharp hover transitions.
-* **Badges (Pills):** Translucent background (`bg-[color]/10`) with sharp border (`border-[color]/20`).
-* **Icons:** Material Symbols or Lucide icons, sharp and thin (`strokeWidth={1.5}`).
+## 4. Spacing & Grid
+- Sistem dasar 4px; tier utama 8 / 12 / 16 / 20 / 24 / 32 / 48.
+- Content max-width `1360px`, gutter mobile 16px, tablet 20px, desktop 28px.
+- Sidebar desktop 252px; konten utama tidak boleh tertutup shell tetap.
+- Target sentuh minimum 44×44px.
 
-## 5. Layout Principles
-Grid-first responsive architecture using Tailwind CSS grid.
-Asymmetric Bento Box splits for the Dashboard.
-Strict single-column collapse below `768px`.
-No flexbox percentage math.
+## 5. Layout & Composition
+- Desktop: sidebar permanen + utility bar ringkas + canvas konten.
+- Mobile: app bar tetap + drawer; konten satu kolom dan aksi inti lebih dulu.
+- Header layar memiliki eyebrow/konteks, satu judul, deskripsi singkat, maksimal satu CTA utama.
+- Filter terpisah dari CTA. Data besar tetap tabel desktop; mobile memakai scroll terarah atau representasi ringkas tanpa menghilangkan fungsi.
+- Cards hanya untuk mengelompokkan relasi; jangan membungkus setiap elemen.
 
-## 6. Motion & Interaction
-Spring physics for interactive hover states (`framer-motion`).
-Perpetual micro-loops on active dashboard components (e.g., pulsing green dot for online devices).
+## 6. Components
+- Radius: 4px kontrol kecil, 8px surface, 12px sheet mobile. Tidak ada pill besar untuk tombol.
+- Buttons: primary hijau solid; secondary putih ber-border; danger terpisah jelas. Semua memiliki hover, focus, pressed, disabled, loading.
+- Fields: label terlihat, tinggi ≥44px, border kuat, focus ring 3px transparan, error di bawah field.
+- Tables: header subtle, garis baris halus, angka tabular, sticky header hanya bila scroll container jelas.
+- Status: compact badge dengan ikon/teks; bukan warna saja.
+- Dialog: modal desktop; bottom sheet mobile; focus trap dan Escape tetap wajib.
+- Empty/loading/error: skeleton mengikuti bentuk data; empty menjelaskan langkah berikut; error memberi retry/recovery.
 
-## 7. Anti-Patterns (Banned)
-- No emojis
-- No pure black (`#000000`)
-- No neon/outer glow shadows
-- No 3-column equal grids
-- No generic placeholder names
-- No overlapping elements
+## 7. Motion & Interaction
+- Durasi 140–220ms; opacity dan transform saja.
+- Press feedback `translateY(1px)` atau scale maksimum `0.99` tanpa layout shift.
+- Maksimal 1–2 elemen bergerak per layar. Tidak ada motion dekoratif berulang selain indikator realtime yang sangat halus.
+- `prefers-reduced-motion` mematikan seluruh motion non-esensial.
+
+## 8. Voice & Brand
+Bahasa Indonesia lugas dan operasional. Gunakan istilah yang sudah dikenal operator: Pegawai, Log Absensi, Shift, Cuti, Hari Libur, Laporan, Rekap Harian, Jasa Pelayanan. Pesan sukses tenang tanpa tanda seru. Error menjelaskan sebab dan langkah pemulihan.
+
+## 9. Anti-patterns
+- Tidak ada gradient ungu/biru, glassmorphism dekoratif, glow, texture berat, atau dark cockpit.
+- Tidak ada radius besar seragam, shadow tebal, layout kartu generik, emoji, atau banyak warna aksen.
+- Tidak ada teks penting <12px; input mobile <16px dilarang.
+- Tidak ada hardcoded warna baru dalam page/component; gunakan token/kelas sistem.
+- Tidak mengubah endpoint, query key, schema, mutation, route, auth/session, socket event, ekspor, atau behavior bisnis demi visual.
+- Tidak mengandalkan hover, warna, atau gestur sebagai satu-satunya affordance.

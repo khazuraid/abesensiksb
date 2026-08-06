@@ -1,35 +1,138 @@
 "use client";
 
-import type { Device, DeviceCommandType } from "@adms/shared-types";
+import type {
+	AttendanceLog,
+	CreateDevice,
+	Device,
+	DeviceCommandType,
+} from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
+	ArrowDownToLine,
+	ArrowUpFromLine,
 	Clock,
 	Cpu,
 	Download,
-	Filter,
-	MoreVertical,
 	Plus,
 	Power,
 	Search,
 	Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import PaginationControls, {
+	type PageMeta,
+} from "@/components/pagination-controls";
 import api from "@/lib/api";
+
+type DeviceCommand = {
+	id: number;
+	command: string;
+	status: "PENDING" | "SENT" | "COMPLETED" | "ERROR";
+	createdAt: string | Date;
+	updatedAt: string | Date;
+};
+
+type ReceivedAttendance = Pick<AttendanceLog, "id" | "timestamp" | "type"> & {
+	employee?: { name?: string; employeeCode?: string };
+};
+
+type DeviceHistory = {
+	id: string;
+	direction: "sent" | "received";
+	title: string;
+	detail: string;
+	status?: DeviceCommand["status"];
+	timestamp: string | Date;
+};
+
+const formatHistoryTime = (value: string | Date) =>
+	new Intl.DateTimeFormat("id-ID", {
+		dateStyle: "medium",
+		timeStyle: "short",
+	}).format(new Date(value));
 
 export default function DevicesPage() {
 	const queryClient = useQueryClient();
 	const [search, setSearch] = useState("");
+	const [page, setPage] = useState(1);
 	const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+	const selectedDeviceId = selectedDevice?.id;
+	const today = new Date().toLocaleDateString("en-CA");
+	const [pullStartDate, setPullStartDate] = useState(today);
+	const [pullEndDate, setPullEndDate] = useState(today);
+	const [showForm, setShowForm] = useState(false);
+	const [form, setForm] = useState<CreateDevice>({
+		serialNumber: "",
+		name: "",
+		location: "",
+		ipAddress: "",
+	});
 
-	const { data: devices, isLoading } = useQuery<Device[]>({
-		queryKey: ["devices"],
+	const {
+		data: response,
+		dataUpdatedAt,
+		isLoading,
+		isFetching,
+	} = useQuery<{ data: Device[]; meta: PageMeta }>({
+		queryKey: ["devices", page, search],
 		queryFn: async () => {
-			const res = await api.get("/devices");
+			const res = await api.get(
+				`/devices?page=${page}&limit=10&search=${encodeURIComponent(search)}`,
+			);
 			return res.data;
 		},
 		refetchInterval: 10000,
 	});
+	const devices = response?.data ?? [];
+
+	const { data: commandResponse, isLoading: commandsLoading } = useQuery<{
+		data: DeviceCommand[];
+	}>({
+		queryKey: ["device-commands", selectedDeviceId],
+		queryFn: async () =>
+			(await api.get(`/devices/${selectedDeviceId}/commands?page=1&limit=20`))
+				.data,
+		enabled: Boolean(selectedDeviceId),
+		refetchInterval: 5000,
+	});
+
+	const { data: attendanceResponse, isLoading: attendanceLoading } = useQuery<{
+		data: ReceivedAttendance[];
+	}>({
+		queryKey: ["device-attendance", selectedDeviceId],
+		queryFn: async () => {
+			const params = new URLSearchParams({
+				deviceId: String(selectedDeviceId),
+				page: "1",
+				limit: "20",
+			});
+			return (await api.get(`/attendance-logs?${params}`)).data;
+		},
+		enabled: Boolean(selectedDeviceId),
+		refetchInterval: 5000,
+	});
+
+	const history: DeviceHistory[] = [
+		...(commandResponse?.data ?? []).map((command) => ({
+			id: `sent-${command.id}`,
+			direction: "sent" as const,
+			title: "Mengambil data dari perangkat",
+			detail: command.command,
+			status: command.status,
+			timestamp:
+				command.status === "PENDING" ? command.createdAt : command.updatedAt,
+		})),
+		...(attendanceResponse?.data ?? []).map((log) => ({
+			id: `received-${log.id}`,
+			direction: "received" as const,
+			title: "Menerima data absensi",
+			detail: `${log.employee?.name ?? "Pegawai"} (${log.employee?.employeeCode ?? "-"}) · ${log.type === "IN" ? "Masuk" : "Pulang"}`,
+			timestamp: log.timestamp,
+		})),
+	].sort(
+		(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+	);
 
 	const sendCommand = useMutation({
 		mutationFn: async ({
@@ -39,33 +142,41 @@ export default function DevicesPage() {
 		}: {
 			id: number;
 			command: DeviceCommandType;
-			//
-			payload?: unknown;
+			payload?: Record<string, unknown>;
 		}) => {
 			const res = await api.post(`/devices/${id}/command`, {
-				command,
-				payload,
+				type: command,
+				...payload,
 			});
 			return res.data;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["devices"] });
-			alert("Command sent successfully!");
+			queryClient.invalidateQueries({
+				queryKey: ["device-commands", selectedDeviceId],
+			});
+			alert("Perintah berhasil dikirim");
 		},
 	});
 
-	const filteredDevices = devices?.filter(
-		(d) =>
-			d.name.toLowerCase().includes(search.toLowerCase()) ||
-			d.serialNumber.toLowerCase().includes(search.toLowerCase()),
-	);
+	const createDevice = useMutation({
+		mutationFn: async (data: CreateDevice) =>
+			(await api.post("/devices", data)).data,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["devices"] });
+			setShowForm(false);
+			setForm({ serialNumber: "", name: "", location: "", ipAddress: "" });
+		},
+	});
+
+	const filteredDevices = devices;
 
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 15 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5 }}
-			className="space-y-6 max-w-[1440px] mx-auto h-[calc(100vh-6rem)] flex flex-col"
+			className="space-y-5 max-w-[1440px] mx-auto flex min-h-0 flex-col md:h-[calc(100vh-6rem)] md:space-y-6"
 		>
 			{/* Page Header & Actions */}
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
@@ -79,11 +190,62 @@ export default function DevicesPage() {
 				</div>
 				<button
 					type="button"
-					className="flex items-center gap-2 px-4 py-2 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
+					onClick={() => setShowForm((open) => !open)}
+					className="flex w-full items-center justify-center gap-2 px-4 py-2 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[13px] shadow-sm active:scale-95 sm:w-auto"
 				>
 					<Plus size={18} /> Tambah Mesin
 				</button>
 			</div>
+
+			{showForm && (
+				<form
+					onSubmit={(event) => {
+						event.preventDefault();
+						createDevice.mutate(form);
+					}}
+					className="grid grid-cols-1 gap-3 rounded-xl border border-black/5 bg-white p-4 sm:grid-cols-2 lg:grid-cols-5"
+				>
+					<input
+						required
+						aria-label="Serial number"
+						placeholder="Serial number"
+						value={form.serialNumber}
+						onChange={(event) =>
+							setForm({ ...form, serialNumber: event.target.value })
+						}
+					/>
+					<input
+						required
+						aria-label="Nama perangkat"
+						placeholder="Nama perangkat"
+						value={form.name}
+						onChange={(event) => setForm({ ...form, name: event.target.value })}
+					/>
+					<input
+						aria-label="Lokasi perangkat"
+						placeholder="Lokasi"
+						value={form.location ?? ""}
+						onChange={(event) =>
+							setForm({ ...form, location: event.target.value })
+						}
+					/>
+					<input
+						aria-label="Alamat IP"
+						placeholder="Alamat IP"
+						value={form.ipAddress ?? ""}
+						onChange={(event) =>
+							setForm({ ...form, ipAddress: event.target.value })
+						}
+					/>
+					<button
+						type="submit"
+						disabled={createDevice.isPending}
+						className="adms-button w-full lg:w-auto"
+					>
+						{createDevice.isPending ? "Menyimpan..." : "Simpan Mesin"}
+					</button>
+				</form>
+			)}
 
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0">
 				{/* Left Column: Device List */}
@@ -101,19 +263,19 @@ export default function DevicesPage() {
 									placeholder="Cari Serial Number atau Nama..."
 									type="text"
 									value={search}
-									onChange={(e) => setSearch(e.target.value)}
+									onChange={(e) => {
+										setSearch(e.target.value);
+										setPage(1);
+									}}
 								/>
 							</div>
-							<button
-								type="button"
-								className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#bdc8ce] text-[#3e484d] hover:text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] whitespace-nowrap"
-							>
-								<Filter size={16} /> Filter Tipe
-							</button>
 						</div>
 					</div>
 
 					{/* Table */}
+					<div className="mobile-scroll-hint">
+						Geser tabel untuk melihat kolom lainnya
+					</div>
 					<div className="flex-1 overflow-auto custom-scrollbar">
 						<table className="w-full text-left border-collapse min-w-[600px]">
 							<thead className="sticky top-0 bg-[#f9f9ff] shadow-sm z-10 border-b border-black/5">
@@ -153,7 +315,7 @@ export default function DevicesPage() {
 									filteredDevices?.map((dev, index) => {
 										const isOnline = dev.lastSeen
 											? new Date(dev.lastSeen).getTime() >
-												Date.now() - 2 * 60 * 1000
+												dataUpdatedAt - 2 * 60 * 1000
 											: false;
 
 										return (
@@ -176,18 +338,13 @@ export default function DevicesPage() {
 													{dev.serialNumber}
 												</td>
 												<td className="py-2 px-4 text-[14px] text-[#3e484d]">
-													{dev.name || "Unknown"}
+													{dev.name || "Tidak diketahui"}
 												</td>
 												<td className="py-2 px-4 font-mono text-[13px] text-[#6e797e]">
 													{dev.ipAddress || "-"}
 												</td>
-												<td className="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-													<button
-														type="button"
-														className="p-1.5 text-[#6e797e] hover:text-[#00647c] transition-colors"
-													>
-														<MoreVertical size={16} />
-													</button>
+												<td className="py-2 px-4 text-right text-[12px] text-[#6e797e]">
+													Pilih baris
 												</td>
 											</tr>
 										);
@@ -196,6 +353,11 @@ export default function DevicesPage() {
 							</tbody>
 						</table>
 					</div>
+					<PaginationControls
+						meta={response?.meta}
+						onPageChange={setPage}
+						disabled={isFetching}
+					/>
 				</div>
 
 				{/* Right Column: Command Center & Terminal */}
@@ -269,16 +431,46 @@ export default function DevicesPage() {
 									size={18}
 									className="text-[#6e797e] group-hover:text-[#00647c] transition-colors"
 								/>
-								Sync Time
+								Sinkronkan Waktu
 							</button>
+							<div className="col-span-2 grid grid-cols-2 gap-2">
+								<label className="text-[11px] text-[#6e797e]">
+									Dari tanggal
+									<input
+										type="date"
+										value={pullStartDate}
+										onChange={(event) => setPullStartDate(event.target.value)}
+										className="mt-1 w-full rounded-md border border-[#bdc8ce] bg-white px-2 py-1.5 text-[12px] text-[#111c2d]"
+									/>
+								</label>
+								<label className="text-[11px] text-[#6e797e]">
+									Sampai tanggal
+									<input
+										type="date"
+										value={pullEndDate}
+										onChange={(event) => setPullEndDate(event.target.value)}
+										className="mt-1 w-full rounded-md border border-[#bdc8ce] bg-white px-2 py-1.5 text-[12px] text-[#111c2d]"
+									/>
+								</label>
+							</div>
 							<button
 								type="button"
-								disabled={!selectedDevice}
+								disabled={
+									!selectedDevice ||
+									!pullStartDate ||
+									!pullEndDate ||
+									pullStartDate > pullEndDate ||
+									sendCommand.isPending
+								}
 								onClick={() => {
 									if (selectedDevice)
 										sendCommand.mutate({
 											id: selectedDevice.id,
 											command: "attendance.download",
+											payload: {
+												start_date: pullStartDate,
+												end_date: pullEndDate,
+											},
 										});
 								}}
 								className="py-2 px-3 border border-[#bdc8ce] rounded-lg hover:bg-[#dee8ff]/50 hover:border-[#00647c]/50 transition-all font-semibold text-[13px] text-[#111c2d] flex flex-col items-center gap-1 group col-span-2 bg-[#f9f9ff] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -287,7 +479,9 @@ export default function DevicesPage() {
 									size={18}
 									className="text-[#6e797e] group-hover:text-[#00647c] transition-colors"
 								/>
-								Tarik Data Absensi
+								{sendCommand.isPending
+									? "Mengirim perintah..."
+									: "Tarik Data Absensi"}
 							</button>
 							<button
 								type="button"
@@ -316,46 +510,82 @@ export default function DevicesPage() {
 						</div>
 					</div>
 
-					{/* Real-time Handshake Log */}
-					<div className="bg-[#263143] rounded-xl flex flex-col flex-1 min-h-[250px] shadow-sm border border-black/5 transition-all duration-300 overflow-hidden">
-						<div className="p-3 border-b border-white/10 flex justify-between items-center bg-[#111c2d]">
-							<h3 className="font-semibold text-[13px] text-white flex items-center gap-2">
-								<span className="w-2 h-2 rounded-full bg-[#006c49] animate-pulse"></span>
-								Log Protokol
+					{/* Real device activity */}
+					<section className="flex min-h-[250px] flex-1 flex-col overflow-hidden rounded-xl border border-black/5 bg-white shadow-sm">
+						<header className="border-b border-black/5 bg-[#f9f9ff] px-4 py-3">
+							<h3 className="flex items-center gap-2 text-[13px] font-semibold text-[#111c2d]">
+								<Clock size={16} className="text-[#00647c]" />
+								Riwayat perangkat
 							</h3>
-							<button type="button" className="text-white/50 hover:text-white">
-								<MoreVertical size={16} />
-							</button>
-						</div>
-						<div className="p-3 flex-1 overflow-y-auto custom-scrollbar font-mono text-[12px] leading-relaxed text-[#ecf1ff]">
-							<div className="text-white/50 mb-2">
-								# ADMS Real-time Handshake Listener (Simulated)
-							</div>
-							{selectedDevice ? (
-								<>
-									<div className="text-[#6ffbbe] mb-1">
-										&gt; [{new Date().toLocaleTimeString()}] REQ:{" "}
-										{selectedDevice.serialNumber} /iclock/cdata?SN=
-										{selectedDevice.serialNumber} HTTP/1.1
-									</div>
-									<div className="text-white/80 mb-3 pl-4">Body: null</div>
-									<div className="text-[#b7eaff] mb-1">
-										&lt; [{new Date().toLocaleTimeString()}] RES: 200 OK
-									</div>
-									<div className="text-white/80 mb-3 pl-4">
-										Server: ADMS/1.0
-										<br />
-										Content-Type: text/plain
-									</div>
-								</>
-							) : (
-								<div className="text-white/50 italic">
-									Pilih perangkat untuk melihat log...
+							<p className="mt-1 text-[11px] text-[#6e797e]">
+								Riwayat mengambil dan menerima data
+							</p>
+						</header>
+						<div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+							{!selectedDevice ? (
+								<p className="py-8 text-center text-[12px] text-[#6e797e]">
+									Pilih perangkat untuk melihat riwayat.
+								</p>
+							) : commandsLoading || attendanceLoading ? (
+								<div
+									className="space-y-2"
+									role="status"
+									aria-label="Memuat riwayat perangkat"
+								>
+									{[1, 2, 3].map((item) => (
+										<div
+											key={item}
+											className="h-16 animate-pulse rounded-lg bg-[#f0f3ff]"
+										/>
+									))}
 								</div>
+							) : history.length === 0 ? (
+								<p className="py-8 text-center text-[12px] text-[#6e797e]">
+									Belum ada aktivitas mengambil atau menerima data.
+								</p>
+							) : (
+								<ol className="space-y-2">
+									{history.map((item) => (
+										<li
+											key={item.id}
+											className="flex gap-3 rounded-lg bg-[#f9f9ff] p-3"
+										>
+											<div
+												className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${item.direction === "sent" ? "bg-[#00647c]/10 text-[#00647c]" : "bg-[#006c49]/10 text-[#006c49]"}`}
+											>
+												{item.direction === "sent" ? (
+													<ArrowUpFromLine size={15} />
+												) : (
+													<ArrowDownToLine size={15} />
+												)}
+											</div>
+											<div className="min-w-0 flex-1">
+												<div className="flex items-start justify-between gap-2">
+													<p className="text-[12px] font-semibold text-[#111c2d]">
+														{item.title}
+													</p>
+													{item.status && (
+														<span className="shrink-0 text-[10px] font-semibold text-[#6e797e]">
+															{item.status}
+														</span>
+													)}
+												</div>
+												<p
+													className="truncate font-mono text-[10px] text-[#3e484d]"
+													title={item.detail}
+												>
+													{item.detail}
+												</p>
+												<time className="mt-1 block text-[10px] text-[#6e797e]">
+													{formatHistoryTime(item.timestamp)}
+												</time>
+											</div>
+										</li>
+									))}
+								</ol>
 							)}
-							<span className="inline-block w-2 h-4 bg-[#b7eaff] animate-pulse ml-1 align-middle mt-2"></span>
 						</div>
-					</div>
+					</section>
 				</div>
 			</div>
 		</motion.div>

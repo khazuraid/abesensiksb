@@ -2,17 +2,20 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import Cookies from "js-cookie";
+
 import { Lock, LogOut, Mail, Save, Shield, User } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import api from "@/lib/api";
 
 export default function ProfilePage() {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [tab, setTab] = useState<"profile" | "password">("profile");
-	const [profileForm, setProfileForm] = useState({ name: "", email: "" });
+	const [profileForm, setProfileForm] = useState<{
+		name?: string;
+		email?: string;
+	}>({});
 	const [passwordForm, setPasswordForm] = useState({
 		currentPassword: "",
 		newPassword: "",
@@ -23,11 +26,6 @@ export default function ProfilePage() {
 		queryKey: ["me"],
 		queryFn: async () => (await api.get("/auth/me")).data,
 	});
-
-	useEffect(() => {
-		if (user)
-			setProfileForm({ name: user.name || "", email: user.email || "" });
-	}, [user]);
 
 	const updateProfileMutation = useMutation({
 		mutationFn: async (data: { name: string; email: string }) =>
@@ -48,8 +46,8 @@ export default function ProfilePage() {
 			}),
 	});
 
-	const handleLogout = () => {
-		Cookies.remove("token");
+	const handleLogout = async () => {
+		await api.post("/auth/logout");
 		localStorage.removeItem("user");
 		router.push("/login");
 	};
@@ -67,7 +65,7 @@ export default function ProfilePage() {
 			animate={{ opacity: 1, y: 0 }}
 			className="w-full mx-auto space-y-8"
 		>
-			<div className="flex items-center justify-between">
+			<div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
 				<div>
 					<h2 className="text-3xl font-display font-bold text-slate-900">
 						Profil Saya
@@ -79,7 +77,7 @@ export default function ProfilePage() {
 				<button
 					type="button"
 					onClick={handleLogout}
-					className="flex items-center gap-2 adms-pill-alert px-5 py-2.5 rounded-lg hover:bg-red-50 transition-all"
+					className="flex w-full items-center justify-center gap-2 adms-pill-alert px-5 py-2.5 rounded-lg hover:bg-red-50 transition-all sm:w-auto"
 				>
 					<LogOut size={18} /> Keluar
 				</button>
@@ -98,7 +96,7 @@ export default function ProfilePage() {
 							{user?.role}
 						</span>
 					</div>
-					<div className="adms-card p-2 space-y-1">
+					<div className="adms-card grid grid-cols-2 gap-1 p-2 md:block md:space-y-1">
 						<button
 							type="button"
 							onClick={() => setTab("profile")}
@@ -137,7 +135,7 @@ export default function ProfilePage() {
 									</label>
 									<input
 										id="pname"
-										value={profileForm.name}
+										value={profileForm.name ?? user?.name ?? ""}
 										onChange={(e) =>
 											setProfileForm({ ...profileForm, name: e.target.value })
 										}
@@ -155,7 +153,7 @@ export default function ProfilePage() {
 									<input
 										id="pemail"
 										type="email"
-										value={profileForm.email}
+										value={profileForm.email ?? user?.email ?? ""}
 										onChange={(e) =>
 											setProfileForm({ ...profileForm, email: e.target.value })
 										}
@@ -180,7 +178,12 @@ export default function ProfilePage() {
 							</div>
 							<button
 								type="button"
-								onClick={() => updateProfileMutation.mutate(profileForm)}
+								onClick={() =>
+									updateProfileMutation.mutate({
+										name: profileForm.name ?? user?.name ?? "",
+										email: profileForm.email ?? user?.email ?? "",
+									})
+								}
 								disabled={updateProfileMutation.isPending}
 								className="flex items-center gap-2 adms-button !bg-[#00647c] !text-white hover:!bg-[#007f9d] disabled:opacity-50"
 							>

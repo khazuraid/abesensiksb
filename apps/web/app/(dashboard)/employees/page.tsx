@@ -8,55 +8,57 @@ import type {
 } from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import {
-	ChevronLeft,
-	ChevronRight,
-	Download,
-	Edit2,
-	Filter,
-	Fingerprint,
-	Search,
-	Trash2,
-	UploadCloud,
-	UserPlus,
-	X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { Edit2, Search, Trash2, UserPlus, X } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
 import EmployeeForm from "@/components/employee-form";
+import PaginationControls, {
+	type PageMeta,
+} from "@/components/pagination-controls";
 import api from "@/lib/api";
+import { useModalAccessibility } from "@/lib/use-modal-accessibility";
 
 export default function EmployeesPage() {
 	const queryClient = useQueryClient();
-	const [search, setSearch] = useState("");
+	const [search, setSearch] = useState(() =>
+		typeof window === "undefined"
+			? ""
+			: (new URLSearchParams(window.location.search).get("search") ?? ""),
+	);
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
 		null,
 	);
 	const [selectedIds, setSelectedIds] = useState<number[]>([]);
+	const [page, setPage] = useState(1);
 	const [isBulkShiftOpen, setIsBulkShiftOpen] = useState(false);
 	const [bulkShiftIds, setBulkShiftIds] = useState<number[]>([]);
+	const bulkShiftDialogRef = useRef<HTMLDivElement>(null);
+	const closeBulkShift = useCallback(() => setIsBulkShiftOpen(false), []);
+	useModalAccessibility(bulkShiftDialogRef, closeBulkShift, isBulkShiftOpen);
 
-	useEffect(() => {
-		const urlParams = new URLSearchParams(window.location.search);
-		const searchQuery = urlParams.get("search");
-		if (searchQuery) setSearch(searchQuery);
-	}, []);
-
-	const { data: employees, isLoading } = useQuery<Employee[]>({
-		queryKey: ["employees"],
+	const {
+		data: response,
+		isLoading,
+		isFetching,
+	} = useQuery<{ data: Employee[]; meta: PageMeta }>({
+		queryKey: ["employees", page, search],
 		queryFn: async () => {
-			const res = await api.get("/employees");
+			const res = await api.get(
+				`/employees?page=${page}&limit=10&search=${encodeURIComponent(search)}`,
+			);
 			return res.data;
 		},
 	});
+	const employees = response?.data ?? [];
 
-	const { data: shifts } = useQuery<Shift[]>({
+	const { data: shiftsResponse } = useQuery<{ data: Shift[] }>({
 		queryKey: ["shifts"],
 		queryFn: async () => {
-			const res = await api.get("/shifts");
+			const res = await api.get("/shifts?page=1&limit=100");
 			return res.data;
 		},
 	});
+	const shifts = shiftsResponse?.data;
 
 	const createMutation = useMutation({
 		mutationFn: async (data: CreateEmployee) => {
@@ -103,9 +105,12 @@ export default function EmployeesPage() {
 			setBulkShiftIds([]);
 			alert("Berhasil memperbarui shift pegawai terpilih.");
 		},
-		onError: (err: any) => {
+		onError: (err: {
+			response?: { data?: { message?: string } };
+			message?: string;
+		}) => {
 			alert(
-				"Gagal update shift: " + (err?.response?.data?.message || err?.message),
+				`Gagal update shift: ${err?.response?.data?.message || err?.message}`,
 			);
 		},
 	});
@@ -123,20 +128,14 @@ export default function EmployeesPage() {
 		setIsFormOpen(true);
 	};
 
-	const filteredEmployees =
-		employees?.filter(
-			(emp) =>
-				emp.name.toLowerCase().includes(search.toLowerCase()) ||
-				emp.employeeCode.toLowerCase().includes(search.toLowerCase()) ||
-				emp.department?.toLowerCase().includes(search.toLowerCase()),
-		) || [];
+	const filteredEmployees = employees;
 
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 15 }}
 			animate={{ opacity: 1, y: 0 }}
 			transition={{ duration: 0.5 }}
-			className="space-y-6 max-w-[1440px] mx-auto h-[calc(100vh-6rem)] flex flex-col"
+			className="space-y-5 max-w-[1440px] mx-auto flex min-h-0 flex-col md:h-[calc(100vh-6rem)] md:space-y-6"
 		>
 			{/* Page Header & Actions */}
 			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
@@ -148,13 +147,7 @@ export default function EmployeesPage() {
 						Registrasi pusat seluruh pengguna ADMS.
 					</p>
 				</div>
-				<div className="flex flex-wrap gap-3">
-					<button
-						type="button"
-						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
-					>
-						<UploadCloud size={18} /> Push ke Perangkat
-					</button>
+				<div className="w-full sm:w-auto">
 					<button
 						type="button"
 						onClick={() => setIsFormOpen(true)}
@@ -167,7 +160,7 @@ export default function EmployeesPage() {
 
 			{/* Bulk Actions Bar */}
 			{selectedIds.length > 0 && (
-				<div className="bg-[#00647c] text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in slide-in-from-top-2">
+				<div className="bg-[#00647c] text-white px-4 py-3 rounded-xl flex flex-col items-stretch gap-3 shadow-sm animate-in fade-in slide-in-from-top-2 sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-center gap-2 text-[14px] font-semibold">
 						<span className="bg-white/20 px-2 py-0.5 rounded-md">
 							{selectedIds.length}
@@ -208,37 +201,22 @@ export default function EmployeesPage() {
 								placeholder="Cari NIP atau Nama..."
 								type="text"
 								value={search}
-								onChange={(e) => setSearch(e.target.value)}
+								onChange={(e) => {
+									setSearch(e.target.value);
+									setPage(1);
+								}}
 							/>
 						</div>
-						<button
-							type="button"
-							className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-[#bdc8ce] text-[#3e484d] hover:text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] whitespace-nowrap"
-						>
-							<Filter size={16} /> Filter Dept
-						</button>
 					</div>
 					<div className="flex items-center gap-4 text-[#3e484d] font-semibold text-[13px]">
-						<span>Total: {filteredEmployees?.length || 0}</span>
-						<div className="flex items-center gap-1">
-							<button
-								type="button"
-								className="p-1 rounded hover:bg-[#f9f9ff] transition-colors"
-							>
-								<ChevronLeft size={16} />
-							</button>
-							<span className="px-2">1 / 1</span>
-							<button
-								type="button"
-								className="p-1 rounded hover:bg-[#f9f9ff] transition-colors"
-							>
-								<ChevronRight size={16} />
-							</button>
-						</div>
+						<span>Total: {response?.meta.total || 0}</span>
 					</div>
 				</div>
 
 				{/* Table */}
+				<div className="mobile-scroll-hint">
+					Geser tabel untuk melihat kolom lainnya
+				</div>
 				<div className="flex-1 overflow-auto custom-scrollbar">
 					<table className="w-full text-left border-collapse min-w-[800px]">
 						<thead className="sticky top-0 bg-[#f9f9ff] shadow-sm z-10 border-b border-black/5">
@@ -273,7 +251,7 @@ export default function EmployeesPage() {
 									Jabatan
 								</th>
 								<th className="py-3 px-4 font-sans text-[12px] font-semibold text-[#6e797e] whitespace-nowrap text-center">
-									Status Biometrik
+									Biometrik
 								</th>
 								<th className="py-3 px-4 font-sans text-[12px] font-semibold text-[#6e797e] whitespace-nowrap text-right">
 									Aksi
@@ -338,28 +316,12 @@ export default function EmployeesPage() {
 										</td>
 										<td className="py-2 px-4 text-center">
 											<div className="flex items-center justify-center gap-2">
-												{/* Fake Biometric Statuses based on template */}
-												<div
-													className="flex items-center gap-1 bg-[#e7eeff] rounded-full px-2 py-0.5 border border-[#bdc8ce]"
-													title="Face Enrolled"
-												>
-													<div className="text-[14px] font-bold text-[#006c49]">
-														F
-													</div>
-													<div className="w-1.5 h-1.5 rounded-full bg-[#006c49] animate-pulse"></div>
-												</div>
-												<div
-													className="flex items-center gap-1 bg-[#e7eeff] rounded-full px-2 py-0.5 border border-[#bdc8ce]"
-													title="Fingerprint Enrolled"
-												>
-													<div className="text-[14px] font-bold text-[#006c49]">
-														FP
-													</div>
-													<div className="w-1.5 h-1.5 rounded-full bg-[#006c49] animate-pulse"></div>
-												</div>
+												<span className="text-[12px] text-[#6e797e]">
+													Belum tersedia
+												</span>
 											</div>
 										</td>
-										<td className="py-2 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+										<td className="py-2 px-4 text-right opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
 											<button
 												type="button"
 												onClick={() => handleEdit(emp)}
@@ -385,6 +347,14 @@ export default function EmployeesPage() {
 						</tbody>
 					</table>
 				</div>
+				<PaginationControls
+					meta={response?.meta}
+					onPageChange={(next) => {
+						setSelectedIds([]);
+						setPage(next);
+					}}
+					disabled={isFetching}
+				/>
 			</div>
 
 			{isFormOpen && (
@@ -399,10 +369,19 @@ export default function EmployeesPage() {
 			)}
 
 			{isBulkShiftOpen && (
-				<div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111c2d]/20 backdrop-blur-sm">
-					<div className="bg-white w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+				<div
+					ref={bulkShiftDialogRef}
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/40 p-0 sm:items-center sm:p-4"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="bulk-shift-title"
+				>
+					<div className="max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-md overflow-y-auto rounded-t-xl bg-white shadow-xl animate-in fade-in zoom-in duration-200 sm:max-h-[90dvh] sm:rounded-md">
 						<div className="px-6 py-5 border-b border-black/5 flex items-center justify-between bg-[#f9f9ff]">
-							<h3 className="text-xl font-bold text-[#111c2d] font-display">
+							<h3
+								id="bulk-shift-title"
+								className="text-xl font-bold text-[#111c2d] font-display"
+							>
 								Atur Shift Pegawai
 							</h3>
 							<button

@@ -1,7 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
+import { usePathname } from "next/navigation";
+import React, {
+	createContext,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
+import { io, type Socket } from "socket.io-client";
 
 interface SocketContextType {
 	socket: Socket | null;
@@ -16,36 +23,58 @@ const SocketContext = createContext<SocketContextType>({
 export const useSocket = () => useContext(SocketContext);
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
-	const [socket, setSocket] = useState<Socket | null>(null);
+	const pathname = usePathname();
+	const socket = useMemo(
+		() =>
+			io(
+				process.env.NEXT_PUBLIC_WORKER_URL ||
+					(typeof window === "undefined"
+						? "http://localhost:8888"
+						: `${window.location.protocol}//${window.location.hostname}:8888`),
+				{
+					transports: ["websocket"],
+					withCredentials: true,
+					autoConnect: false,
+					auth: async (callback) => {
+						try {
+							const response = await fetch("/api/auth/token", {
+								credentials: "include",
+							});
+							const data = (await response.json()) as { token?: string };
+							callback({ token: data.token });
+						} catch {
+							callback({});
+						}
+					},
+					reconnectionAttempts: 5,
+					reconnectionDelay: 1000,
+				},
+			),
+		[],
+	);
 	const [isConnected, setIsConnected] = useState(false);
 
 	useEffect(() => {
-		// Asumsi backend jalan di port 8888 dan diakses di production via url yang sama
-		const apiUrl = (
-			process.env.NEXT_PUBLIC_API_URL || "http://localhost:8888"
-		).replace(/\/api\/?$/, "");
-		const socketInstance = io(apiUrl, {
-			transports: ["websocket"],
-			reconnectionAttempts: 5,
-			reconnectionDelay: 1000,
-		});
-
-		socketInstance.on("connect", () => {
+		if (pathname === "/login") return;
+		const onConnect = () => {
 			console.log("Connected to WebSocket backend");
 			setIsConnected(true);
-		});
+		};
 
-		socketInstance.on("disconnect", () => {
+		const onDisconnect = () => {
 			console.log("Disconnected from WebSocket backend");
 			setIsConnected(false);
-		});
-
-		setSocket(socketInstance);
+		};
+		socket.on("connect", onConnect);
+		socket.on("disconnect", onDisconnect);
+		socket.connect();
 
 		return () => {
-			socketInstance.disconnect();
+			socket.off("connect", onConnect);
+			socket.off("disconnect", onDisconnect);
+			socket.disconnect();
 		};
-	}, []);
+	}, [pathname, socket]);
 
 	return (
 		<SocketContext.Provider value={{ socket, isConnected }}>

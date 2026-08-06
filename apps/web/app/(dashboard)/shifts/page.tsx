@@ -12,8 +12,12 @@ import {
 	Trash2,
 	X,
 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import PaginationControls, {
+	type PageMeta,
+} from "@/components/pagination-controls";
 import api from "@/lib/api";
+import { useModalAccessibility } from "@/lib/use-modal-accessibility";
 
 function ShiftForm({
 	onClose,
@@ -26,6 +30,8 @@ function ShiftForm({
 	initialData?: Shift;
 	isLoading: boolean;
 }) {
+	const dialogRef = useRef<HTMLDivElement>(null);
+	useModalAccessibility(dialogRef, onClose);
 	const [form, setForm] = useState<CreateShift>({
 		name: initialData?.name || "",
 		startTime: initialData?.startTime || "08:00",
@@ -52,10 +58,19 @@ function ShiftForm({
 	};
 
 	return (
-		<div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111c2d]/80 backdrop-blur-sm">
-			<div className="bg-white w-full max-w-md shadow-2xl rounded-xl border border-black/10 max-h-[90vh] flex flex-col">
-				<div className="p-6 border-b border-black/5 flex items-center justify-between shrink-0">
-					<h3 className="text-[20px] font-display font-semibold text-[#111c2d]">
+		<div
+			ref={dialogRef}
+			className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/80 p-0 sm:items-center sm:p-4"
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="shift-form-title"
+		>
+			<div className="bg-white w-full max-w-md shadow-2xl rounded-t-xl sm:rounded-md border border-black/10 max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[90dvh] flex flex-col">
+				<div className="p-4 sm:p-6 border-b border-black/5 flex items-center justify-between shrink-0">
+					<h3
+						id="shift-form-title"
+						className="text-[20px] font-display font-semibold text-[#111c2d]"
+					>
 						{initialData ? "Edit Shift" : "Tambah Shift"}
 					</h3>
 					<button
@@ -77,7 +92,7 @@ function ShiftForm({
 							effectiveTo: form.effectiveTo || null,
 						});
 					}}
-					className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1"
+					className="flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] custom-scrollbar sm:p-6"
 				>
 					<div>
 						<label
@@ -95,7 +110,7 @@ function ShiftForm({
 							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
 						/>
 					</div>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
 						<div>
 							<label
 								htmlFor="start"
@@ -131,7 +146,7 @@ function ShiftForm({
 							/>
 						</div>
 					</div>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
 						<div>
 							<label
 								htmlFor="tol"
@@ -172,7 +187,7 @@ function ShiftForm({
 							/>
 						</div>
 					</div>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
 						<div>
 							<label
 								htmlFor="minin"
@@ -208,7 +223,7 @@ function ShiftForm({
 							/>
 						</div>
 					</div>
-					<div className="grid grid-cols-2 gap-4">
+					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
 						<div>
 							<label
 								htmlFor="minout"
@@ -296,11 +311,17 @@ export default function ShiftsPage() {
 	const queryClient = useQueryClient();
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+	const [page, setPage] = useState(1);
 
-	const { data: shifts, isLoading } = useQuery<Shift[]>({
-		queryKey: ["shifts"],
-		queryFn: async () => (await api.get("/shifts")).data,
+	const {
+		data: response,
+		isLoading,
+		isFetching,
+	} = useQuery<{ data: Shift[]; meta: PageMeta }>({
+		queryKey: ["shifts", page],
+		queryFn: async () => (await api.get(`/shifts?page=${page}&limit=10`)).data,
 	});
+	const shifts = response?.data;
 
 	const createMutation = useMutation({
 		mutationFn: async (data: CreateShift) => await api.post("/shifts", data),
@@ -356,7 +377,7 @@ export default function ShiftsPage() {
 						setSelectedShift(null);
 						setIsFormOpen(true);
 					}}
-					className="flex items-center gap-2 px-6 py-3 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[14px] shadow-sm active:scale-95"
+					className="flex w-full items-center justify-center gap-2 px-6 py-3 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[14px] shadow-sm active:scale-95 sm:w-auto"
 				>
 					<Plus size={18} /> Tambah Shift
 				</button>
@@ -401,7 +422,7 @@ export default function ShiftsPage() {
 										)}
 									</div>
 								</div>
-								<div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+								<div className="flex gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
 									<button
 										type="button"
 										onClick={() => {
@@ -476,6 +497,11 @@ export default function ShiftsPage() {
 					))
 				)}
 			</div>
+			<PaginationControls
+				meta={response?.meta}
+				onPageChange={setPage}
+				disabled={isFetching}
+			/>
 
 			{isFormOpen && (
 				<ShiftForm

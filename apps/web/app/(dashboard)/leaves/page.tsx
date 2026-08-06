@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Check, Plus, Trash2, X as XIcon } from "lucide-react";
 import { useState } from "react";
+import PaginationControls from "@/components/pagination-controls";
 import api from "@/lib/api";
 
 interface Leave {
@@ -49,10 +50,11 @@ export default function LeavesPage() {
 	const leaves: Leave[] = response?.data || [];
 	const meta = response?.meta;
 
-	const { data: employees } = useQuery<Employee[]>({
+	const { data: employeeResponse } = useQuery<{ data: Employee[] }>({
 		queryKey: ["employees-list"],
-		queryFn: async () => (await api.get("/employees")).data,
+		queryFn: async () => (await api.get("/employees?page=1&limit=100")).data,
 	});
+	const employees = employeeResponse?.data;
 
 	const createMutation = useMutation({
 		mutationFn: async (data: typeof form) => {
@@ -114,7 +116,7 @@ export default function LeavesPage() {
 				<button
 					type="button"
 					onClick={() => setShowForm(!showForm)}
-					className="bg-[#00647c] text-white px-6 py-2.5 rounded-lg flex items-center gap-2 font-semibold text-[13px] hover:bg-[#007f9d] transition-colors shadow-sm active:scale-95"
+					className="bg-[#00647c] text-white px-6 py-2.5 rounded-lg flex w-full items-center justify-center gap-2 font-semibold text-[13px] hover:bg-[#007f9d] transition-colors shadow-sm active:scale-95 sm:w-auto"
 				>
 					<Plus size={18} /> Ajukan Cuti
 				</button>
@@ -195,6 +197,9 @@ export default function LeavesPage() {
 			)}
 
 			<div className="bg-white rounded-xl border border-black/5 overflow-hidden shadow-sm">
+				<div className="mobile-scroll-hint">
+					Geser tabel untuk melihat detail pengajuan
+				</div>
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse min-w-[800px]">
 						<thead>
@@ -273,7 +278,7 @@ export default function LeavesPage() {
 											)}
 										</td>
 										<td className="py-4 px-6 text-right">
-											<div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+											<div className="flex items-center justify-end gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
 												{leave.status === "PENDING" && (
 													<>
 														<button
@@ -315,46 +320,11 @@ export default function LeavesPage() {
 					</table>
 				</div>
 
-				{/* Pagination Controls */}
-				{meta && meta.totalPages > 1 && (
-					<div className="p-4 border-t border-black/5 flex items-center justify-between bg-[#f9f9ff]">
-						<div className="text-[12px] text-[#6e797e] font-medium">
-							Menampilkan Halaman {meta.page} dari {meta.totalPages}
-						</div>
-						<div className="flex items-center gap-2">
-							<button
-								type="button"
-								onClick={() => setPage((p) => Math.max(1, p - 1))}
-								disabled={page === 1}
-								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
-							>
-								Sebelumnya
-							</button>
-							<div className="flex gap-1">
-								{Array.from({ length: meta.totalPages }, (_, i) => i + 1).map(
-									(pageNum) => (
-										<button
-											key={pageNum}
-											type="button"
-											onClick={() => setPage(pageNum)}
-											className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${page === pageNum ? "bg-[#00647c] text-white" : "bg-white border border-black/10 text-[#3e484d] hover:bg-[#dee8ff]/50"}`}
-										>
-											{pageNum}
-										</button>
-									),
-								)}
-							</div>
-							<button
-								type="button"
-								onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-								disabled={page === meta.totalPages}
-								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
-							>
-								Selanjutnya
-							</button>
-						</div>
-					</div>
-				)}
+				<PaginationControls
+					meta={meta}
+					onPageChange={setPage}
+					disabled={isLoading}
+				/>
 			</div>
 		</motion.div>
 	);

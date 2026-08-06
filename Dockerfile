@@ -1,44 +1,53 @@
+# syntax=docker/dockerfile:1
+
 # === BUILD STAGE ===
 FROM node:20-alpine AS builder
-RUN corepack enable && corepack prepare pnpm@9 --activate
+RUN npm install --global pnpm@9.15.9
+RUN apk add --no-cache libc6-compat
 WORKDIR /app
-
-# Force devDependencies ter-install meski parent (Coolify) kirim
-# NODE_ENV=production sebagai build arg/env. devDeps wajib untuk build.
-ENV NODE_ENV=development
 
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 COPY packages/ ./packages/
-COPY apps/ ./apps/
-COPY biome.json turbo.json ./
+COPY apps/web/ ./apps/web/
+COPY apps/worker/ ./apps/worker/
+COPY turbo.json biome.json ./
 
-RUN pnpm install --frozen-lockfile
-RUN pnpm turbo build
+ARG NEXT_PUBLIC_WORKER_URL
+ENV NEXT_PUBLIC_WORKER_URL=$NEXT_PUBLIC_WORKER_URL
+RUN NODE_ENV=development pnpm install --frozen-lockfile
+RUN pnpm --filter @adms/database build
+RUN pnpm --filter worker build
+RUN pnpm --filter web build
 
-# === API PRODUCTION ===
-FROM node:20-alpine AS api
+# === ALL-IN-ONE RUNTIME: POSTGRES + REDIS + WEB + WORKER ===
+FROM postgres:16-alpine AS all-in-one
+
+RUN apk add --no-cache redis su-exec libstdc++ libgcc
+COPY --from=builder /usr/local/bin/node /usr/local/bin/node
+
 WORKDIR /app
-ENV NODE_ENV=production
-
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/apps/api/package.json ./apps/api/
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
-
-EXPOSE 8888
-CMD ["node", "apps/api/dist/main.js"]
-
-# === WEB PRODUCTION ===
-FROM node:20-alpine AS web
-WORKDIR /app
-ENV NODE_ENV=production
+ENV NODE_ENV=production \
+    HOSTNAME=0.0.0.0 \
+    PORT=8080 \
+    WORKER_PORT=8888 \
+    REDIS_HOST=127.0.0.1 \
+    REDIS_PORT=6379 \
+    PGDATA=/var/lib/postgresql/data
 
 COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
+COPY --from=builder /app/apps/worker/package.json ./apps/worker/
+COPY --from=builder /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder /app/apps/worker/node_modules ./apps/worker/node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/node_modules ./node_modules
+COPY scripts/docker-all-in-one.sh /usr/local/bin/docker-all-in-one
+RUN chmod +x /usr/local/bin/docker-all-in-one \
+    && mkdir -p /var/lib/redis /app/apps/web/uploads \
+    && chown -R postgres:postgres /var/lib/postgresql \
+    && chown -R redis:redis /var/lib/redis
 
-EXPOSE 8080
-ENV HOSTNAME="0.0.0.0"
-ENV PORT=8080
-CMD ["node", "apps/web/server.js"]
+VOLUME ["/var/lib/postgresql/data", "/var/lib/redis", "/app/apps/web/uploads"]
+EXPOSE 8080 8888
+ENTRYPOINT ["/usr/local/bin/docker-all-in-one"]

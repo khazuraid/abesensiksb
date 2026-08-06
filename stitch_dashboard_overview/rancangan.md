@@ -127,10 +127,10 @@ Setiap halaman akan menggunakan desain **Glassmorphism** dengan komponen dari **
 ---
 
 ## 🛠️ Standar Pengembangan untuk AI
-1.  **Type Safety**: Gunakan shared-types antar apps/api dan apps/web.
+1.  **Type Safety**: Gunakan shared-types antar apps/web dan apps/worker.
 2.  **Error Handling**: Gunakan Sentry untuk menangkap kegagalan parsing data mesin.
 3.  **Responsive Design**: Pastikan Dashboard nyaman digunakan di Mobile/Tablet.
-4.  **Security**: Semua endpoint API internal wajib dilindungi AuthGuard (JWT).
+4.  **Security**: Semua endpoint API internal wajib memakai session JWT dan RBAC.
 
 ---
 

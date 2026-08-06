@@ -1,49 +1,66 @@
-// migrate.js — dijalankan sebelum app start di container
-// Membaca bootstrap.sql dan seed-admin.sql, eksekusi ke DATABASE_URL
-const { Pool } = require("pg");
+const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
+const { Pool } = require("pg");
+
+const files = [
+	"bootstrap.sql",
+	"patch.sql",
+	"migrations/0005_attendance_log_idempotency.sql",
+	"migrations/0006_production_hardening.sql",
+	"migrations/0007_integrity_and_reliability.sql",
+	"migrations/0008_final_reliability.sql",
+];
 
 async function run() {
+	if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL wajib diisi");
 	const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-	const bootstrap = fs.readFileSync(
-		path.join(__dirname, "bootstrap.sql"),
-		"utf8",
-	);
-	const seed = fs.readFileSync(path.join(__dirname, "seed-admin.sql"), "utf8");
-
-	console.log("[migrate] Running bootstrap.sql...");
+	const client = await pool.connect();
 	try {
-		await pool.query(bootstrap);
-	} catch (e) {
-		console.error("[migrate] WARNING: Failed to run bootstrap.sql:", e.message);
+		await client.query("SELECT pg_advisory_lock($1)", [1_832_746_521]);
+		await client.query(`CREATE TABLE IF NOT EXISTS migration_history (
+			name text PRIMARY KEY,
+			checksum text NOT NULL,
+			applied_at timestamptz NOT NULL DEFAULT now()
+		)`);
+		for (const file of files) {
+			const migration = fs.readFileSync(path.join(__dirname, file), "utf8");
+			const checksum = createHash("sha256").update(migration).digest("hex");
+			const { rows } = await client.query(
+				"SELECT checksum FROM migration_history WHERE name = $1",
+				[file],
+			);
+			if (rows[0]) {
+				if (rows[0].checksum !== checksum)
+					throw new Error(`Checksum mismatch for applied migration ${file}`);
+				continue;
+			}
+			console.log(`[migrate] Running ${file}...`);
+			await client.query("BEGIN");
+			try {
+				await client.query(migration);
+				await client.query(
+					"INSERT INTO migration_history (name, checksum) VALUES ($1, $2)",
+					[file, checksum],
+				);
+				await client.query("COMMIT");
+			} catch (error) {
+				await client.query("ROLLBACK");
+				throw error;
+			}
+		}
+		console.log("[migrate] Done.");
+	} finally {
+		try {
+			await client.query("SELECT pg_advisory_unlock($1)", [1_832_746_521]);
+		} finally {
+			client.release();
+			await pool.end();
+		}
 	}
-
-	try {
-		console.log("[migrate] Running patch.sql...");
-		const patchSql = fs.readFileSync(path.join(__dirname, "patch.sql"), "utf8");
-		await pool.query(patchSql);
-	} catch (e) {
-		console.error("[migrate] WARNING: Failed to run patch.sql:", e.message);
-	}
-
-	try {
-		console.log("[migrate] Running seed-admin.sql...");
-		await pool.query(seed);
-	} catch (e) {
-		console.error(
-			"[migrate] WARNING: Failed to run seed-admin.sql:",
-			e.message,
-		);
-	}
-
-	console.log("[migrate] Done.");
-
-	await pool.end();
 }
 
-run().catch((e) => {
-	console.error("[migrate] ERROR in run():", e.message);
-	console.error("[migrate] The server will still attempt to start...");
+run().catch((error) => {
+	console.error("[migrate] ERROR in run():", error.message);
+	process.exitCode = 1;
 });

@@ -7,10 +7,12 @@
 		},
 		"build": {
 			"dependsOn": ["^build"],
+			"env": ["NODE_ENV", "JWT_SECRET", "ADMS_SECRET_KEY", "MAX_API_BODY_BYTES", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "HOLIDAY_API_KEY", "WEB_PUBLIC_URL", "COMMAND_ACK_TIMEOUT_MS", "WORKER_CONCURRENCY"],
 			"outputs": [".next/**", "dist/**"]
 		},
 		"lint": {
-			"dependsOn": ["^lint"]
+			"dependsOn": ["^lint"],
+			"env": ["NODE_ENV", "JWT_SECRET", "ADMS_SECRET_KEY", "MAX_API_BODY_BYTES", "REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "HOLIDAY_API_KEY", "WEB_PUBLIC_URL", "COMMAND_ACK_TIMEOUT_MS", "WORKER_CONCURRENCY"]
 		},
 		"db:generate": {
 			"cache": false

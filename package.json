@@ -5,15 +5,19 @@
 		"dev": "turbo run dev",
 		"build": "turbo run build",
 		"lint": "turbo run lint",
+		"test": "node --test packages/database/migrate.spec.js && pnpm --filter web test && pnpm --filter worker test",
+		"check-types": "pnpm --filter @adms/database build && pnpm --filter @adms/shared-types build && pnpm --filter web check-types && pnpm --filter worker check-types",
+		"verify": "pnpm run test && pnpm run lint && pnpm run check-types && pnpm run build && git diff --check",
 		"db:generate": "turbo run db:generate",
 		"db:migrate": "turbo run db:migrate",
 		"prepare": "husky"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.4.15",
+		"@biomejs/biome": "^2.5.6",
 		"husky": "^9.1.7",
-		"lint-staged": "^17.0.7",
-		"turbo": "^2.9.12"
+		"lint-staged": "^17.3.0",
+		"turbo": "^2.10.8",
+		"typescript": "6.0.3"
 	},
 	"lint-staged": {
 		"*.{js,ts,tsx,jsx}": [
@@ -24,7 +28,16 @@
 	"pnpm": {
 		"overrides": {
 			"glob": "^11.0.0",
-			"inflight": "npm:lru-cache@^11.0.0"
+			"inflight": "npm:lru-cache@^11.0.0",
+			"brace-expansion@^2": "2.1.4",
+			"brace-expansion@^5": "5.0.9",
+			"dompurify": "3.4.12",
+			"postcss": "8.5.25",
+			"sharp": "0.35.3",
+			"socket.io-parser": "4.2.7",
+			"tmp": "0.2.7",
+			"uuid": "11.1.1",
+			"ws": "8.21.1"
 		}
 	}
 }

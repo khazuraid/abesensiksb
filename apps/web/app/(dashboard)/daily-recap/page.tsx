@@ -2,15 +2,13 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import {
-	ChevronLeft,
-	ChevronRight,
-	Download,
-	FileText,
-	Search,
-} from "lucide-react";
-import { useState } from "react";
+import { ChevronRight, Download, FileText, Search } from "lucide-react";
+import { useCallback, useRef, useState } from "react";
+import PaginationControls, {
+	type PageMeta,
+} from "@/components/pagination-controls";
 import api from "@/lib/api";
+import { useModalAccessibility } from "@/lib/use-modal-accessibility";
 
 interface DayData {
 	date: string;
@@ -42,6 +40,7 @@ export default function DailyRecapPage() {
 	const [month, setMonth] = useState(new Date().getMonth() + 1);
 	const [year, setYear] = useState(new Date().getFullYear());
 	const [search, setSearch] = useState("");
+	const [page, setPage] = useState(1);
 	const [selectedEmployee, setSelectedEmployee] =
 		useState<EmployeeRecap | null>(null);
 	const [editingDay, setEditingDay] = useState<{
@@ -49,13 +48,25 @@ export default function DailyRecapPage() {
 		field: "in" | "out";
 		value: string;
 	} | null>(null);
+	const editDialogRef = useRef<HTMLDivElement>(null);
+	const closeEdit = useCallback(() => setEditingDay(null), []);
+	useModalAccessibility(editDialogRef, closeEdit, Boolean(editingDay));
 	const queryClient = useQueryClient();
 
-	const { data, isLoading } = useQuery<EmployeeRecap[]>({
-		queryKey: ["daily-recap", month, year],
+	const {
+		data: response,
+		isLoading,
+		isFetching,
+	} = useQuery<{ data: EmployeeRecap[]; meta: PageMeta }>({
+		queryKey: ["daily-recap", month, year, page, search],
 		queryFn: async () =>
-			(await api.get(`/reports/daily-recap?month=${month}&year=${year}`)).data,
+			(
+				await api.get(
+					`/reports/daily-recap?month=${month}&year=${year}&page=${page}&limit=10&search=${encodeURIComponent(search)}`,
+				)
+			).data,
 	});
+	const data = response?.data;
 
 	const { data: availablePeriods } = useQuery<
 		{ month: number; year: number }[]
@@ -89,7 +100,16 @@ export default function DailyRecapPage() {
 			id: number;
 			timestamp: string;
 		}) => {
-			await api.patch(`/attendance-logs/${id}`, { timestamp });
+			const reason = window.prompt(
+				"Alasan koreksi absensi (minimal 5 karakter)",
+			);
+			if (!reason || reason.trim().length < 5)
+				throw new Error("Alasan koreksi wajib diisi");
+			await api.post("/attendance-corrections", {
+				attendanceLogId: id,
+				timestamp,
+				reason,
+			});
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
@@ -130,11 +150,7 @@ export default function DailyRecapPage() {
 		}
 	};
 
-	const filtered = data?.filter(
-		(i) =>
-			i.name.toLowerCase().includes(search.toLowerCase()) ||
-			i.employeeCode.toLowerCase().includes(search.toLowerCase()),
-	);
+	const filtered = data;
 
 	const statusColor = (s: string, isHoliday?: boolean, isWorkDay?: boolean) => {
 		if (isHoliday) return "bg-purple-100 text-purple-700";
@@ -150,6 +166,8 @@ export default function DailyRecapPage() {
 				return "bg-[#ffdad6] text-[#ba1a1a]";
 			case "LEAVE":
 				return "bg-cyan-100 text-cyan-700";
+			case "IN_PROGRESS":
+				return "bg-blue-100 text-blue-700";
 			default:
 				return "bg-transparent text-gray-400";
 		}
@@ -169,6 +187,8 @@ export default function DailyRecapPage() {
 				return "A";
 			case "LEAVE":
 				return "C";
+			case "IN_PROGRESS":
+				return "…";
 			default:
 				return "-";
 		}
@@ -239,7 +259,7 @@ export default function DailyRecapPage() {
 			emp.totalAbsent.toString(),
 		]);
 
-		// @ts-expect-error
+		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
 		doc.autoTable({
 			head,
 			body,
@@ -276,8 +296,8 @@ export default function DailyRecapPage() {
 						PC=Pulang Cepat, A=Alpa, C=Cuti/Izin, L=Libur, O=Off
 					</p>
 				</div>
-				<div className="flex flex-wrap items-center gap-3">
-					<div className="relative">
+				<div className="grid w-full grid-cols-1 gap-2 min-[390px]:grid-cols-[1fr_auto] md:flex md:w-auto md:flex-wrap md:items-center md:gap-3">
+					<div className="relative min-w-0">
 						<select
 							className="appearance-none bg-white border border-[#bdc8ce] rounded-lg pl-4 pr-10 py-2 cursor-pointer hover:bg-[#f9f9ff] transition-colors shadow-sm font-semibold text-[13px] text-[#111c2d] outline-none focus:ring-2 focus:ring-[#00647c]/20 focus:border-[#00647c]"
 							value={`${month}-${year}`}
@@ -311,7 +331,7 @@ export default function DailyRecapPage() {
 							className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6e797e] pointer-events-none rotate-90"
 						/>
 					</div>
-					<div className="flex gap-2">
+					<div className="grid grid-cols-2 gap-2">
 						<button
 							type="button"
 							onClick={handleExport}
@@ -342,7 +362,10 @@ export default function DailyRecapPage() {
 							placeholder="Cari pegawai..."
 							type="text"
 							value={search}
-							onChange={(e) => setSearch(e.target.value)}
+							onChange={(e) => {
+								setSearch(e.target.value);
+								setPage(1);
+							}}
 						/>
 					</div>
 					<div className="hidden lg:flex items-center gap-2">
@@ -361,6 +384,9 @@ export default function DailyRecapPage() {
 					</div>
 				</div>
 
+				<div className="mobile-scroll-hint">
+					Geser kalender secara horizontal untuk melihat seluruh tanggal
+				</div>
 				<div className="overflow-x-auto flex-1 relative custom-scrollbar">
 					<table
 						className="w-full text-left border-collapse"
@@ -504,14 +530,30 @@ export default function DailyRecapPage() {
 						</tbody>
 					</table>
 				</div>
+				<PaginationControls
+					meta={response?.meta}
+					onPageChange={setPage}
+					disabled={isFetching}
+				/>
 			</div>
 
 			{/* Modal Edit */}
 			{editingDay && selectedEmployee && (
-				<div className="fixed inset-0 bg-[#111c2d]/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-					<div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden flex flex-col">
+				<div
+					ref={editDialogRef}
+					className="fixed inset-0 bg-[#111c2d]/80 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="edit-attendance-title"
+				>
+					<div className="bg-white rounded-t-xl sm:rounded-md shadow-lg w-full max-w-sm overflow-hidden flex flex-col">
 						<div className="px-6 py-4 border-b border-black/5 flex justify-between items-center bg-[#f9f9ff]">
-							<h3 className="font-semibold text-[#111c2d]">Edit Absensi</h3>
+							<h3
+								id="edit-attendance-title"
+								className="font-semibold text-[#111c2d]"
+							>
+								Edit Absensi
+							</h3>
 							<button
 								type="button"
 								onClick={() => setEditingDay(null)}

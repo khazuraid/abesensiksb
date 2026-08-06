@@ -1,66 +1,47 @@
-# File ini hanya untuk self-hosted (docker compose up).
-# Saat deploy via Coolify, file ini TIDAK dipakai — Coolify pakai apps/api/Dockerfile
-# dan managed Postgres/Redis resource. Lihat DEPLOYMENT.md.
-
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${DB_USER:-adms}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-adms_db}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    # PENTING: jangan expose port 5432 ke host kalau VPS punya IP publik.
-    # Postgres hanya boleh diakses dari Docker network internal.
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-adms}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    # Sama: jangan expose port 6379 ke publik.
-
-  api:
+  absensi:
+    container_name: adms
     build:
       context: .
-      target: api
+      target: all-in-one
+      args:
+        NEXT_PUBLIC_WORKER_URL: ${WORKER_PUBLIC_URL:-}
+    image: absensi:latest
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
     environment:
-      DATABASE_URL: postgres://${DB_USER:-adms}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-adms_db}
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: ${WEB_URL:-http://localhost:3000}
+      DB_USER: ${DB_USER:-adms}
+      DB_PASSWORD: ${DB_PASSWORD:-adms123}
+      DB_NAME: ${DB_NAME:-adms_db}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi}
+      ADMS_SECRET_KEY: ${ADMS_SECRET_KEY:?ADMS_SECRET_KEY wajib diisi}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:8080}
+      CORS_ORIGIN: ${WEB_PUBLIC_URL:-http://localhost:8080}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL wajib diisi}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD wajib diisi}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrator}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
-      ADMS_SECRET_KEY: ${ADMS_SECRET_KEY:-}
-      PORT: 8888
-    ports:
-      - "8888:8888"
-
-  web:
-    build:
-      context: .
-      target: web
-    restart: unless-stopped
-    depends_on:
-      - api
-    environment:
-      NEXT_PUBLIC_API_URL: ${API_URL:-http://localhost:8888/api}
+      NODE_ENV: production
+      TZ: Asia/Jakarta
     ports:
       - "8080:8080"
+      - "8888:8888"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - redis_data:/var/lib/redis
+      - uploads:/app/apps/web/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${DB_USER:-adms} -d $${DB_NAME:-adms_db} && redis-cli -h 127.0.0.1 ping | grep -q PONG && wget -q -O - http://127.0.0.1:8080/api/health-db >/dev/null && wget -q -O - http://127.0.0.1:8888/health/ready >/dev/null"]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 45s
 
 volumes:
   postgres_data:
+    name: adms_postgres_data
+  redis_data:
+    name: adms_redis_data
+  uploads:
+    name: adms_uploads

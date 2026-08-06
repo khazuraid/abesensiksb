@@ -1,5 +1,4 @@
-/* eslint-env node */
-// eslint-disable-next-line no-undef
+/* global module */
 module.exports = {
 	plugins: {
 		"@tailwindcss/postcss": {},

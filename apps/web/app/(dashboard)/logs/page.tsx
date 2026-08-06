@@ -8,17 +8,17 @@ import {
 	CheckCircle2,
 	Clock,
 	Download,
-	FileText,
 	Filter,
 	Monitor,
 	Search,
-	TrendingUp,
 	User,
 	XCircle,
 } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import PaginationControls from "@/components/pagination-controls";
 import api from "@/lib/api";
+import { useModalAccessibility } from "@/lib/use-modal-accessibility";
 
 export default function AttendanceLogsPage() {
 	const [search, setSearch] = useState("");
@@ -30,6 +30,9 @@ export default function AttendanceLogsPage() {
 	const [filterStartDate, setFilterStartDate] = useState(getTodayStr());
 	const [filterEndDate, setFilterEndDate] = useState(getTodayStr());
 	const [photoModal, setPhotoModal] = useState<string | null>(null);
+	const photoDialogRef = useRef<HTMLDivElement>(null);
+	const closePhoto = useCallback(() => setPhotoModal(null), []);
+	useModalAccessibility(photoDialogRef, closePhoto, Boolean(photoModal));
 	const [page, setPage] = useState(1);
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -39,9 +42,7 @@ export default function AttendanceLogsPage() {
 		return () => clearTimeout(timer);
 	}, [search]);
 
-	const apiBase =
-		process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
-		"http://localhost:8888";
+	const apiBase = "";
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: [
@@ -65,13 +66,13 @@ export default function AttendanceLogsPage() {
 				params.set("search", debouncedSearch);
 			}
 			params.set("page", String(page));
-			params.set("limit", "20");
+			params.set("limit", "10");
 			return (await api.get(`/attendance-logs?${params}`)).data;
 		},
 		refetchInterval: 10000,
 	});
 
-	const logs: any[] = response?.data || [];
+	const logs: AttendanceLog[] = response?.data || [];
 	const meta = response?.meta;
 
 	const formatDate = (date: string | Date) =>
@@ -89,7 +90,7 @@ export default function AttendanceLogsPage() {
 			params.set("to", `${filterEndDate}T23:59:59`);
 		}
 		try {
-			const res = await api.get(`/reports/export?${params}`, {
+			const res = await api.get(`/attendance-logs/export?${params}`, {
 				responseType: "blob",
 			});
 			const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -119,19 +120,13 @@ export default function AttendanceLogsPage() {
 						Monitoring log kehadiran real-time dari seluruh perangkat.
 					</p>
 				</div>
-				<div className="flex flex-wrap gap-3">
+				<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
 					<button
 						type="button"
 						onClick={handleExport}
 						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
 					>
 						<Download size={18} /> Export Excel
-					</button>
-					<button
-						type="button"
-						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
-					>
-						<FileText size={18} /> Export PDF
 					</button>
 				</div>
 			</div>
@@ -149,9 +144,6 @@ export default function AttendanceLogsPage() {
 						<h3 className="font-display text-[32px] font-bold text-[#111c2d] leading-none">
 							{meta?.total || 0}
 						</h3>
-						<span className="text-[12px] font-semibold text-[#006c49] flex items-center mb-1 bg-[#006c49]/10 px-1.5 py-0.5 rounded">
-							<TrendingUp size={14} className="mr-1" /> 12%
-						</span>
 					</div>
 					<p className="font-mono text-[11px] text-[#6e797e] mt-2">Hari ini</p>
 				</div>
@@ -191,8 +183,8 @@ export default function AttendanceLogsPage() {
 						>
 							Rentang Tanggal
 						</label>
-						<div className="flex items-center gap-2">
-							<div className="relative">
+						<div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-[1fr_auto_1fr] min-[390px]:items-center sm:flex">
+							<div className="relative min-w-0">
 								<CalendarDays
 									className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
 									size={18}
@@ -205,8 +197,10 @@ export default function AttendanceLogsPage() {
 									className="w-full sm:w-36 bg-white border border-[#bdc8ce] rounded-lg py-2 pl-10 pr-2 text-[13px] font-sans text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c]/50 transition-all shadow-sm"
 								/>
 							</div>
-							<span className="text-[#6e797e] text-[13px] font-medium">-</span>
-							<div className="relative">
+							<span className="hidden text-[#6e797e] text-[13px] font-medium min-[390px]:block">
+								-
+							</span>
+							<div className="relative min-w-0">
 								<CalendarDays
 									className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
 									size={18}
@@ -251,6 +245,9 @@ export default function AttendanceLogsPage() {
 
 			{/* Main Data Table */}
 			<div className="bg-white rounded-xl shadow-sm border border-black/5 overflow-hidden">
+				<div className="mobile-scroll-hint">
+					Geser tabel untuk melihat detail absensi
+				</div>
 				<div className="overflow-x-auto">
 					<table className="w-full text-left border-collapse min-w-[800px]">
 						<thead>
@@ -375,69 +372,27 @@ export default function AttendanceLogsPage() {
 					</table>
 				</div>
 
-				{/* Pagination Controls */}
-				{meta && meta.totalPages > 1 && (
-					<div className="p-4 border-t border-black/5 flex items-center justify-between bg-[#f9f9ff]">
-						<div className="text-[12px] text-[#6e797e] font-medium">
-							Menampilkan Halaman {meta.page} dari {meta.totalPages} (Total{" "}
-							{meta.total} data)
-						</div>
-						<div className="flex items-center gap-2">
-							<button
-								type="button"
-								onClick={() => setPage((p) => Math.max(1, p - 1))}
-								disabled={page === 1}
-								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
-							>
-								Sebelumnya
-							</button>
-							<div className="flex gap-1">
-								{Array.from(
-									{ length: Math.min(5, meta.totalPages) },
-									(_, i) => {
-										let pageNum = i + 1;
-										if (meta.totalPages > 5) {
-											if (page > 3) {
-												pageNum = page - 2 + i;
-											}
-											if (pageNum > meta.totalPages) return null;
-										}
-										return (
-											<button
-												key={pageNum}
-												type="button"
-												onClick={() => setPage(pageNum)}
-												className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-colors ${page === pageNum ? "bg-[#00647c] text-white" : "bg-white border border-black/10 text-[#3e484d] hover:bg-[#dee8ff]/50"}`}
-											>
-												{pageNum}
-											</button>
-										);
-									},
-								)}
-							</div>
-							<button
-								type="button"
-								onClick={() => setPage((p) => Math.min(meta.totalPages, p + 1))}
-								disabled={page === meta.totalPages}
-								className="px-3 py-1.5 bg-white border border-black/10 rounded-lg text-[12px] font-semibold text-[#111c2d] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#dee8ff]/50 transition-colors"
-							>
-								Selanjutnya
-							</button>
-						</div>
-					</div>
-				)}
+				<PaginationControls
+					meta={meta}
+					onPageChange={setPage}
+					disabled={isLoading}
+				/>
 			</div>
 
 			{photoModal && (
 				<div
-					className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#111c2d]/80 backdrop-blur-sm"
+					ref={photoDialogRef}
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/80 p-0 sm:items-center sm:p-4"
 					onClick={() => setPhotoModal(null)}
+					role="dialog"
+					aria-modal="true"
+					aria-label="Foto absensi"
 				>
 					<div
-						className="bg-white rounded-xl p-2 max-w-lg shadow-2xl relative border border-black/10"
+						className="w-full max-w-lg rounded-t-xl bg-white p-2 shadow-2xl relative border border-black/10 sm:rounded-md"
 						onClick={(e) => e.stopPropagation()}
 					>
-						<div className="relative w-[300px] sm:w-[400px] h-[300px] sm:h-[400px]">
+						<div className="relative aspect-square w-full sm:w-[400px]">
 							<Image
 								src={photoModal}
 								alt="Foto Absensi"
