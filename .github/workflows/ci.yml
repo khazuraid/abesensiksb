@@ -52,4 +52,4 @@ jobs:
         run: |
           test "$(psql "$DATABASE_URL" -Atc "select count(*) from migration_history")" = "6"
           test "$(psql "$DATABASE_URL" -Atc "select to_regclass('public.worker_cron_runs') is not null")" = "t"
-          test "$(redis-cli -h "$REDIS_HOST" ping)" = "PONG"
+          node -e 'const net=require("node:net"); const socket=net.createConnection({host:process.env.REDIS_HOST,port:Number(process.env.REDIS_PORT)},()=>socket.write("*1\r\n$4\r\nPING\r\n")); socket.setTimeout(2000); socket.on("data",data=>{if(data.toString().trim()!=="+PONG") process.exit(1); socket.end()}); socket.on("timeout",()=>process.exit(1)); socket.on("error",()=>process.exit(1))'
