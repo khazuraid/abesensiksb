@@ -2,7 +2,14 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { ChevronRight, Download, FileText, Search } from "lucide-react";
+import {
+	ChevronRight,
+	FileSpreadsheet,
+	FileText,
+	Search,
+	Users,
+	X,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import PaginationControls, {
 	type PageMeta,
@@ -275,51 +282,59 @@ export default function DailyRecapPage() {
 
 		doc.save(`Rekap-Harian-${months[month - 1]}-${year}.pdf`);
 	};
-	// Determine number of days in the selected month
 	const daysInMonth = new Date(year, month, 0).getDate();
 	const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+	const pageSummary = (data ?? []).reduce(
+		(summary, employee) => ({
+			present: summary.present + employee.totalPresent,
+			late: summary.late + employee.totalLate,
+			absent: summary.absent + employee.totalAbsent,
+		}),
+		{ present: 0, late: 0, absent: 0 },
+	);
 
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 15 }}
 			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="space-y-6 max-w-full mx-auto min-h-[calc(100vh-6rem)] flex flex-col"
+			transition={{ duration: 0.35 }}
+			className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-full flex-col gap-5 md:gap-6"
 		>
-			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4 shrink-0">
-				<div>
-					<h1 className="font-display text-3xl font-semibold text-[#111c2d] mb-1">
-						Rekap Harian
+			<header className="flex shrink-0 flex-col gap-5 border-b border-[#d5ded9] pb-5 md:flex-row md:items-end md:justify-between md:pb-6">
+				<div className="max-w-2xl">
+					<div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#087066]">
+						<span className="h-px w-6 bg-[#087066]" />
+						Matriks kehadiran
+					</div>
+					<h1 className="text-[28px] leading-tight md:text-[34px]">
+						Rekap harian pegawai
 					</h1>
-					<p className="font-sans text-sm text-[#6e797e]">
-						Detail kehadiran per hari berdasarkan shift. H=Hadir, T=Telat,
-						PC=Pulang Cepat, A=Alpa, C=Cuti/Izin, L=Libur, O=Off
+					<p className="mt-2 max-w-xl text-sm leading-6">
+						Tinjau pola kehadiran per tanggal, temukan pengecualian, lalu
+						koreksi catatan langsung dari kalender.
 					</p>
 				</div>
-				<div className="grid w-full grid-cols-1 gap-2 min-[390px]:grid-cols-[1fr_auto] md:flex md:w-auto md:flex-wrap md:items-center md:gap-3">
-					<div className="relative min-w-0">
+				<div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] md:w-auto">
+					<div className="relative min-w-0 md:min-w-48">
 						<select
-							className="appearance-none bg-white border border-[#bdc8ce] rounded-lg pl-4 pr-10 py-2 cursor-pointer hover:bg-[#f9f9ff] transition-colors shadow-sm font-semibold text-[13px] text-[#111c2d] outline-none focus:ring-2 focus:ring-[#00647c]/20 focus:border-[#00647c]"
+							aria-label="Periode rekap"
+							className="w-full appearance-none bg-white py-2 pl-3 pr-10 text-[13px] font-semibold"
 							value={`${month}-${year}`}
 							onChange={(e) => {
 								const [m, y] = e.target.value.split("-");
 								setMonth(Number(m));
 								setYear(Number(y));
+								setPage(1);
 							}}
 						>
-							{availablePeriods?.map((p) => {
-								const mName = new Date(0, p.month - 1).toLocaleString("id-ID", {
-									month: "long",
-								});
-								return (
-									<option
-										key={`${p.month}-${p.year}`}
-										value={`${p.month}-${p.year}`}
-									>
-										{mName} {p.year}
-									</option>
-								);
-							})}
+							{availablePeriods?.map((period) => (
+								<option
+									key={`${period.month}-${period.year}`}
+									value={`${period.month}-${period.year}`}
+								>
+									{months[period.month - 1]} {period.year}
+								</option>
+							))}
 							{!availablePeriods && (
 								<option value={`${month}-${year}`}>
 									{months[month - 1]} {year}
@@ -328,39 +343,76 @@ export default function DailyRecapPage() {
 						</select>
 						<ChevronRight
 							size={16}
-							className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6e797e] pointer-events-none rotate-90"
+							className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-[#53635d]"
 						/>
 					</div>
-					<div className="grid grid-cols-2 gap-2">
-						<button
-							type="button"
-							onClick={handleExport}
-							className="bg-[#00647c] text-white font-semibold text-[13px] px-4 py-2.5 rounded-lg hover:bg-[#007f9d] shadow-sm flex items-center gap-2 transition-colors active:scale-95"
-						>
-							<Download size={16} /> Excel
-						</button>
-						<button
-							type="button"
-							onClick={handleExportPdf}
-							className="bg-[#ba1a1a] text-white font-semibold text-[13px] px-4 py-2.5 rounded-lg hover:bg-[#a01313] shadow-sm flex items-center gap-2 transition-colors active:scale-95"
-						>
-							<FileText size={16} /> PDF
-						</button>
+					<button
+						type="button"
+						onClick={handleExport}
+						className="adms-button-outline"
+					>
+						<FileSpreadsheet size={16} /> Excel
+					</button>
+					<button
+						type="button"
+						onClick={handleExportPdf}
+						className="adms-button"
+					>
+						<FileText size={16} /> PDF
+					</button>
+				</div>
+			</header>
+
+			<section
+				aria-label="Ringkasan rekap"
+				className="grid overflow-hidden border border-[#d5ded9] bg-white sm:grid-cols-4"
+			>
+				<div className="flex items-center gap-3 p-4 sm:border-r sm:border-[#d5ded9]">
+					<Users size={18} className="text-[#087066]" />
+					<div>
+						<p className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em]">
+							Pegawai tampil
+						</p>
+						<strong className="block text-xl tabular-nums text-[#14211d]">
+							{data?.length ?? 0}
+						</strong>
 					</div>
 				</div>
-			</div>
+				<div className="flex items-center justify-between border-t border-[#d5ded9] p-4 sm:border-r sm:border-t-0">
+					<span className="text-xs font-semibold text-[#53635d]">Hadir</span>
+					<strong className="font-mono text-xl text-[#23734b]">
+						{pageSummary.present}
+					</strong>
+				</div>
+				<div className="flex items-center justify-between border-t border-[#d5ded9] p-4 sm:border-r sm:border-t-0">
+					<span className="text-xs font-semibold text-[#53635d]">
+						Terlambat
+					</span>
+					<strong className="font-mono text-xl text-[#946617]">
+						{pageSummary.late}
+					</strong>
+				</div>
+				<div className="flex items-center justify-between border-t border-[#d5ded9] p-4 sm:border-t-0">
+					<span className="text-xs font-semibold text-[#53635d]">
+						Tidak hadir
+					</span>
+					<strong className="font-mono text-xl text-[#a9433d]">
+						{pageSummary.absent}
+					</strong>
+				</div>
+			</section>
 
-			<div className="bg-white border border-black/5 rounded-xl shadow-sm flex-1 flex flex-col overflow-hidden">
-				<div className="p-4 border-b border-black/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#f9f9ff]/50">
-					<div className="relative w-full sm:w-80">
+			<section className="flex flex-1 flex-col overflow-hidden border border-[#d5ded9] bg-white">
+				<header className="flex flex-col gap-4 border-b border-[#d5ded9] bg-[#eaf0ed] p-4 lg:flex-row lg:items-center lg:justify-between">
+					<div className="relative w-full lg:w-80">
 						<Search
-							size={18}
-							className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
+							size={16}
+							className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#53635d]"
 						/>
 						<input
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg pl-10 pr-4 py-2 text-[13px] font-sans focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-all"
-							placeholder="Cari pegawai..."
-							type="text"
+							className="w-full py-2 pl-9 pr-3 text-sm"
+							placeholder="Cari nama atau kode pegawai..."
+							type="search"
 							value={search}
 							onChange={(e) => {
 								setSearch(e.target.value);
@@ -368,24 +420,32 @@ export default function DailyRecapPage() {
 							}}
 						/>
 					</div>
-					<div className="hidden lg:flex items-center gap-2">
-						<span className="px-2 py-1 rounded text-[10px] font-semibold bg-[#6cf8bb]/30 text-[#006c49]">
-							H
+					<div className="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-[9px] font-semibold uppercase tracking-[0.08em] text-[#53635d]">
+						<span className="flex items-center gap-1.5">
+							<i className="h-2 w-2 bg-[#23734b]" />
+							Hadir
 						</span>
-						<span className="px-2 py-1 rounded text-[10px] font-semibold bg-[#ffeebb] text-[#894e00]">
-							T
+						<span className="flex items-center gap-1.5">
+							<i className="h-2 w-2 bg-[#946617]" />
+							Telat
 						</span>
-						<span className="px-2 py-1 rounded text-[10px] font-semibold bg-orange-100 text-orange-700">
-							PC
+						<span className="flex items-center gap-1.5">
+							<i className="h-2 w-2 bg-[#b5662f]" />
+							Pulang cepat
 						</span>
-						<span className="px-2 py-1 rounded text-[10px] font-semibold bg-[#ffdad6] text-[#ba1a1a]">
-							A
+						<span className="flex items-center gap-1.5">
+							<i className="h-2 w-2 bg-[#a9433d]" />
+							Alpa
+						</span>
+						<span className="flex items-center gap-1.5">
+							<i className="h-2 w-2 bg-[#087066]" />
+							Cuti / izin
 						</span>
 					</div>
-				</div>
+				</header>
 
 				<div className="mobile-scroll-hint">
-					Geser kalender secara horizontal untuk melihat seluruh tanggal
+					Geser matriks untuk melihat seluruh tanggal dan ringkasan
 				</div>
 				<div className="overflow-x-auto flex-1 relative custom-scrollbar">
 					<table
@@ -535,33 +595,32 @@ export default function DailyRecapPage() {
 					onPageChange={setPage}
 					disabled={isFetching}
 				/>
-			</div>
+			</section>
 
 			{/* Modal Edit */}
 			{editingDay && selectedEmployee && (
 				<div
 					ref={editDialogRef}
-					className="fixed inset-0 bg-[#111c2d]/80 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
+					className="fixed inset-0 z-50 flex items-end justify-center bg-[#14211d]/60 p-0 sm:items-center sm:p-4"
 					role="dialog"
 					aria-modal="true"
 					aria-labelledby="edit-attendance-title"
 				>
-					<div className="bg-white rounded-t-xl sm:rounded-md shadow-lg w-full max-w-sm overflow-hidden flex flex-col">
-						<div className="px-6 py-4 border-b border-black/5 flex justify-between items-center bg-[#f9f9ff]">
+					<div className="flex w-full max-w-sm flex-col overflow-hidden border border-[#d5ded9] bg-white shadow-lg">
+						<div className="flex items-center justify-between border-b border-[#d5ded9] bg-[#14211d] px-5 py-4 text-white">
 							<h3
 								id="edit-attendance-title"
-								className="font-semibold text-[#111c2d]"
+								className="font-semibold !text-white"
 							>
-								Edit Absensi
+								Koreksi catatan
 							</h3>
 							<button
 								type="button"
 								onClick={() => setEditingDay(null)}
-								className="text-[#6e797e] hover:text-[#111c2d]"
+								className="flex h-9 w-9 items-center justify-center border border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
+								aria-label="Tutup dialog koreksi"
 							>
-								<span className="material-symbols-outlined text-[20px]">
-									close
-								</span>
+								<X size={17} />
 							</button>
 						</div>
 						<div className="p-6">
@@ -644,7 +703,7 @@ export default function DailyRecapPage() {
 									updateMutation.isPending ||
 									createMutation.isPending
 								}
-								className="w-full bg-[#00647c] text-white font-semibold text-[13px] py-2.5 rounded-lg hover:bg-[#007f9d] transition-colors disabled:opacity-50"
+								className="adms-button w-full"
 							>
 								{updateMutation.isPending || createMutation.isPending
 									? "Menyimpan..."

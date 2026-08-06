@@ -8,7 +8,16 @@ import type {
 } from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { Edit2, Search, Trash2, UserPlus, X } from "lucide-react";
+import {
+	BadgeCheck,
+	BriefcaseBusiness,
+	Edit2,
+	Search,
+	Trash2,
+	UserPlus,
+	Users,
+	X,
+} from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import EmployeeForm from "@/components/employee-form";
 import PaginationControls, {
@@ -129,40 +138,93 @@ export default function EmployeesPage() {
 	};
 
 	const filteredEmployees = employees;
+	const activeEmployees = employees.filter(
+		(employee) => employee.isActive,
+	).length;
+	const departments = new Set(
+		employees.map((employee) => employee.department).filter(Boolean),
+	).size;
 
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 15 }}
 			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="space-y-5 max-w-[1440px] mx-auto flex min-h-0 flex-col md:h-[calc(100vh-6rem)] md:space-y-6"
+			transition={{ duration: 0.35 }}
+			className="mx-auto flex min-h-0 max-w-[1440px] flex-col gap-5 md:min-h-[calc(100vh-6rem)] md:gap-6"
 		>
-			{/* Page Header & Actions */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
-				<div>
-					<h2 className="font-display text-3xl font-semibold text-[#111c2d]">
-						Manajemen Pegawai
+			<header className="flex shrink-0 flex-col gap-5 border-b border-[#d5ded9] pb-5 sm:flex-row sm:items-end sm:justify-between md:pb-6">
+				<div className="max-w-2xl">
+					<div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#087066]">
+						<span className="h-px w-6 bg-[#087066]" />
+						Direktori SDM
+					</div>
+					<h2 className="text-[28px] leading-tight md:text-[34px]">
+						Manajemen pegawai
 					</h2>
-					<p className="font-sans text-sm text-[#6e797e] mt-1">
-						Registrasi pusat seluruh pengguna ADMS.
+					<p className="mt-2 max-w-xl text-sm leading-6">
+						Kelola identitas, unit kerja, jabatan, dan penempatan shift dalam
+						satu direktori.
 					</p>
 				</div>
-				<div className="w-full sm:w-auto">
-					<button
-						type="button"
-						onClick={() => setIsFormOpen(true)}
-						className="flex items-center gap-2 px-4 py-2 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
-					>
-						<UserPlus size={18} /> Tambah Pegawai
-					</button>
+				<button
+					type="button"
+					onClick={() => setIsFormOpen(true)}
+					className="adms-button w-full sm:w-auto"
+				>
+					<UserPlus size={17} /> Tambah pegawai
+				</button>
+			</header>
+
+			<section
+				aria-label="Ringkasan pegawai"
+				className="grid overflow-hidden border border-[#d5ded9] bg-white sm:grid-cols-3"
+			>
+				<div className="flex items-center gap-4 p-4 sm:border-r sm:border-[#d5ded9] md:p-5">
+					<div className="flex h-10 w-10 items-center justify-center bg-[#dceae5] text-[#087066]">
+						<Users size={19} />
+					</div>
+					<div>
+						<p className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em]">
+							Total pegawai
+						</p>
+						<strong className="block text-2xl tabular-nums text-[#14211d]">
+							{response?.meta.total ?? 0}
+						</strong>
+					</div>
 				</div>
-			</div>
+				<div className="flex items-center gap-4 border-t border-[#d5ded9] p-4 sm:border-r sm:border-t-0 md:p-5">
+					<div className="flex h-10 w-10 items-center justify-center bg-[#e8f3ec] text-[#23734b]">
+						<BadgeCheck size={19} />
+					</div>
+					<div>
+						<p className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em]">
+							Aktif di halaman
+						</p>
+						<strong className="block text-2xl tabular-nums text-[#14211d]">
+							{activeEmployees}
+						</strong>
+					</div>
+				</div>
+				<div className="flex items-center gap-4 border-t border-[#d5ded9] p-4 sm:border-t-0 md:p-5">
+					<div className="flex h-10 w-10 items-center justify-center bg-[#eaf0ed] text-[#53635d]">
+						<BriefcaseBusiness size={19} />
+					</div>
+					<div>
+						<p className="font-mono text-[9px] font-semibold uppercase tracking-[0.12em]">
+							Unit di halaman
+						</p>
+						<strong className="block text-2xl tabular-nums text-[#14211d]">
+							{departments}
+						</strong>
+					</div>
+				</div>
+			</section>
 
 			{/* Bulk Actions Bar */}
 			{selectedIds.length > 0 && (
-				<div className="bg-[#00647c] text-white px-4 py-3 rounded-xl flex flex-col items-stretch gap-3 shadow-sm animate-in fade-in slide-in-from-top-2 sm:flex-row sm:items-center sm:justify-between">
+				<div className="flex flex-col items-stretch gap-3 border border-[#087066] bg-[#14211d] px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
 					<div className="flex items-center gap-2 text-[14px] font-semibold">
-						<span className="bg-white/20 px-2 py-0.5 rounded-md">
+						<span className="border border-white/20 px-2 py-0.5 font-mono">
 							{selectedIds.length}
 						</span>
 						Pegawai Terpilih
@@ -171,14 +233,14 @@ export default function EmployeesPage() {
 						<button
 							type="button"
 							onClick={() => setIsBulkShiftOpen(true)}
-							className="px-3 py-1.5 bg-white text-[#00647c] rounded-lg text-[13px] font-bold hover:bg-[#f9f9ff] active:scale-95 transition-all"
+							className="min-h-10 border border-white bg-white px-3 text-[13px] font-bold text-[#14211d] hover:bg-[#eaf0ed]"
 						>
 							Atur Shift
 						</button>
 						<button
 							type="button"
 							onClick={() => setSelectedIds([])}
-							className="px-3 py-1.5 border border-white/20 text-white rounded-lg text-[13px] font-medium hover:bg-white/10 active:scale-95 transition-all"
+							className="min-h-10 border border-white/30 px-3 text-[13px] font-medium text-white hover:bg-white/10"
 						>
 							Batal
 						</button>
@@ -187,19 +249,19 @@ export default function EmployeesPage() {
 			)}
 
 			{/* Data Table Container */}
-			<div className="bg-white border border-black/5 rounded-xl shadow-sm flex flex-col flex-1 overflow-hidden">
+			<section className="flex flex-1 flex-col overflow-hidden border border-[#d5ded9] bg-white">
 				{/* Toolbar */}
-				<div className="p-4 border-b border-black/5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#f9f9ff]/50">
+				<header className="flex flex-col items-start justify-between gap-4 border-b border-[#d5ded9] bg-[#eaf0ed] p-4 sm:flex-row sm:items-center">
 					<div className="flex items-center gap-3 w-full sm:w-auto">
 						<div className="relative w-full sm:w-64">
 							<Search
-								className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
+								className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#53635d]"
 								size={16}
 							/>
 							<input
-								className="w-full bg-white border border-[#bdc8ce] rounded-md py-1.5 pl-9 pr-3 text-[13px] font-sans text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c]/50 transition-all placeholder:text-[#6e797e]"
-								placeholder="Cari NIP atau Nama..."
-								type="text"
+								className="w-full py-2 pl-9 pr-3 text-sm"
+								placeholder="Cari NIP atau nama..."
+								type="search"
 								value={search}
 								onChange={(e) => {
 									setSearch(e.target.value);
@@ -208,10 +270,12 @@ export default function EmployeesPage() {
 							/>
 						</div>
 					</div>
-					<div className="flex items-center gap-4 text-[#3e484d] font-semibold text-[13px]">
-						<span>Total: {response?.meta.total || 0}</span>
+					<div className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.1em] text-[#53635d]">
+						<span>
+							{isFetching ? "Memperbarui" : `${response?.meta.total || 0} data`}
+						</span>
 					</div>
-				</div>
+				</header>
 
 				{/* Table */}
 				<div className="mobile-scroll-hint">
@@ -315,11 +379,7 @@ export default function EmployeesPage() {
 											{emp.position || "-"}
 										</td>
 										<td className="py-2 px-4 text-center">
-											<div className="flex items-center justify-center gap-2">
-												<span className="text-[12px] text-[#6e797e]">
-													Belum tersedia
-												</span>
-											</div>
+											<span className="adms-pill-neutral">Belum tersedia</span>
 										</td>
 										<td className="py-2 px-4 text-right opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
 											<button
@@ -355,7 +415,7 @@ export default function EmployeesPage() {
 					}}
 					disabled={isFetching}
 				/>
-			</div>
+			</section>
 
 			{isFormOpen && (
 				<EmployeeForm

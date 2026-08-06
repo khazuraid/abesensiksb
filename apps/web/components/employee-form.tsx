@@ -62,9 +62,9 @@ export default function EmployeeForm({
 			aria-modal="true"
 			aria-labelledby="employee-form-title"
 		>
-			<div className="flex max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-xl flex-col overflow-hidden rounded-t-xl border border-border bg-white shadow-[0_20px_54px_rgba(20,33,29,.14)] sm:max-h-[90dvh] sm:rounded-lg">
-				<div className="flex shrink-0 items-center justify-between border-b border-border bg-[#eaf0ed] px-4 py-4 sm:px-6">
-					<h3 className="text-xl font-bold text-[#111c2d] font-display">
+			<div className="flex max-h-[calc(100dvh-env(safe-area-inset-top))] w-full max-w-xl flex-col overflow-hidden border border-border bg-white shadow-[0_20px_54px_rgba(20,33,29,.14)] sm:max-h-[90dvh]">
+				<div className="flex shrink-0 items-center justify-between border-b border-[#d5ded9] bg-[#14211d] px-4 py-4 text-white sm:px-6">
+					<h3 className="text-lg font-bold !text-white">
 						<span id="employee-form-title">
 							{initialData ? "Edit" : "Tambah"} Pegawai
 						</span>
@@ -72,7 +72,7 @@ export default function EmployeeForm({
 					<button
 						type="button"
 						onClick={onClose}
-						className="p-2 hover:bg-black/5 rounded-full text-[#6e797e] hover:text-[#111c2d] transition-all"
+						className="flex h-9 w-9 items-center justify-center border border-white/20 text-white/70 hover:bg-white/10 hover:text-white"
 						aria-label="Tutup formulir pegawai"
 					>
 						<X size={20} />
@@ -96,7 +96,7 @@ export default function EmployeeForm({
 								id="name"
 								aria-invalid={Boolean(errors.name)}
 								aria-describedby={errors.name ? "name-error" : undefined}
-								className="w-full bg-white border border-[#aebdb6] rounded-xl py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#087066] focus:border-[#087066] transition-all"
+								className="w-full bg-white border border-[#aebdb6]  py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#087066] focus:border-[#087066] transition-all"
 								placeholder="Contoh: Budi Santoso"
 							/>
 							{errors.name && (
@@ -124,7 +124,7 @@ export default function EmployeeForm({
 								aria-describedby={
 									errors.employeeCode ? "employee-code-error" : undefined
 								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-xl py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
 								placeholder="Contoh: 19850101..."
 							/>
 							{errors.employeeCode && (
@@ -150,7 +150,7 @@ export default function EmployeeForm({
 							{shifts?.map((shift) => (
 								<label
 									key={shift.id}
-									className={`flex items-start gap-3 p-3 border rounded-xl cursor-pointer transition-all ${
+									className={`flex items-start gap-3 p-3 border  cursor-pointer transition-all ${
 										currentShiftIds.includes(shift.id)
 											? "border-[#00647c] bg-[#f0f3ff]"
 											: "border-[#bdc8ce] bg-white hover:border-[#00647c]/50"
@@ -198,7 +198,7 @@ export default function EmployeeForm({
 							<input
 								{...register("department")}
 								id="department"
-								className="w-full bg-white border border-[#bdc8ce] rounded-xl py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
 								placeholder="Contoh: IT"
 							/>
 						</div>
@@ -212,7 +212,7 @@ export default function EmployeeForm({
 							<input
 								{...register("position")}
 								id="position"
-								className="w-full bg-white border border-[#bdc8ce] rounded-xl py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
 								placeholder="Contoh: Manager"
 							/>
 						</div>
@@ -237,7 +237,7 @@ export default function EmployeeForm({
 						<button
 							type="button"
 							onClick={onClose}
-							className="flex-1 px-6 py-2.5 rounded-xl font-semibold border border-[#bdc8ce] bg-white text-[#3e484d] hover:bg-[#f9f9ff] transition-all text-[14px]"
+							className="adms-button-outline flex-1"
 						>
 							Batal
 						</button>
@@ -245,7 +245,7 @@ export default function EmployeeForm({
 							type="submit"
 							disabled={isLoading}
 							aria-busy={isLoading}
-							className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-[14px]"
+							className="adms-button flex-1"
 						>
 							{isLoading && <Loader2 size={16} className="animate-spin" />}
 							Simpan Data
