@@ -1548,10 +1548,7 @@ export class ReportsService {
 }
 
 export class JaspelService {
-	constructor(
-		private db: Db,
-		_reports: ReportsService,
-	) {}
+	constructor(private db: Db) {}
 	async getVariables(filter: ListFilter = {}) {
 		const pagination = normalizePageParams(filter);
 		const where = and(

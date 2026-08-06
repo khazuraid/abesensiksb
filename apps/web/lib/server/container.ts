@@ -68,7 +68,7 @@ export const leaves = new LeavesService(db);
 export const settings = new SettingsService(db);
 export const holidays = new HolidaysService(db, settings);
 export const reports = new ReportsService(db);
-export const jaspel = new JaspelService(db, reports);
+export const jaspel = new JaspelService(db);
 export const adms = new AdmsService(
 	db,
 	{
