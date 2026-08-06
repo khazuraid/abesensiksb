@@ -5,7 +5,7 @@
 		"dev": "turbo run dev",
 		"build": "turbo run build",
 		"lint": "turbo run lint",
-		"test": "node --test packages/database/migrate.spec.js && pnpm --filter web test && pnpm --filter worker test",
+		"test": "node --test packages/database/migrate.spec.js && pnpm --filter @adms/database build && pnpm --filter web test && pnpm --filter worker test",
 		"check-types": "pnpm --filter @adms/database build && pnpm --filter @adms/shared-types build && pnpm --filter web check-types && pnpm --filter worker check-types",
 		"verify": "pnpm run test && pnpm run lint && pnpm run check-types && pnpm run build && git diff --check",
 		"db:generate": "turbo run db:generate",
