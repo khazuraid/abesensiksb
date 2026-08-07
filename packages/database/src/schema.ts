@@ -135,6 +135,41 @@ export const shifts = pgTable("shifts", {
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const employeeShiftAssignments = pgTable(
+	"employee_shift_assignments",
+	{
+		id: serial("id").primaryKey(),
+		employeeId: integer("employee_id")
+			.notNull()
+			.references(() => employees.id, { onDelete: "cascade" }),
+		shiftId: integer("shift_id")
+			.notNull()
+			.references(() => shifts.id, { onDelete: "restrict" }),
+		assignmentGroupId: varchar("assignment_group_id", { length: 36 }).notNull(),
+		startDate: date("start_date").notNull(),
+		endDate: date("end_date"),
+		createdAt: timestamp("created_at").defaultNow().notNull(),
+	},
+	(table) => [
+		index("idx_employee_shift_assignments_employee_period").on(
+			table.employeeId,
+			table.startDate,
+			table.endDate,
+		),
+		index("idx_employee_shift_assignments_shift").on(table.shiftId),
+		check(
+			"chk_employee_shift_assignment_range",
+			sql`${table.endDate} IS NULL OR ${table.endDate} >= ${table.startDate}`,
+		),
+	],
+);
+
+export const admsDeviceClaimStatusEnum = pgEnum("adms_device_claim_status", [
+	"PENDING",
+	"APPROVED",
+	"REJECTED",
+]);
+
 export const devices = pgTable("devices", {
 	id: serial("id").primaryKey(),
 
@@ -168,6 +203,32 @@ export const devices = pgTable("devices", {
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+
+export const admsDeviceClaims = pgTable(
+	"adms_device_claims",
+	{
+		id: serial("id").primaryKey(),
+		sourceIp: varchar("source_ip", { length: 50 }).notNull(),
+		endpoint: varchar("endpoint", { length: 100 }).notNull(),
+		userAgent: varchar("user_agent", { length: 255 }),
+		deviceId: integer("device_id").references(() => devices.id, {
+			onDelete: "set null",
+		}),
+		status: admsDeviceClaimStatusEnum("status").default("PENDING").notNull(),
+		firstSeen: timestamp("first_seen").defaultNow().notNull(),
+		lastSeen: timestamp("last_seen").defaultNow().notNull(),
+		resolvedBy: integer("resolved_by").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		resolvedAt: timestamp("resolved_at"),
+	},
+	(table) => [
+		index("idx_adms_device_claims_pending_seen").on(
+			table.status,
+			table.lastSeen,
+		),
+	],
+);
 
 export const attendanceLogs = pgTable(
 	"attendance_logs",
@@ -365,16 +426,46 @@ export const employeesRelations = relations(employees, ({ one, many }) => ({
 	attendanceLogs: many(attendanceLogs),
 	jaspelVariables: one(employeeJaspelVariables),
 	jaspelDistributions: many(jaspelDistributions),
+	shiftAssignments: many(employeeShiftAssignments),
 }));
 
 export const shiftsRelations = relations(shifts, ({ many }) => ({
-	employees: many(employees),
+	assignments: many(employeeShiftAssignments),
 }));
+
+export const employeeShiftAssignmentsRelations = relations(
+	employeeShiftAssignments,
+	({ one }) => ({
+		employee: one(employees, {
+			fields: [employeeShiftAssignments.employeeId],
+			references: [employees.id],
+		}),
+		shift: one(shifts, {
+			fields: [employeeShiftAssignments.shiftId],
+			references: [shifts.id],
+		}),
+	}),
+);
 
 export const devicesRelations = relations(devices, ({ many }) => ({
 	attendanceLogs: many(attendanceLogs),
 	commands: many(deviceCommands),
+	claims: many(admsDeviceClaims),
 }));
+
+export const admsDeviceClaimsRelations = relations(
+	admsDeviceClaims,
+	({ one }) => ({
+		device: one(devices, {
+			fields: [admsDeviceClaims.deviceId],
+			references: [devices.id],
+		}),
+		resolvedByUser: one(users, {
+			fields: [admsDeviceClaims.resolvedBy],
+			references: [users.id],
+		}),
+	}),
+);
 
 export const deviceCommandsRelations = relations(deviceCommands, ({ one }) => ({
 	device: one(devices, {

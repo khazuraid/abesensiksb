@@ -36,7 +36,6 @@ jobs:
       REDIS_HOST: 127.0.0.1
       REDIS_PORT: 6379
       JWT_SECRET: ci_jwt_secret_at_least_32_characters
-      ADMS_SECRET_KEY: ci_adms_secret_at_least_32_characters
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -50,6 +49,6 @@ jobs:
       - run: pnpm run verify
       - name: Verify migration journal and runtime infrastructure
         run: |
-          test "$(psql "$DATABASE_URL" -Atc "select count(*) from migration_history")" = "6"
+          test "$(psql "$DATABASE_URL" -Atc "select count(*) from migration_history")" = "8"
           test "$(psql "$DATABASE_URL" -Atc "select to_regclass('public.worker_cron_runs') is not null")" = "t"
           node -e 'const net=require("node:net"); const socket=net.createConnection({host:process.env.REDIS_HOST,port:Number(process.env.REDIS_PORT)},()=>socket.write("*1\r\n$4\r\nPING\r\n")); socket.setTimeout(2000); socket.on("data",data=>{if(data.toString().trim()!=="+PONG") process.exit(1); socket.end()}); socket.on("timeout",()=>process.exit(1)); socket.on("error",()=>process.exit(1))'

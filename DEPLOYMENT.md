@@ -12,8 +12,7 @@ Pendekatan ini memenuhi instalasi satu-container. Untuk skala besar/high availab
 
 ```bash
 cp .env.example .env
-# Isi DB_PASSWORD, JWT_SECRET, ADMS_SECRET_KEY,
-# ADMIN_EMAIL, dan ADMIN_PASSWORD.
+# Isi DB_PASSWORD, JWT_SECRET, ADMIN_EMAIL, dan ADMIN_PASSWORD.
 docker compose up -d --build
 docker compose ps
 ```
@@ -69,7 +68,6 @@ Wajib:
 ```env
 DB_PASSWORD=<password-kuat>
 JWT_SECRET=<random-minimal-64-karakter>
-ADMS_SECRET_KEY=<random-panjang>
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=<minimal-12-karakter>
 WEB_PUBLIC_URL=http://localhost:8080
@@ -81,12 +79,11 @@ WORKER_PUBLIC_URL=http://localhost:8888
 ## Mesin ADMS
 
 ```text
-Server Address: http(s)://domain-web
+Server Address: domain-web
 Port: 8080 atau 443 melalui reverse proxy
-Path: /iclock
 ```
 
-Jika `ADMS_SECRET_KEY` aktif, mesin harus mengirim `key=<ADMS_SECRET_KEY>`.
+Daftarkan Serial Number (SN) perangkat terlebih dahulu di menu Perangkat. Endpoint `/iclock` hanya menerima SN yang sudah terdaftar.
 
 ## Troubleshooting
 

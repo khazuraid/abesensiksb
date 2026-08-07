@@ -18,6 +18,14 @@ const reliability = readFileSync(
 	resolve(__dirname, "migrations/0008_final_reliability.sql"),
 	"utf8",
 );
+const shiftAssignments = readFileSync(
+	resolve(__dirname, "migrations/0009_employee_shift_assignments.sql"),
+	"utf8",
+);
+const admsDeviceClaims = readFileSync(
+	resolve(__dirname, "migrations/0010_adms_device_claims.sql"),
+	"utf8",
+);
 
 const chain = [
 	"bootstrap.sql",
@@ -26,6 +34,8 @@ const chain = [
 	"migrations/0006_production_hardening.sql",
 	"migrations/0007_integrity_and_reliability.sql",
 	"migrations/0008_final_reliability.sql",
+	"migrations/0009_employee_shift_assignments.sql",
+	"migrations/0010_adms_device_claims.sql",
 ];
 
 test("all-in-one deployment runs fail-closed migration before runtimes", () => {
@@ -82,6 +92,7 @@ test("CI database credentials match the PostgreSQL service", () => {
 		ci,
 		/DATABASE_URL: postgresql:\/\/adms:ci_password@127\.0\.0\.1:5432\/adms_ci/,
 	);
+	assert.match(ci, /count\(\*\) from migration_history.*= "8"/s);
 });
 
 test("final reliability migration upgrades existing databases", () => {
@@ -89,4 +100,22 @@ test("final reliability migration upgrades existing databases", () => {
 	assert.match(reliability, /started_at/);
 	assert.match(reliability, /ALTER COLUMN "completed_at" DROP NOT NULL/);
 	assert.match(reliability, /SET "status" = 'COMPLETED'/);
+});
+
+test("shift assignments persist dated periods with database range protection", () => {
+	assert.match(shiftAssignments, /employee_shift_assignments/);
+	assert.match(shiftAssignments, /"start_date" date NOT NULL/);
+	assert.match(shiftAssignments, /"end_date" date/);
+	assert.match(shiftAssignments, /"end_date" >= "start_date"/);
+	assert.match(shiftAssignments, /"assignment_group_id" text NOT NULL/);
+	assert.match(shiftAssignments, /EXCLUDE USING gist/);
+	assert.match(shiftAssignments, /"assignment_group_id" WITH <>/);
+});
+
+test("ADMS device claims journal SN-less requests and permit one approved IP", () => {
+	assert.match(admsDeviceClaims, /adms_device_claims/);
+	assert.match(admsDeviceClaims, /"source_ip" varchar\(50\) NOT NULL/);
+	assert.match(admsDeviceClaims, /adms_device_claim_status/);
+	assert.match(admsDeviceClaims, /uq_adms_device_claims_pending_ip/);
+	assert.match(admsDeviceClaims, /uq_adms_device_claims_approved_ip/);
 });

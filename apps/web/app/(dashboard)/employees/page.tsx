@@ -41,6 +41,9 @@ export default function EmployeesPage() {
 	const [page, setPage] = useState(1);
 	const [isBulkShiftOpen, setIsBulkShiftOpen] = useState(false);
 	const [bulkShiftIds, setBulkShiftIds] = useState<number[]>([]);
+	const [bulkShiftStartDate, setBulkShiftStartDate] = useState("");
+	const [bulkShiftEndDate, setBulkShiftEndDate] = useState("");
+	const [bulkShiftError, setBulkShiftError] = useState("");
 	const bulkShiftDialogRef = useRef<HTMLDivElement>(null);
 	const closeBulkShift = useCallback(() => setIsBulkShiftOpen(false), []);
 	useModalAccessibility(bulkShiftDialogRef, closeBulkShift, isBulkShiftOpen);
@@ -105,6 +108,8 @@ export default function EmployeesPage() {
 			await api.patch("/employees/bulk/shift", {
 				employeeIds: selectedIds,
 				shiftIds: bulkShiftIds,
+				startDate: bulkShiftStartDate,
+				endDate: bulkShiftEndDate,
 			});
 		},
 		onSuccess: () => {
@@ -112,14 +117,37 @@ export default function EmployeesPage() {
 			setIsBulkShiftOpen(false);
 			setSelectedIds([]);
 			setBulkShiftIds([]);
+			setBulkShiftStartDate("");
+			setBulkShiftEndDate("");
+			setBulkShiftError("");
 			alert("Berhasil memperbarui shift pegawai terpilih.");
 		},
 		onError: (err: {
-			response?: { data?: { message?: string } };
+			response?: {
+				data?: {
+					message?: string;
+					details?: {
+						conflicts?: Array<{
+							employeeName: string;
+							startDate: string;
+							endDate: string | null;
+						}>;
+					};
+				};
+			};
 			message?: string;
 		}) => {
-			alert(
-				`Gagal update shift: ${err?.response?.data?.message || err?.message}`,
+			const conflicts = err.response?.data?.details?.conflicts;
+			setBulkShiftError(
+				conflicts?.length
+					? `${err.response?.data?.message}: ${conflicts
+							.slice(0, 3)
+							.map(
+								(item) =>
+									`${item.employeeName} (${item.startDate}–${item.endDate ?? "seterusnya"})`,
+							)
+							.join(", ")}`
+					: err.response?.data?.message || err.message || "Gagal update shift",
 			);
 		},
 	});
@@ -455,11 +483,37 @@ export default function EmployeesPage() {
 
 						<div className="p-6 space-y-4">
 							<p className="text-[14px] text-[#3e484d]">
-								Anda akan mengubah shift untuk{" "}
-								<strong>{selectedIds.length}</strong> pegawai. Pilih shift yang
-								baru:
+								Atur shift dan periode berlaku untuk{" "}
+								<strong>{selectedIds.length}</strong> pegawai.
 							</p>
-
+							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+								<label className="text-[13px] font-semibold text-[#3e484d]">
+									Tanggal mulai
+									<input
+										type="date"
+										value={bulkShiftStartDate}
+										max={bulkShiftEndDate || undefined}
+										onChange={(event) => {
+											setBulkShiftStartDate(event.target.value);
+											setBulkShiftError("");
+										}}
+										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
+									/>
+								</label>
+								<label className="text-[13px] font-semibold text-[#3e484d]">
+									Tanggal selesai
+									<input
+										type="date"
+										value={bulkShiftEndDate}
+										min={bulkShiftStartDate || undefined}
+										onChange={(event) => {
+											setBulkShiftEndDate(event.target.value);
+											setBulkShiftError("");
+										}}
+										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
+									/>
+								</label>
+							</div>
 							<div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar border rounded-xl p-2 border-black/5">
 								{shifts?.map((shift) => (
 									<label
@@ -473,14 +527,13 @@ export default function EmployeesPage() {
 										<input
 											type="checkbox"
 											checked={bulkShiftIds.includes(shift.id)}
-											onChange={(e) => {
-												if (e.target.checked) {
-													setBulkShiftIds([...bulkShiftIds, shift.id]);
-												} else {
-													setBulkShiftIds(
-														bulkShiftIds.filter((id) => id !== shift.id),
-													);
-												}
+											onChange={(event) => {
+												setBulkShiftError("");
+												setBulkShiftIds(
+													event.target.checked
+														? [...bulkShiftIds, shift.id]
+														: bulkShiftIds.filter((id) => id !== shift.id),
+												);
 											}}
 											className="mt-0.5 w-4 h-4 rounded border-[#bdc8ce] text-[#00647c] focus:ring-[#00647c]/50 cursor-pointer"
 										/>
@@ -495,7 +548,14 @@ export default function EmployeesPage() {
 									</label>
 								))}
 							</div>
-
+							{bulkShiftError && (
+								<p
+									role="alert"
+									className="border border-[#ba1a1a]/30 bg-[#ba1a1a]/5 p-3 text-[13px] text-[#8f1616]"
+								>
+									{bulkShiftError}
+								</p>
+							)}
 							<div className="pt-4 flex gap-3">
 								<button
 									type="button"
@@ -507,7 +567,13 @@ export default function EmployeesPage() {
 								<button
 									type="button"
 									onClick={() => bulkShiftMutation.mutate()}
-									disabled={bulkShiftMutation.isPending}
+									disabled={
+										bulkShiftMutation.isPending ||
+										bulkShiftIds.length === 0 ||
+										!bulkShiftStartDate ||
+										!bulkShiftEndDate ||
+										bulkShiftEndDate < bulkShiftStartDate
+									}
 									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-[14px] disabled:opacity-50"
 								>
 									{bulkShiftMutation.isPending

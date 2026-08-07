@@ -21,6 +21,20 @@ export const EmployeeSchema = z.object({
 	position: z.string().nullable().optional(),
 	branch: z.string().nullable().optional(),
 	shiftIds: z.array(z.number()).default([]),
+	shiftAssignments: z
+		.array(
+			z.object({
+				id: z.number(),
+				employeeId: z.number(),
+				shiftId: z.number(),
+				startDate: z.string(),
+				endDate: z.string().nullable(),
+				shiftName: z.string(),
+				startTime: z.string(),
+				endTime: z.string(),
+			}),
+		)
+		.optional(),
 	biometricId: z.string().nullable().optional(),
 	biometricSyncedAt: z.date().nullable().optional(),
 	isActive: z.boolean().default(true),
@@ -33,6 +47,7 @@ export const CreateEmployeeSchema = EmployeeSchema.omit({
 	biometricSyncedAt: true,
 	createdAt: true,
 	updatedAt: true,
+	shiftAssignments: true,
 });
 
 export const UpdateEmployeeSchema = CreateEmployeeSchema.partial();

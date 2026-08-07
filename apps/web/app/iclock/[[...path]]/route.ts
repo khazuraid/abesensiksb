@@ -1,5 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
+import { isRegisteredAdmsDevice } from "@/lib/server/adms-auth";
 import { ApiError, handle } from "@/lib/server/api";
 import { adms } from "@/lib/server/container";
 
@@ -12,18 +12,25 @@ function text(value: string, status = 200) {
 	});
 }
 
-function authorize(request: NextRequest) {
-	const secret = process.env.ADMS_SECRET_KEY;
-	if (!secret) {
-		if (process.env.NODE_ENV === "production")
-			throw new ApiError(503, "ADMS secret is not configured");
-		return;
+async function authorize(request: NextRequest) {
+	const sn = request.nextUrl.searchParams.get("SN") ?? "";
+	const sourceIp = ip(request);
+	if (!sn) {
+		const device = await adms.findClaimedDevice(sourceIp);
+		if (!device) {
+			await adms.recordUnidentifiedDevice(
+				sourceIp,
+				endpoint(request),
+				request.headers.get("user-agent") ?? "",
+			);
+			throw new ApiError(401, "Perangkat tanpa SN menunggu persetujuan");
+		}
+		return { sn: device.serialNumber, device };
 	}
-	const key = request.nextUrl.searchParams.get("key") ?? "";
-	const actual = Buffer.from(key),
-		expected = Buffer.from(secret);
-	if (actual.length !== expected.length || !timingSafeEqual(actual, expected))
-		throw new ApiError(401, "Invalid ADMS key");
+	const device = await adms.findDevice(sn);
+	if (!isRegisteredAdmsDevice(sn, device?.serialNumber))
+		throw new ApiError(401, "Perangkat dengan SN ini belum terdaftar");
+	return { sn, device };
 }
 
 function endpoint(request: NextRequest) {
@@ -43,12 +50,11 @@ function ip(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
 	return handle(request, async () => {
-		authorize(request);
-		const sn = request.nextUrl.searchParams.get("SN") ?? "";
-		if (endpoint(request) === "getrequest")
+		const { sn, device } = await authorize(request);
+		await adms.updateDeviceStatus(sn, ip(request));
+		if (endpoint(request) === "getrequest") {
 			return text(await adms.getPendingCommands(sn));
-		if (!sn) return text("OK");
-		const device = await adms.registerOrUpdateDevice(sn, ip(request));
+		}
 		return text(
 			[
 				`GET OPTION FROM: ${sn}`,
@@ -69,8 +75,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	return handle(request, async () => {
-		authorize(request);
-		const sn = request.nextUrl.searchParams.get("SN") ?? "";
+		const { sn } = await authorize(request);
 		const path = endpoint(request);
 		if (path === "fdata") {
 			const pin = request.nextUrl.searchParams.get("PIN") ?? "";
@@ -92,10 +97,10 @@ export async function POST(request: NextRequest) {
 				await adms.ackCommand(
 					Number(id),
 					(raw.match(/Return[=:](\d+)/)?.[1] ?? "0") === "0",
+					sn,
 				);
 			return text("OK");
 		}
-		if (!sn) return text("ERROR: Missing SN");
 		await adms.updateDeviceStatus(sn, ip(request));
 		if (!raw) return text("OK");
 		const table = request.nextUrl.searchParams.get("table") ?? "";

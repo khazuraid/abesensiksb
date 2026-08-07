@@ -112,6 +112,15 @@ function errorResponse(error: unknown) {
 				{ status: 409 },
 			);
 		}
+		if (code === "23P01") {
+			return NextResponse.json(
+				{
+					statusCode: 409,
+					message: "Periode shift bentrok dengan jadwal yang sudah ada",
+				},
+				{ status: 409 },
+			);
+		}
 		if (code === "23503") {
 			return NextResponse.json(
 				{ statusCode: 409, message: "Data is still referenced" },

@@ -13,7 +13,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-adms123}
       DB_NAME: ${DB_NAME:-adms_db}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET wajib diisi}
-      ADMS_SECRET_KEY: ${ADMS_SECRET_KEY:?ADMS_SECRET_KEY wajib diisi}
       WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:8080}
       CORS_ORIGIN: ${WEB_PUBLIC_URL:-http://localhost:8080}
       ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL wajib diisi}

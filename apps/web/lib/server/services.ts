@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import * as schema from "@adms/database";
 import type {
 	CreateDevice,
@@ -22,6 +23,7 @@ import {
 	gte,
 	ilike,
 	inArray,
+	isNull,
 	lte,
 	or,
 	type SQL,
@@ -35,6 +37,10 @@ import {
 	normalizePageParams,
 	type PageParams,
 } from "./pagination";
+import {
+	assertValidShiftAssignmentRange,
+	type ShiftAssignmentRange,
+} from "./shift-assignment";
 
 type Db = typeof schema.db;
 type DbExecutor = Pick<Db, "execute" | "select">;
@@ -288,7 +294,7 @@ export class EmployeesService {
 					ilike(schema.employees.department, `%${filter.search}%`),
 				)
 			: undefined;
-		const data = await this.db
+		const rows = await this.db
 			.select()
 			.from(schema.employees)
 			.where(where)
@@ -299,7 +305,10 @@ export class EmployeesService {
 			.select({ count: count() })
 			.from(schema.employees)
 			.where(where);
-		return { data, meta: createPageMeta(total, pagination) };
+		return {
+			data: await this.withShiftAssignments(rows),
+			meta: createPageMeta(total, pagination),
+		};
 	}
 	async findOne(id: number) {
 		const [result] = await this.db
@@ -307,20 +316,23 @@ export class EmployeesService {
 			.from(schema.employees)
 			.where(eq(schema.employees.id, id));
 		if (!result) throw new ApiError(404, `Employee with ID ${id} not found`);
-		return result;
+		return (await this.withShiftAssignments([result]))[0];
 	}
 	async create(data: CreateEmployee) {
+		await this.validateShiftIds(data.shiftIds);
 		const [result] = await this.db
 			.insert(schema.employees)
 			.values(data)
 			.returning();
 		return result;
 	}
-	bulkCreate(data: CreateEmployee[]) {
+	async bulkCreate(data: CreateEmployee[]) {
 		if (!data.length) return [];
+		await this.validateShiftIds(data.flatMap((employee) => employee.shiftIds));
 		return this.db.insert(schema.employees).values(data).returning();
 	}
 	async update(id: number, data: UpdateEmployee) {
+		if (data.shiftIds) await this.validateShiftIds(data.shiftIds);
 		const [result] = await this.db
 			.update(schema.employees)
 			.set({ ...data, updatedAt: new Date() })
@@ -337,13 +349,75 @@ export class EmployeesService {
 		if (!result) throw new ApiError(404, `Employee with ID ${id} not found`);
 		return { message: "Employee deleted successfully" };
 	}
-	async bulkAssignShift(employeeIds: number[], shiftIds: number[]) {
+	async bulkAssignShift(
+		employeeIds: number[],
+		shiftIds: number[],
+		range: ShiftAssignmentRange,
+	) {
+		try {
+			assertValidShiftAssignmentRange(range.startDate, range.endDate);
+		} catch (error) {
+			throw new ApiError(400, (error as Error).message);
+		}
 		await this.validateShiftIds(shiftIds);
-		await this.db
-			.update(schema.employees)
-			.set({ shiftIds, updatedAt: new Date() })
+		const employees = await this.db
+			.select({ id: schema.employees.id })
+			.from(schema.employees)
 			.where(inArray(schema.employees.id, employeeIds));
-		return { message: `Shifts assigned to ${employeeIds.length} employees` };
+		if (employees.length !== new Set(employeeIds).size)
+			throw new ApiError(404, "Pegawai tidak ditemukan");
+		const conflicts = await this.db
+			.select({
+				employeeId: schema.employeeShiftAssignments.employeeId,
+				employeeName: schema.employees.name,
+				startDate: schema.employeeShiftAssignments.startDate,
+				endDate: schema.employeeShiftAssignments.endDate,
+			})
+			.from(schema.employeeShiftAssignments)
+			.innerJoin(
+				schema.employees,
+				eq(schema.employees.id, schema.employeeShiftAssignments.employeeId),
+			)
+			.where(
+				and(
+					inArray(schema.employeeShiftAssignments.employeeId, employeeIds),
+					or(
+						isNull(schema.employeeShiftAssignments.endDate),
+						gte(schema.employeeShiftAssignments.endDate, range.startDate),
+					),
+					lte(
+						schema.employeeShiftAssignments.startDate,
+						range.endDate ?? range.startDate,
+					),
+				),
+			);
+		if (conflicts.length)
+			throw new ApiError(
+				409,
+				"Periode shift bentrok dengan jadwal yang sudah ada",
+				{
+					conflicts,
+				},
+			);
+		const assignmentGroupId = randomUUID();
+		await this.db.transaction(async (tx) => {
+			await tx.insert(schema.employeeShiftAssignments).values(
+				employeeIds.flatMap((employeeId) =>
+					shiftIds.map((shiftId) => ({
+						employeeId,
+						shiftId,
+						assignmentGroupId,
+						startDate: range.startDate,
+						endDate: range.endDate ?? null,
+					})),
+				),
+			);
+			await tx
+				.update(schema.employees)
+				.set({ shiftIds, updatedAt: new Date() })
+				.where(inArray(schema.employees.id, employeeIds));
+		});
+		return { message: `Shift diterapkan ke ${employeeIds.length} pegawai` };
 	}
 	async resolveEmployeeId(userId: number) {
 		const [employee] = await this.db
@@ -367,6 +441,38 @@ export class EmployeesService {
 			);
 		if (rows.length !== new Set(shiftIds).size)
 			throw new ApiError(400, "Shift tidak valid atau tidak aktif");
+	}
+	private async withShiftAssignments<T extends { id: number }>(rows: T[]) {
+		if (!rows.length) return [];
+		const assignments = await this.db
+			.select({
+				id: schema.employeeShiftAssignments.id,
+				employeeId: schema.employeeShiftAssignments.employeeId,
+				shiftId: schema.employeeShiftAssignments.shiftId,
+				startDate: schema.employeeShiftAssignments.startDate,
+				endDate: schema.employeeShiftAssignments.endDate,
+				shiftName: schema.shifts.name,
+				startTime: schema.shifts.startTime,
+				endTime: schema.shifts.endTime,
+			})
+			.from(schema.employeeShiftAssignments)
+			.innerJoin(
+				schema.shifts,
+				eq(schema.shifts.id, schema.employeeShiftAssignments.shiftId),
+			)
+			.where(
+				inArray(
+					schema.employeeShiftAssignments.employeeId,
+					rows.map((row) => row.id),
+				),
+			)
+			.orderBy(desc(schema.employeeShiftAssignments.startDate));
+		return rows.map((row) => ({
+			...row,
+			shiftAssignments: assignments.filter(
+				(assignment) => assignment.employeeId === row.id,
+			),
+		}));
 	}
 }
 
@@ -793,6 +899,7 @@ export class AttendanceLogsService {
 			if (status === "APPROVED") {
 				const [log] = await tx
 					.select({
+						employeeId: schema.attendanceLogs.employeeId,
 						type: schema.attendanceLogs.type,
 						shiftIds: schema.employees.shiftIds,
 					})
@@ -805,6 +912,7 @@ export class AttendanceLogsService {
 				if (!log) throw new ApiError(404, "Attendance log not found");
 				const evaluation = this.shiftEngine
 					? await this.shiftEngine.evaluateAttendance({
+							employeeId: log.employeeId,
 							shiftIds: log.shiftIds,
 							timestamp: correction.newTimestamp,
 							type: log.type,
@@ -1280,6 +1388,10 @@ export class ReportsService {
 		if (!employees.length) return [];
 		const employeeIds = employees.map((employee) => employee.id);
 		const shifts = await this.db.select().from(schema.shifts);
+		const shiftAssignments = await this.db
+			.select()
+			.from(schema.employeeShiftAssignments)
+			.where(inArray(schema.employeeShiftAssignments.employeeId, employeeIds));
 		const logs = await this.db
 			.select()
 			.from(schema.attendanceLogs)
@@ -1328,11 +1440,24 @@ export class ReportsService {
 			for (let day = 1; day <= daysInMonth; day++) {
 				const date = new Date(year, month - 1, day);
 				const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+				const employeeAssignments = shiftAssignments.filter(
+					(assignment) => assignment.employeeId === employee.id,
+				);
+				const datedShiftIds = employeeAssignments
+					.filter(
+						(assignment) =>
+							assignment.startDate <= dateStr &&
+							(!assignment.endDate || assignment.endDate >= dateStr),
+					)
+					.map((assignment) => assignment.shiftId);
+				const applicableShiftIds = employeeAssignments.length
+					? datedShiftIds
+					: employee.shiftIds;
 				const shift =
 					shifts
 						.filter(
 							(s) =>
-								employee.shiftIds.includes(s.id) &&
+								applicableShiftIds.includes(s.id) &&
 								s.isActive &&
 								s.workDays.includes(date.getDay()) &&
 								(!s.effectiveFrom || dateStr >= s.effectiveFrom) &&
@@ -1430,7 +1555,18 @@ export class ReportsService {
 				department: employee.department ?? "",
 				shiftName:
 					shifts
-						.filter((s) => employee.shiftIds.includes(s.id) && s.isActive)
+						.filter(
+							(s) =>
+								(shiftAssignments.some(
+									(assignment) => assignment.employeeId === employee.id,
+								)
+									? shiftAssignments.some(
+											(assignment) =>
+												assignment.employeeId === employee.id &&
+												assignment.shiftId === s.id,
+										)
+									: employee.shiftIds.includes(s.id)) && s.isActive,
+						)
 						.map((s) => s.name)
 						.join(", ") || "-",
 				days,
@@ -1878,6 +2014,7 @@ export class JaspelService {
 export class ShiftEngineService {
 	constructor(private db: Db) {}
 	async evaluateAttendance(input: {
+		employeeId?: number;
 		shiftIds?: number[] | null;
 		timestamp: Date;
 		type: "IN" | "OUT";
@@ -1892,13 +2029,48 @@ export class ShiftEngineService {
 			).length
 		)
 			return "PRESENT" as const;
-		const shifts = input.shiftIds?.length
+		const datedAssignments = input.employeeId
+			? await this.db
+					.select({ shiftId: schema.employeeShiftAssignments.shiftId })
+					.from(schema.employeeShiftAssignments)
+					.where(
+						and(
+							eq(schema.employeeShiftAssignments.employeeId, input.employeeId),
+							lte(schema.employeeShiftAssignments.startDate, date),
+							or(
+								isNull(schema.employeeShiftAssignments.endDate),
+								gte(schema.employeeShiftAssignments.endDate, date),
+							),
+						),
+					)
+			: [];
+		const hasDatedHistory = input.employeeId
+			? Boolean(
+					(
+						await this.db
+							.select({ id: schema.employeeShiftAssignments.id })
+							.from(schema.employeeShiftAssignments)
+							.where(
+								eq(
+									schema.employeeShiftAssignments.employeeId,
+									input.employeeId,
+								),
+							)
+							.limit(1)
+					).length,
+				)
+			: false;
+		const shiftIds = hasDatedHistory
+			? datedAssignments.map((assignment) => assignment.shiftId)
+			: input.shiftIds;
+		if (hasDatedHistory && !shiftIds?.length) return "PRESENT" as const;
+		const shifts = shiftIds?.length
 			? await this.db
 					.select()
 					.from(schema.shifts)
 					.where(
 						and(
-							inArray(schema.shifts.id, input.shiftIds),
+							inArray(schema.shifts.id, shiftIds),
 							eq(schema.shifts.isActive, true),
 						),
 					)
@@ -1964,26 +2136,117 @@ export class AdmsService {
 		private shifts: ShiftEngineService,
 		private logger: Logger = console,
 	) {}
-	async registerOrUpdateDevice(sn: string, ip: string) {
-		const [existing] = await this.db
+	async findDevice(sn: string) {
+		const [device] = await this.db
 			.select()
 			.from(schema.devices)
 			.where(eq(schema.devices.serialNumber, sn));
+		return device;
+	}
+	async findClaimedDevice(ip: string) {
+		if (!ip) return;
+		const [claim] = await this.db
+			.select({ device: schema.devices })
+			.from(schema.admsDeviceClaims)
+			.innerJoin(
+				schema.devices,
+				eq(schema.admsDeviceClaims.deviceId, schema.devices.id),
+			)
+			.where(
+				and(
+					eq(schema.admsDeviceClaims.sourceIp, ip),
+					eq(schema.admsDeviceClaims.status, "APPROVED"),
+				),
+			);
+		return claim?.device;
+	}
+	async recordUnidentifiedDevice(
+		ip: string,
+		endpoint: string,
+		userAgent: string,
+	) {
+		if (!ip) return;
+		const now = new Date();
+		const [existing] = await this.db
+			.select({ id: schema.admsDeviceClaims.id })
+			.from(schema.admsDeviceClaims)
+			.where(
+				and(
+					eq(schema.admsDeviceClaims.sourceIp, ip),
+					eq(schema.admsDeviceClaims.status, "PENDING"),
+				),
+			)
+			.limit(1);
 		if (existing) {
-			await this.updateDeviceStatus(sn, ip);
-			return existing;
+			await this.db
+				.update(schema.admsDeviceClaims)
+				.set({ endpoint, userAgent, lastSeen: now })
+				.where(eq(schema.admsDeviceClaims.id, existing.id));
+			return;
 		}
-		const [created] = await this.db
-			.insert(schema.devices)
-			.values({
-				serialNumber: sn,
-				name: `Device ${sn}`,
-				ipAddress: ip,
-				isOnline: true,
-				lastSeen: new Date(),
-			})
-			.returning();
-		return created;
+		await this.db.insert(schema.admsDeviceClaims).values({
+			sourceIp: ip,
+			endpoint,
+			userAgent: userAgent || null,
+		});
+	}
+	async findClaims(filter: PageParams = {}) {
+		const pagination = normalizePageParams(filter);
+		const where = eq(schema.admsDeviceClaims.status, "PENDING");
+		const data = await this.db
+			.select()
+			.from(schema.admsDeviceClaims)
+			.where(where)
+			.orderBy(desc(schema.admsDeviceClaims.lastSeen))
+			.limit(pagination.limit)
+			.offset(pagination.offset);
+		const [{ count: total = 0 } = { count: 0 }] = await this.db
+			.select({ count: count() })
+			.from(schema.admsDeviceClaims)
+			.where(where);
+		return { data, meta: createPageMeta(total, pagination) };
+	}
+	async approveClaim(id: number, deviceId: number, userId: number) {
+		return this.db.transaction(async (tx) => {
+			const [claim] = await tx
+				.select()
+				.from(schema.admsDeviceClaims)
+				.where(
+					and(
+						eq(schema.admsDeviceClaims.id, id),
+						eq(schema.admsDeviceClaims.status, "PENDING"),
+					),
+				);
+			if (!claim)
+				throw new ApiError(404, "Permintaan perangkat tidak ditemukan");
+			const [device] = await tx
+				.select({ id: schema.devices.id })
+				.from(schema.devices)
+				.where(eq(schema.devices.id, deviceId));
+			if (!device)
+				throw new ApiError(404, "Device with ID ${deviceId} not found");
+			const now = new Date();
+			await tx
+				.update(schema.admsDeviceClaims)
+				.set({ status: "REJECTED", resolvedBy: userId, resolvedAt: now })
+				.where(
+					and(
+						eq(schema.admsDeviceClaims.sourceIp, claim.sourceIp),
+						eq(schema.admsDeviceClaims.status, "APPROVED"),
+					),
+				);
+			const [approved] = await tx
+				.update(schema.admsDeviceClaims)
+				.set({
+					deviceId,
+					status: "APPROVED",
+					resolvedBy: userId,
+					resolvedAt: now,
+				})
+				.where(eq(schema.admsDeviceClaims.id, id))
+				.returning();
+			return approved;
+		});
 	}
 	updateDeviceStatus(sn: string, ip: string) {
 		return this.db
@@ -2036,11 +2299,21 @@ export class AdmsService {
 			);
 		return commands.map((c) => `C:${c.id}:${c.command}`).join("\n");
 	}
-	async ackCommand(id: number, success: boolean) {
+	async ackCommand(id: number, success: boolean, sn: string) {
+		const [device] = await this.db
+			.select({ id: schema.devices.id })
+			.from(schema.devices)
+			.where(eq(schema.devices.serialNumber, sn));
+		if (!device) return;
 		await this.db
 			.update(schema.deviceCommands)
 			.set({ status: success ? "COMPLETED" : "ERROR", updatedAt: new Date() })
-			.where(eq(schema.deviceCommands.id, id));
+			.where(
+				and(
+					eq(schema.deviceCommands.id, id),
+					eq(schema.deviceCommands.deviceId, device.id),
+				),
+			);
 	}
 	async handleLogData(sn: string, raw: string) {
 		const [device] = await this.db
@@ -2082,6 +2355,7 @@ export class AdmsService {
 					);
 				if (duplicate.length) continue;
 				const status = await this.shifts.evaluateAttendance({
+					employeeId: employee.id,
 					shiftIds: employee.shiftIds,
 					timestamp,
 					type,

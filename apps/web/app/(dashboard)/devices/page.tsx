@@ -54,6 +54,15 @@ type DeviceHistory = {
 	timestamp: string | Date;
 };
 
+type DeviceClaim = {
+	id: number;
+	sourceIp: string;
+	endpoint: string;
+	userAgent: string | null;
+	firstSeen: string | Date;
+	lastSeen: string | Date;
+};
+
 const formatHistoryTime = (value: string | Date) =>
 	new Intl.DateTimeFormat("id-ID", {
 		dateStyle: "medium",
@@ -119,6 +128,31 @@ export default function DevicesPage() {
 	const onlineDevices = devices.filter((device) =>
 		isDeviceOnline(device, dataUpdatedAt),
 	).length;
+	const { data: claimResponse } = useQuery<{
+		data: DeviceClaim[];
+		meta: PageMeta;
+	}>({
+		queryKey: ["device-claims"],
+		queryFn: async () =>
+			(await api.get("/devices/claims?page=1&limit=10")).data,
+		refetchInterval: 10000,
+	});
+	const claims = claimResponse?.data ?? [];
+	const approveClaim = useMutation({
+		mutationFn: async ({
+			claimId,
+			deviceId,
+		}: {
+			claimId: number;
+			deviceId: number;
+		}) =>
+			(await api.post(`/devices/claims/${claimId}/approve`, { deviceId })).data,
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["device-claims"] });
+			queryClient.invalidateQueries({ queryKey: ["devices"] });
+			toast.success("Permintaan perangkat disetujui");
+		},
+	});
 
 	const { data: commandResponse, isLoading: commandsLoading } = useQuery<{
 		data: DeviceCommand[];
@@ -283,13 +317,66 @@ export default function DevicesPage() {
 				</div>
 			</section>
 
+			{claims.length > 0 && (
+				<section className="border border-[#d8bc7a] bg-[#fffaf0]">
+					<header className="border-b border-[#ead9ac] px-4 py-3 md:px-5">
+						<h3 className="text-sm font-semibold">Permintaan mesin tanpa SN</h3>
+						<p className="mt-1 text-xs">
+							Pilih terminal milik Anda untuk mengizinkan IP ini. IP berubah
+							perlu persetujuan ulang.
+						</p>
+					</header>
+					<ul className="divide-y divide-[#ead9ac]">
+						{claims.map((claim) => (
+							<li
+								key={claim.id}
+								className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between md:px-5"
+							>
+								<div className="min-w-0">
+									<p className="font-mono text-xs font-semibold">
+										{claim.sourceIp}
+									</p>
+									<p className="mt-1 text-xs">
+										/{claim.endpoint} · terakhir{" "}
+										{formatHistoryTime(claim.lastSeen)}
+									</p>
+									{claim.userAgent && (
+										<p className="mt-1 truncate font-mono text-[10px] text-[#53635d]">
+											{claim.userAgent}
+										</p>
+									)}
+								</div>
+								<select
+									defaultValue=""
+									disabled={approveClaim.isPending || devices.length === 0}
+									onChange={(event) => {
+										const deviceId = Number(event.target.value);
+										if (deviceId)
+											approveClaim.mutate({ claimId: claim.id, deviceId });
+									}}
+									className="min-h-10 border border-[#b9a069] bg-white px-3 text-xs sm:w-56"
+								>
+									<option value="">Setujui untuk terminal...</option>
+									{devices.map((device) => (
+										<option key={device.id} value={device.id}>
+											{device.name} · {device.serialNumber}
+										</option>
+									))}
+								</select>
+							</li>
+						))}
+					</ul>
+				</section>
+			)}
+
 			{showForm && (
 				<section className="border border-[#aebdb6] bg-white">
 					<div className="flex items-start justify-between gap-4 border-b border-[#d5ded9] bg-[#eaf0ed] px-4 py-3 md:px-5">
 						<div>
 							<h3 className="text-sm font-semibold">Daftarkan terminal baru</h3>
 							<p className="mt-1 text-xs">
-								Serial number dan nama wajib diisi.
+								SN adalah identitas koneksi ADMS. Samakan persis dengan SN di
+								mesin.
 							</p>
 						</div>
 						<button

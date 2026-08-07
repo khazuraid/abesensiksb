@@ -23,6 +23,7 @@ import {
 } from "@/lib/server/api";
 import { readSession } from "@/lib/server/auth";
 import {
+	adms,
 	attendanceLogs,
 	audit,
 	devices,
@@ -47,10 +48,17 @@ const managerOnlyResources = new Set([
 	"reports",
 	"jaspel",
 ]);
-const bulkShiftSchema = z.object({
-	employeeIds: z.array(z.number().int().positive()).min(1),
-	shiftIds: z.array(z.number().int().positive()),
-});
+const bulkShiftSchema = z
+	.object({
+		employeeIds: z.array(z.number().int().positive()).min(1),
+		shiftIds: z.array(z.number().int().positive()).min(1),
+		startDate: z.string().date(),
+		endDate: z.string().date(),
+	})
+	.refine((data) => data.endDate >= data.startDate, {
+		message: "Tanggal selesai tidak boleh sebelum tanggal mulai",
+		path: ["endDate"],
+	});
 const leaveSchema = z.object({
 	employeeId: z.number().int().positive(),
 	type: z.enum(["ANNUAL", "SICK", "PERMISSION", "MATERNITY", "OTHER"]),
@@ -192,6 +200,10 @@ export async function GET(request: NextRequest) {
 					? employees.findOne(idAt(path))
 					: employees.findAll(pageParams(request));
 			case "devices":
+				if (path[1] === "claims") {
+					requireRole(user, [...admin]);
+					return adms.findClaims(pageParams(request));
+				}
 				return path[2] === "commands"
 					? devices.getCommands(idAt(path), pageParams(request))
 					: path[1]
@@ -344,6 +356,19 @@ export async function POST(request: NextRequest) {
 				}
 			case "devices":
 				requireRole(user, [...admin]);
+				if (path[1] === "claims" && path[3] === "approve") {
+					const deviceId = parseWith(
+						z.object({ deviceId: z.number().int().positive() }),
+						body,
+					).deviceId;
+					return audited(
+						user.userId,
+						"APPROVE",
+						"adms-device-claims",
+						{ claimId: idAt(path), deviceId },
+						() => adms.approveClaim(idAt(path), deviceId, user.userId),
+					);
+				}
 				if (path[1] === "command" || path[2] === "command") {
 					const command = parseWith(
 						SendCommandSchema,
@@ -484,13 +509,20 @@ export async function PATCH(request: NextRequest) {
 						user.userId,
 						"UPDATE",
 						"employees",
-						{ bulk: true },
-						() => employees.bulkAssignShift(data.employeeIds, data.shiftIds),
+						{
+							bulk: true,
+							startDate: data.startDate,
+							endDate: data.endDate ?? null,
+						},
+						() =>
+							employees.bulkAssignShift(data.employeeIds, data.shiftIds, {
+								startDate: data.startDate,
+								endDate: data.endDate,
+							}),
 					);
 				}
 				{
 					const data = parseWith(UpdateEmployeeSchema, body);
-					if (data.shiftIds) await employees.validateShiftIds(data.shiftIds);
 					return audited(
 						user.userId,
 						"UPDATE",
