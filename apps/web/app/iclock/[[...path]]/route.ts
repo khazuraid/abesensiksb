@@ -60,9 +60,12 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-	return handle(request, async () => {
+	return handle(request, async ({ body }) => {
 		const { sn } = await authorize(request);
 		const path = endpoint(request);
+		const raw = Buffer.from(body as ArrayBuffer)
+			.toString("utf8")
+			.trim();
 		if (path === "fdata") {
 			const pin = request.nextUrl.searchParams.get("PIN") ?? "";
 			if (sn && pin)
@@ -70,13 +73,10 @@ export async function POST(request: NextRequest) {
 					sn,
 					pin,
 					request.nextUrl.searchParams.get("FileName") ?? "",
-					Buffer.from(await request.arrayBuffer()),
+					Buffer.from(body as ArrayBuffer),
 				);
 			return text("OK");
 		}
-		const raw = Buffer.from(await request.arrayBuffer())
-			.toString("utf8")
-			.trim();
 		if (path === "devicecmd") {
 			const id = raw.match(/ID[=:](\d+)/)?.[1];
 			if (id)
