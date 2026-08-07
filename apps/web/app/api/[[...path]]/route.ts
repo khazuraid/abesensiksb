@@ -356,6 +356,15 @@ export async function POST(request: NextRequest) {
 				}
 			case "devices":
 				requireRole(user, [...admin]);
+				if (path[1] === "claims" && path[3] === "register") {
+					return audited(
+						user.userId,
+						"CREATE",
+						"devices",
+						{ claimId: idAt(path) },
+						() => adms.registerClaim(idAt(path), user.userId),
+					);
+				}
 				if (path[1] === "claims" && path[3] === "approve") {
 					const deviceId = parseWith(
 						z.object({ deviceId: z.number().int().positive() }),

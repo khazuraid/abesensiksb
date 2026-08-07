@@ -138,19 +138,13 @@ export default function DevicesPage() {
 		refetchInterval: 10000,
 	});
 	const claims = claimResponse?.data ?? [];
-	const approveClaim = useMutation({
-		mutationFn: async ({
-			claimId,
-			deviceId,
-		}: {
-			claimId: number;
-			deviceId: number;
-		}) =>
-			(await api.post(`/devices/claims/${claimId}/approve`, { deviceId })).data,
+	const registerClaim = useMutation({
+		mutationFn: async (claimId: number) =>
+			(await api.post(`/devices/claims/${claimId}/register`)).data,
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["device-claims"] });
 			queryClient.invalidateQueries({ queryKey: ["devices"] });
-			toast.success("Permintaan perangkat disetujui");
+			toast.success("Terminal didaftarkan. Perintah tarik pegawai dikirim");
 		},
 	});
 
@@ -322,8 +316,7 @@ export default function DevicesPage() {
 					<header className="border-b border-[#ead9ac] px-4 py-3 md:px-5">
 						<h3 className="text-sm font-semibold">Permintaan mesin tanpa SN</h3>
 						<p className="mt-1 text-xs">
-							Pilih terminal milik Anda untuk mengizinkan IP ini. IP berubah
-							perlu persetujuan ulang.
+							Daftarkan mesin ini; sistem langsung meminta daftar pegawai.
 						</p>
 					</header>
 					<ul className="divide-y divide-[#ead9ac]">
@@ -346,23 +339,14 @@ export default function DevicesPage() {
 										</p>
 									)}
 								</div>
-								<select
-									defaultValue=""
-									disabled={approveClaim.isPending || devices.length === 0}
-									onChange={(event) => {
-										const deviceId = Number(event.target.value);
-										if (deviceId)
-											approveClaim.mutate({ claimId: claim.id, deviceId });
-									}}
-									className="min-h-10 border border-[#b9a069] bg-white px-3 text-xs sm:w-56"
+								<button
+									type="button"
+									disabled={registerClaim.isPending}
+									onClick={() => registerClaim.mutate(claim.id)}
+									className="adms-button-outline min-h-10 text-xs"
 								>
-									<option value="">Setujui untuk terminal...</option>
-									{devices.map((device) => (
-										<option key={device.id} value={device.id}>
-											{device.name} · {device.serialNumber}
-										</option>
-									))}
-								</select>
+									Daftarkan & tarik pegawai
+								</button>
 							</li>
 						))}
 					</ul>

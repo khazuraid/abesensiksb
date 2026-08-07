@@ -2248,7 +2248,47 @@ export class AdmsService {
 			return approved;
 		});
 	}
-	updateDeviceStatus(sn: string, ip: string) {
+	async registerClaim(id: number, userId: number) {
+		return this.db.transaction(async (tx) => {
+			const [claim] = await tx
+				.select()
+				.from(schema.admsDeviceClaims)
+				.where(
+					and(
+						eq(schema.admsDeviceClaims.id, id),
+						eq(schema.admsDeviceClaims.status, "PENDING"),
+					),
+				);
+			if (!claim)
+				throw new ApiError(404, "Permintaan perangkat tidak ditemukan");
+			const now = new Date();
+			const [device] = await tx
+				.insert(schema.devices)
+				.values({
+					serialNumber: `NO-SN-${claim.id}`,
+					name: `Terminal ${claim.sourceIp}`,
+					ipAddress: claim.sourceIp,
+					isOnline: true,
+					lastSeen: now,
+				})
+				.returning();
+			await tx.insert(schema.deviceCommands).values({
+				deviceId: device!.id,
+				command: "DATA QUERY USERINFO",
+			});
+			await tx
+				.update(schema.admsDeviceClaims)
+				.set({
+					deviceId: device!.id,
+					status: "APPROVED",
+					resolvedBy: userId,
+					resolvedAt: now,
+				})
+				.where(eq(schema.admsDeviceClaims.id, id));
+			return device;
+		});
+	}
+	updateDeviceStatus(sn: string, ip: string, deviceId?: number) {
 		return this.db
 			.update(schema.devices)
 			.set({
@@ -2257,13 +2297,21 @@ export class AdmsService {
 				ipAddress: ip,
 				updatedAt: new Date(),
 			})
-			.where(eq(schema.devices.serialNumber, sn));
+			.where(
+				deviceId
+					? eq(schema.devices.id, deviceId)
+					: eq(schema.devices.serialNumber, sn),
+			);
 	}
-	async getPendingCommands(sn: string) {
+	async getPendingCommands(sn: string, deviceId?: number) {
 		const [device] = await this.db
 			.select()
 			.from(schema.devices)
-			.where(eq(schema.devices.serialNumber, sn));
+			.where(
+				deviceId
+					? eq(schema.devices.id, deviceId)
+					: eq(schema.devices.serialNumber, sn),
+			);
 		if (!device) return "OK";
 		const stale = new Date(
 			Date.now() - Number(process.env.COMMAND_ACK_TIMEOUT_MS || 60_000),
@@ -2299,11 +2347,20 @@ export class AdmsService {
 			);
 		return commands.map((c) => `C:${c.id}:${c.command}`).join("\n");
 	}
-	async ackCommand(id: number, success: boolean, sn: string) {
+	async ackCommand(
+		id: number,
+		success: boolean,
+		sn: string,
+		deviceId?: number,
+	) {
 		const [device] = await this.db
 			.select({ id: schema.devices.id })
 			.from(schema.devices)
-			.where(eq(schema.devices.serialNumber, sn));
+			.where(
+				deviceId
+					? eq(schema.devices.id, deviceId)
+					: eq(schema.devices.serialNumber, sn),
+			);
 		if (!device) return;
 		await this.db
 			.update(schema.deviceCommands)

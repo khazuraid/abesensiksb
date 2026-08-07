@@ -101,12 +101,12 @@ test("ADMS parity covers data, photo, command polling and acknowledgement", () =
 test("ADMS menandai perangkat terdaftar online saat polling konfigurasi", () => {
 	assert.match(
 		admsRoute,
-		/const \{ sn, device \} = await authorize\(request\);\s*await adms\.updateDeviceStatus\(sn, ip\(request\)\);\s*if \(endpoint\(request\) === "getrequest"\)/s,
+		/const \{ sn, device \} = await authorize\(request\);\s*await adms\.updateDeviceStatus\(sn, ip\(request\), device\?\.id\);\s*if \(endpoint\(request\) === "getrequest"\)/s,
 	);
 });
 
 test("ADMS tidak mewajibkan SN", () => {
 	assert.doesNotMatch(admsRoute, /isRegisteredAdmsDevice/);
-	assert.doesNotMatch(admsRoute, /recordUnidentifiedDevice/);
+	assert.match(admsRoute, /recordUnidentifiedDevice/);
 	assert.match(admsRoute, /searchParams\.get\("SN"\) \?\? "unknown"/);
 });

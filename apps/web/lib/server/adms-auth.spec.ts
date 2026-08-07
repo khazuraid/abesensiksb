@@ -11,7 +11,6 @@ const routeSource = () =>
 test("ADMS menerima koneksi tanpa SN", async () => {
 	const source = await routeSource();
 	assert.doesNotMatch(source, /isRegisteredAdmsDevice/);
-	assert.doesNotMatch(source, /recordUnidentifiedDevice/);
 	assert.match(
 		source,
 		/const sn = request\.nextUrl\.searchParams\.get\("SN"\) \?\? "unknown"/,
@@ -23,4 +22,12 @@ test("ADMS memakai body yang dibaca handler sekali", async () => {
 	assert.match(source, /return handle\(request, async \(\{ body \}\) =>/);
 	assert.doesNotMatch(source, /request\.arrayBuffer\(\)/);
 	assert.match(source, /Buffer\.from\(body as ArrayBuffer\)/);
+});
+
+test("ADMS tanpa SN menemukan terminal terdaftar dari IP", async () => {
+	const source = await routeSource();
+	assert.match(source, /await adms\.findClaimedDevice\(ip\(request\)\)/);
+	assert.match(source, /await adms\.recordUnidentifiedDevice\(/);
+	assert.match(source, /updateDeviceStatus\(sn, ip\(request\), device\?\.id\)/);
+	assert.match(source, /getPendingCommands\(sn, device\?\.id\)/);
 });

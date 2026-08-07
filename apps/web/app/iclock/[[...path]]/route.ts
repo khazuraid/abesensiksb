@@ -13,10 +13,17 @@ function text(value: string, status = 200) {
 
 async function authorize(request: NextRequest) {
 	const sn = request.nextUrl.searchParams.get("SN") ?? "unknown";
-	return {
-		sn,
-		device: sn === "unknown" ? undefined : await adms.findDevice(sn),
-	};
+	const device =
+		sn === "unknown"
+			? await adms.findClaimedDevice(ip(request))
+			: await adms.findDevice(sn);
+	if (sn === "unknown" && !device)
+		await adms.recordUnidentifiedDevice(
+			ip(request),
+			endpoint(request),
+			request.headers.get("user-agent") ?? "",
+		);
+	return { sn, device };
 }
 
 function endpoint(request: NextRequest) {
@@ -37,9 +44,9 @@ function ip(request: NextRequest) {
 export async function GET(request: NextRequest) {
 	return handle(request, async () => {
 		const { sn, device } = await authorize(request);
-		await adms.updateDeviceStatus(sn, ip(request));
+		await adms.updateDeviceStatus(sn, ip(request), device?.id);
 		if (endpoint(request) === "getrequest") {
-			return text(await adms.getPendingCommands(sn));
+			return text(await adms.getPendingCommands(sn, device?.id));
 		}
 		return text(
 			[
@@ -61,7 +68,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	return handle(request, async ({ body }) => {
-		const { sn } = await authorize(request);
+		const { sn, device } = await authorize(request);
 		const path = endpoint(request);
 		const raw = Buffer.from(body as ArrayBuffer)
 			.toString("utf8")
@@ -84,10 +91,11 @@ export async function POST(request: NextRequest) {
 					Number(id),
 					(raw.match(/Return[=:](\d+)/)?.[1] ?? "0") === "0",
 					sn,
+					device?.id,
 				);
 			return text("OK");
 		}
-		await adms.updateDeviceStatus(sn, ip(request));
+		await adms.updateDeviceStatus(sn, ip(request), device?.id);
 		if (!raw) return text("OK");
 		const table = request.nextUrl.searchParams.get("table") ?? "";
 		if (table === "user" || table === "USERINFO")

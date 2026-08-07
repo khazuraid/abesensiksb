@@ -19,3 +19,8 @@ test("attendance download sends the API command type and date range", () => {
 	assert.match(source, /start_date: pullStartDate/);
 	assert.match(source, /end_date: pullEndDate/);
 });
+
+test("SN-less claim can register a terminal and pull employees", () => {
+	assert.match(source, /\/devices\/claims\/\$\{claimId\}\/register/);
+	assert.match(source, /Daftarkan & tarik pegawai/);
+});
