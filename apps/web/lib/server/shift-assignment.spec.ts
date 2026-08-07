@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
 	assertValidShiftAssignmentRange,
@@ -47,4 +48,17 @@ test("tanggal selesai tidak boleh sebelum tanggal mulai", () => {
 		() => assertValidShiftAssignmentRange("2026-08-10", "2026-08-09"),
 		/Tanggal selesai tidak boleh sebelum tanggal mulai/,
 	);
+});
+
+test("form shift menyediakan rentang tanggal berlaku", async () => {
+	const source = await readFile(
+		new URL("../../app/(dashboard)/shifts/page.tsx", import.meta.url),
+		"utf8",
+	);
+	assert.match(source, /htmlFor="effectiveFrom"/);
+	assert.match(source, /htmlFor="effectiveTo"/);
+	assert.match(source, /id="effectiveFrom"[\s\S]*?type="date"/);
+	assert.match(source, /id="effectiveTo"[\s\S]*?type="date"/);
+	assert.match(source, /min={form\.effectiveFrom \|\| undefined}/);
+	assert.match(source, /max={form\.effectiveTo \|\| undefined}/);
 });

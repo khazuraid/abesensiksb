@@ -259,6 +259,44 @@ function ShiftForm({
 							/>
 						</div>
 					</div>
+					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
+						<div>
+							<label
+								htmlFor="effectiveFrom"
+								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
+							>
+								Berlaku mulai
+							</label>
+							<input
+								id="effectiveFrom"
+								type="date"
+								value={form.effectiveFrom || ""}
+								max={form.effectiveTo || undefined}
+								onChange={(e) =>
+									setForm({ ...form, effectiveFrom: e.target.value || null })
+								}
+								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="effectiveTo"
+								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
+							>
+								Berlaku sampai
+							</label>
+							<input
+								id="effectiveTo"
+								type="date"
+								value={form.effectiveTo || ""}
+								min={form.effectiveFrom || undefined}
+								onChange={(e) =>
+									setForm({ ...form, effectiveTo: e.target.value || null })
+								}
+								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
+							/>
+						</div>
+					</div>
 					<div>
 						<div className="block text-[13px] font-semibold text-[#3e484d] mb-2">
 							Hari Kerja
