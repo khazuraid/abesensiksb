@@ -1,6 +1,5 @@
 import type { NextRequest } from "next/server";
-import { isRegisteredAdmsDevice } from "@/lib/server/adms-auth";
-import { ApiError, handle } from "@/lib/server/api";
+import { handle } from "@/lib/server/api";
 import { adms } from "@/lib/server/container";
 
 export const runtime = "nodejs";
@@ -13,24 +12,11 @@ function text(value: string, status = 200) {
 }
 
 async function authorize(request: NextRequest) {
-	const sn = request.nextUrl.searchParams.get("SN") ?? "";
-	const sourceIp = ip(request);
-	if (!sn) {
-		const device = await adms.findClaimedDevice(sourceIp);
-		if (!device) {
-			await adms.recordUnidentifiedDevice(
-				sourceIp,
-				endpoint(request),
-				request.headers.get("user-agent") ?? "",
-			);
-			throw new ApiError(401, "Perangkat tanpa SN menunggu persetujuan");
-		}
-		return { sn: device.serialNumber, device };
-	}
-	const device = await adms.findDevice(sn);
-	if (!isRegisteredAdmsDevice(sn, device?.serialNumber))
-		throw new ApiError(401, "Perangkat dengan SN ini belum terdaftar");
-	return { sn, device };
+	const sn = request.nextUrl.searchParams.get("SN") ?? "unknown";
+	return {
+		sn,
+		device: sn === "unknown" ? undefined : await adms.findDevice(sn),
+	};
 }
 
 function endpoint(request: NextRequest) {

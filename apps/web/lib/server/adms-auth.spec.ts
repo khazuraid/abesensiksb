@@ -1,10 +1,16 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { isRegisteredAdmsDevice } from "./adms-auth";
 
-test("ADMS menerima perangkat hanya saat SN cocok dengan perangkat terdaftar", () => {
-	assert.equal(isRegisteredAdmsDevice("ZK-001", "ZK-001"), true);
-	assert.equal(isRegisteredAdmsDevice("ZK-001", "ZK-002"), false);
-	assert.equal(isRegisteredAdmsDevice("ZK-001", undefined), false);
-	assert.equal(isRegisteredAdmsDevice("", "ZK-001"), false);
+test("ADMS menerima koneksi tanpa SN", async () => {
+	const source = await readFile(
+		new URL("../../app/iclock/[[...path]]/route.ts", import.meta.url),
+		"utf8",
+	);
+	assert.doesNotMatch(source, /isRegisteredAdmsDevice/);
+	assert.doesNotMatch(source, /recordUnidentifiedDevice/);
+	assert.match(
+		source,
+		/const sn = request\.nextUrl\.searchParams\.get\("SN"\) \?\? "unknown"/,
+	);
 });

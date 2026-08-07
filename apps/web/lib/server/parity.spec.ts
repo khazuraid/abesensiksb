@@ -95,7 +95,6 @@ test("ADMS parity covers data, photo, command polling and acknowledgement", () =
 	]) {
 		assert.match(admsRoute, new RegExp(marker));
 	}
-	assert.match(admsRoute, /isRegisteredAdmsDevice/);
 	assert.match(admsRoute, /findDevice/);
 });
 
@@ -106,13 +105,8 @@ test("ADMS menandai perangkat terdaftar online saat polling konfigurasi", () => 
 	);
 });
 
-test("ADMS tanpa SN dicatat lalu menunggu persetujuan IP", () => {
-	assert.match(admsRoute, /findClaimedDevice\(sourceIp\)/);
-	assert.match(admsRoute, /recordUnidentifiedDevice/);
-	assert.match(admsRoute, /Perangkat tanpa SN menunggu persetujuan/);
-	assert.match(
-		apiRoute,
-		/path\[1\] === "claims"\) \{\s*requireRole\(user, \[\.\.\.admin\]\)/s,
-	);
-	assert.match(apiRoute, /adms\.approveClaim/);
+test("ADMS tidak mewajibkan SN", () => {
+	assert.doesNotMatch(admsRoute, /isRegisteredAdmsDevice/);
+	assert.doesNotMatch(admsRoute, /recordUnidentifiedDevice/);
+	assert.match(admsRoute, /searchParams\.get\("SN"\) \?\? "unknown"/);
 });
