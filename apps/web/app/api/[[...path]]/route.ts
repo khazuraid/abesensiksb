@@ -361,8 +361,8 @@ export async function POST(request: NextRequest) {
 						user.userId,
 						"CREATE",
 						"devices",
-						{ claimId: idAt(path) },
-						() => adms.registerClaim(idAt(path), user.userId),
+						{ claimId: idAt(path, 2) },
+						() => adms.registerClaim(idAt(path, 2), user.userId),
 					);
 				}
 				if (path[1] === "claims" && path[3] === "approve") {
@@ -374,8 +374,8 @@ export async function POST(request: NextRequest) {
 						user.userId,
 						"APPROVE",
 						"adms-device-claims",
-						{ claimId: idAt(path), deviceId },
-						() => adms.approveClaim(idAt(path), deviceId, user.userId),
+						{ claimId: idAt(path, 2), deviceId },
+						() => adms.approveClaim(idAt(path, 2), deviceId, user.userId),
 					);
 				}
 				if (path[1] === "command" || path[2] === "command") {

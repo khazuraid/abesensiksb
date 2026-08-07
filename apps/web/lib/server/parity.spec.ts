@@ -110,3 +110,12 @@ test("ADMS tidak mewajibkan SN", () => {
 	assert.match(admsRoute, /recordUnidentifiedDevice/);
 	assert.match(admsRoute, /searchParams\.get\("SN"\) \?\? "unknown"/);
 });
+
+test("registrasi claim memakai ID setelah segmen claims", () => {
+	assert.match(apiRoute, /path\[1\] === "claims" && path\[3\] === "register"/);
+	assert.match(apiRoute, /claimId: idAt\(path, 2\)/);
+	assert.match(
+		apiRoute,
+		/adms\.registerClaim\(idAt\(path, 2\), user\.userId\)/,
+	);
+});
