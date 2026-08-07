@@ -24,38 +24,32 @@ export const useSocket = () => useContext(SocketContext);
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
 	const pathname = usePathname();
-	const socket = useMemo(
-		() =>
-			io(
-				process.env.NEXT_PUBLIC_WORKER_URL ||
-					(typeof window === "undefined"
-						? "http://localhost:8888"
-						: `${window.location.protocol}//${window.location.hostname}:8888`),
-				{
-					transports: ["websocket"],
-					withCredentials: true,
-					autoConnect: false,
-					auth: async (callback) => {
-						try {
-							const response = await fetch("/api/auth/token", {
-								credentials: "include",
-							});
-							const data = (await response.json()) as { token?: string };
-							callback({ token: data.token });
-						} catch {
-							callback({});
-						}
-					},
-					reconnectionAttempts: 5,
-					reconnectionDelay: 1000,
-				},
-			),
-		[],
-	);
+	const workerUrl = process.env.NEXT_PUBLIC_WORKER_URL;
+	const socket = useMemo(() => {
+		if (!workerUrl) return null;
+		return io(workerUrl, {
+			transports: ["websocket"],
+			withCredentials: true,
+			autoConnect: false,
+			auth: async (callback) => {
+				try {
+					const response = await fetch("/api/auth/token", {
+						credentials: "include",
+					});
+					const data = (await response.json()) as { token?: string };
+					callback({ token: data.token });
+				} catch {
+					callback({});
+				}
+			},
+			reconnectionAttempts: 5,
+			reconnectionDelay: 1000,
+		});
+	}, [workerUrl]);
 	const [isConnected, setIsConnected] = useState(false);
 
 	useEffect(() => {
-		if (pathname === "/login") return;
+		if (pathname === "/login" || !socket) return;
 		const onConnect = () => {
 			console.log("Connected to WebSocket backend");
 			setIsConnected(true);

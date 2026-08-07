@@ -7,6 +7,11 @@ const source = await readFile(
 	"utf8",
 );
 
-test("worker socket follows the browser host when no public URL is built in", () => {
-	assert.match(source, /window\.location\.hostname}:8888/);
+test("worker socket only connects when a public worker URL is configured", () => {
+	assert.match(
+		source,
+		/const workerUrl = process\.env\.NEXT_PUBLIC_WORKER_URL/,
+	);
+	assert.match(source, /if \(!workerUrl\) return null/);
+	assert.doesNotMatch(source, /window\.location\.hostname}:8888/);
 });
