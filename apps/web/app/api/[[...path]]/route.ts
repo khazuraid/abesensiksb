@@ -190,7 +190,7 @@ export async function GET(request: NextRequest) {
 		if (!path.length) return { message: "Next.js ADMS API berjalan" };
 		if (path[0] === "health-db") {
 			const result = await schema.db.execute("SELECT 1 as ok");
-			return { status: "ok", connected: result.rows.length > 0 };
+			return { status: result.rows.length > 0 ? "ok" : "error" };
 		}
 		const user = await readValidSession(request);
 		if (managerOnlyResources.has(path[0] ?? ""))

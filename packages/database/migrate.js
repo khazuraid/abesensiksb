@@ -12,6 +12,7 @@ const files = [
 	"migrations/0008_final_reliability.sql",
 	"migrations/0009_employee_shift_assignments.sql",
 	"migrations/0010_adms_device_claims.sql",
+	"migrations/0011_device_block.sql",
 ];
 
 async function run() {

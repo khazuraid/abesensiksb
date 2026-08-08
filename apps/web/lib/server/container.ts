@@ -46,7 +46,7 @@ export function getAdmsQueue() {
 	const queue =
 		globalState.admsQueue ??
 		new Queue("adms-logs", { connection: redisConnection() });
-	if (process.env.NODE_ENV !== "production") globalState.admsQueue = queue;
+	globalState.admsQueue = queue;
 	return queue;
 }
 

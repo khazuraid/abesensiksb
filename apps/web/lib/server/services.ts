@@ -2180,9 +2180,9 @@ export class AdmsService {
 		return claim?.device;
 	}
 	async registerDevice(sn: string, ip: string) {
-		if (!ip) return;
+		const safeIp = ip || "0.0.0.0";
 		const serialNumber =
-			sn === "unknown" ? `NO-SN-${ip.replace(/[^a-zA-Z0-9]/g, "-")}` : sn;
+			sn === "unknown" ? `NO-SN-${safeIp.replace(/[^a-zA-Z0-9]/g, "-")}` : sn;
 		return this.db.transaction(async (tx) => {
 			const [existing] = await tx
 				.select()
