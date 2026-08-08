@@ -147,3 +147,10 @@ test("sinkronisasi USERINFO mengisi biometricId pegawai yang cocok namanya", () 
 	);
 	assert.match(services, /biometricId: pin/);
 });
+
+test("ATTLOG dari PIN baru dibuatkan pegawai agar tetap tersimpan", () => {
+	assert.match(
+		services,
+		/if \(!employee\)[\s\S]*?insert\(schema\.employees\)[\s\S]*?employeeCode: pin,[\s\S]*?name: `Pegawai \$\{pin\}`,[\s\S]*?biometricId: pin/,
+	);
+});

@@ -2403,7 +2403,7 @@ export class AdmsService {
 				const type =
 					parts[2]?.trim() === "0" ? ("IN" as const) : ("OUT" as const);
 				if (!pin || Number.isNaN(timestamp.getTime())) continue;
-				const [employee] = await this.db
+				let [employee] = await this.db
 					.select()
 					.from(schema.employees)
 					.where(
@@ -2413,8 +2413,27 @@ export class AdmsService {
 						),
 					);
 				if (!employee) {
+					const [created] = await this.db
+						.insert(schema.employees)
+						.values({
+							employeeCode: pin,
+							name: `Pegawai ${pin}`,
+							biometricId: pin,
+							biometricSyncedAt: new Date(),
+						})
+						.onConflictDoNothing({ target: schema.employees.biometricId })
+						.returning();
+					if (created) employee = created;
+					else {
+						[employee] = await this.db
+							.select()
+							.from(schema.employees)
+							.where(eq(schema.employees.biometricId, pin));
+					}
+				}
+				if (!employee) {
 					this.logger.warn(
-						`Unknown biometric PIN rejected: ${pin} (device: ${device?.name ?? sn})`,
+						`Biometric PIN could not be resolved: ${pin} (device: ${device?.name ?? sn})`,
 					);
 					continue;
 				}
