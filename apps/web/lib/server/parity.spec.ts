@@ -19,6 +19,10 @@ const authActionRoute = readFileSync(
 	resolve(process.cwd(), "app/api/auth/[action]/route.ts"),
 	"utf8",
 );
+const services = readFileSync(
+	resolve(process.cwd(), "lib/server/services.ts"),
+	"utf8",
+);
 
 const legacyParity = [
 	["GET", "users"],
@@ -98,17 +102,17 @@ test("ADMS parity covers data, photo, command polling and acknowledgement", () =
 	assert.match(admsRoute, /findDevice/);
 });
 
-test("ADMS menandai perangkat terdaftar online saat polling konfigurasi", () => {
-	assert.match(
-		admsRoute,
-		/const \{ sn, device \} = await authorize\(request\);\s*await adms\.updateDeviceStatus\(sn, ip\(request\), device\?\.id\);\s*if \(endpoint\(request\) === "getrequest"\)/s,
-	);
+test("ADMS meneruskan perangkat ter-resolve saat memproses log absensi", () => {
+	assert.match(admsRoute, /handleLogData\(sn, raw, device\?\.id\)/);
 });
 
-test("ADMS tidak mewajibkan SN", () => {
+test("ADMS langsung memasukkan mesin ke daftar perangkat", () => {
 	assert.doesNotMatch(admsRoute, /isRegisteredAdmsDevice/);
-	assert.match(admsRoute, /recordUnidentifiedDevice/);
+	assert.match(admsRoute, /registerDevice\(sn, ip\(request\)/);
 	assert.match(admsRoute, /searchParams\.get\("SN"\) \?\? "unknown"/);
+	assert.match(services, /async registerDevice\(/);
+	assert.match(services, /serialNumber = sn === "unknown"/);
+	assert.match(services, /name: `Terminal \$\{ip\}`/);
 });
 
 test("registrasi claim memakai ID setelah segmen claims", () => {

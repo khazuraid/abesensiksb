@@ -17,13 +17,10 @@ async function authorize(request: NextRequest) {
 		sn === "unknown"
 			? await adms.findClaimedDevice(ip(request))
 			: await adms.findDevice(sn);
-	if (sn === "unknown" && !device)
-		await adms.recordUnidentifiedDevice(
-			ip(request),
-			endpoint(request),
-			request.headers.get("user-agent") ?? "",
-		);
-	return { sn, device };
+	return {
+		sn,
+		device: device ?? (await adms.registerDevice(sn, ip(request))),
+	};
 }
 
 function endpoint(request: NextRequest) {
@@ -106,6 +103,6 @@ export async function POST(request: NextRequest) {
 			if (raw.includes("PIN=")) return text(await adms.handleUserData(sn, raw));
 			return text("OK");
 		}
-		return text(await adms.handleLogData(sn, raw));
+		return text(await adms.handleLogData(sn, raw, device?.id));
 	});
 }

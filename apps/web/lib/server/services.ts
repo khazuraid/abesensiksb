@@ -2160,34 +2160,41 @@ export class AdmsService {
 			);
 		return claim?.device;
 	}
-	async recordUnidentifiedDevice(
-		ip: string,
-		endpoint: string,
-		userAgent: string,
-	) {
+	async registerDevice(sn: string, ip: string) {
 		if (!ip) return;
-		const now = new Date();
-		const [existing] = await this.db
-			.select({ id: schema.admsDeviceClaims.id })
-			.from(schema.admsDeviceClaims)
-			.where(
-				and(
-					eq(schema.admsDeviceClaims.sourceIp, ip),
-					eq(schema.admsDeviceClaims.status, "PENDING"),
-				),
-			)
-			.limit(1);
-		if (existing) {
-			await this.db
-				.update(schema.admsDeviceClaims)
-				.set({ endpoint, userAgent, lastSeen: now })
-				.where(eq(schema.admsDeviceClaims.id, existing.id));
-			return;
-		}
-		await this.db.insert(schema.admsDeviceClaims).values({
-			sourceIp: ip,
-			endpoint,
-			userAgent: userAgent || null,
+		const serialNumber =
+			sn === "unknown" ? `NO-SN-${ip.replace(/[^a-zA-Z0-9]/g, "-")}` : sn;
+		return this.db.transaction(async (tx) => {
+			const [existing] = await tx
+				.select()
+				.from(schema.devices)
+				.where(eq(schema.devices.serialNumber, serialNumber))
+				.limit(1);
+			const now = new Date();
+			if (existing) {
+				await tx
+					.update(schema.devices)
+					.set({ isOnline: true, lastSeen: now, ipAddress: ip, updatedAt: now })
+					.where(eq(schema.devices.id, existing.id));
+				return {
+					...existing,
+					isOnline: true,
+					lastSeen: now,
+					ipAddress: ip,
+					updatedAt: now,
+				};
+			}
+			const [device] = await tx
+				.insert(schema.devices)
+				.values({
+					serialNumber,
+					name: `Terminal ${ip}`,
+					ipAddress: ip,
+					isOnline: true,
+					lastSeen: now,
+				})
+				.returning();
+			return device;
 		});
 	}
 	async findClaims(filter: PageParams = {}) {
@@ -2372,11 +2379,15 @@ export class AdmsService {
 				),
 			);
 	}
-	async handleLogData(sn: string, raw: string) {
+	async handleLogData(sn: string, raw: string, deviceId?: number) {
 		const [device] = await this.db
 			.select()
 			.from(schema.devices)
-			.where(eq(schema.devices.serialNumber, sn));
+			.where(
+				deviceId
+					? eq(schema.devices.id, deviceId)
+					: eq(schema.devices.serialNumber, sn),
+			);
 		let queued = 0;
 		for (const line of raw.split("\n").filter(Boolean)) {
 			try {
@@ -2397,7 +2408,9 @@ export class AdmsService {
 						),
 					);
 				if (!employee) {
-					this.logger.warn(`Unknown biometric PIN rejected: ${pin}`);
+					this.logger.warn(
+						`Unknown biometric PIN rejected: ${pin} (device: ${device?.name ?? sn})`,
+					);
 					continue;
 				}
 				const duplicate = await this.db
