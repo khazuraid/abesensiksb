@@ -10,6 +10,7 @@ import {
 	Plus,
 	Timer,
 	Trash2,
+	UserCheck,
 	X,
 } from "lucide-react";
 import { useRef, useState } from "react";
@@ -350,6 +351,13 @@ export default function ShiftsPage() {
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 	const [page, setPage] = useState(1);
+	const [assignShift, setAssignShift] = useState<Shift | null>(null);
+	const [assignStart, setAssignStart] = useState("");
+	const [assignEnd, setAssignEnd] = useState("");
+	const [assignError, setAssignError] = useState("");
+	const assignDialogRef = useRef<HTMLDivElement>(null);
+	const closeAssign = () => setAssignShift(null);
+	useModalAccessibility(assignDialogRef, closeAssign, !!assignShift);
 
 	const {
 		data: response,
@@ -382,6 +390,40 @@ export default function ShiftsPage() {
 	const deleteMutation = useMutation({
 		mutationFn: async (id: number) => await api.delete(`/shifts/${id}`),
 		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shifts"] }),
+	});
+
+	const assignAllMutation = useMutation({
+		mutationFn: async () => {
+			await api.patch("/employees/bulk/shift", {
+				allEmployees: true,
+				shiftIds: [assignShift!.id],
+				startDate: assignStart,
+				endDate: assignEnd,
+			});
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["employees"] });
+			setAssignShift(null);
+			setAssignStart("");
+			setAssignEnd("");
+			setAssignError("");
+			alert(`Shift "${assignShift?.name}" diterapkan ke semua pegawai.`);
+		},
+		onError: (err: {
+			response?: {
+				data?: { message?: string; details?: { conflicts?: unknown[] } };
+			};
+			message?: string;
+		}) => {
+			const conflicts = err.response?.data?.details?.conflicts;
+			setAssignError(
+				conflicts?.length
+					? `${err.response?.data?.message}: ${conflicts.length} pegawai bentrok`
+					: err.response?.data?.message ||
+							err.message ||
+							"Gagal menerapkan shift",
+			);
+		},
 	});
 
 	const handleSubmit = (data: CreateShift) => {
@@ -461,6 +503,17 @@ export default function ShiftsPage() {
 									</div>
 								</div>
 								<div className="flex gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+									<button
+										type="button"
+										title="Assign ke semua pegawai"
+										onClick={() => {
+											setAssignShift(shift);
+											setAssignError("");
+										}}
+										className="w-8 h-8 rounded-full hover:bg-[#f9f9ff] flex items-center justify-center text-[#6e797e] hover:text-[#00647c] transition-colors"
+									>
+										<UserCheck size={16} />
+									</button>
 									<button
 										type="button"
 										onClick={() => {
@@ -551,6 +604,105 @@ export default function ShiftsPage() {
 					initialData={selectedShift || undefined}
 					isLoading={createMutation.isPending || updateMutation.isPending}
 				/>
+			)}
+
+			{assignShift && (
+				<div
+					ref={assignDialogRef}
+					className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/40 p-0 sm:items-center sm:p-4"
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="assign-shift-title"
+				>
+					<div className="w-full max-w-md rounded-t-xl bg-white shadow-xl sm:rounded-md">
+						<div className="flex items-center justify-between border-b border-black/5 px-6 py-4">
+							<h3
+								id="assign-shift-title"
+								className="text-[16px] font-semibold text-[#111c2d]"
+							>
+								Assign ke semua pegawai
+							</h3>
+							<button
+								type="button"
+								onClick={closeAssign}
+								className="p-2 text-[#6e797e] hover:text-[#111c2d]"
+							>
+								<X size={18} />
+							</button>
+						</div>
+						<div className="space-y-4 p-6">
+							<p className="text-[14px] text-[#3e484d]">
+								Terapkan shift{" "}
+								<strong className="capitalize">{assignShift.name}</strong> (
+								{assignShift.startTime.slice(0, 5)}–
+								{assignShift.endTime.slice(0, 5)}) ke{" "}
+								<strong>semua pegawai</strong>.
+							</p>
+							<div className="grid grid-cols-2 gap-3">
+								<label className="text-[13px] font-semibold text-[#3e484d]">
+									Tanggal mulai
+									<input
+										type="date"
+										required
+										value={assignStart}
+										max={assignEnd || undefined}
+										onChange={(e) => {
+											setAssignStart(e.target.value);
+											setAssignError("");
+										}}
+										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
+									/>
+								</label>
+								<label className="text-[13px] font-semibold text-[#3e484d]">
+									Tanggal selesai
+									<input
+										type="date"
+										required
+										value={assignEnd}
+										min={assignStart || undefined}
+										onChange={(e) => {
+											setAssignEnd(e.target.value);
+											setAssignError("");
+										}}
+										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
+									/>
+								</label>
+							</div>
+							{assignError && (
+								<p
+									role="alert"
+									className="border border-[#ba1a1a]/30 bg-[#ba1a1a]/5 p-3 text-[13px] text-[#8f1616]"
+								>
+									{assignError}
+								</p>
+							)}
+							<div className="flex gap-3 pt-2">
+								<button
+									type="button"
+									onClick={closeAssign}
+									className="flex-1 px-6 py-2.5 rounded-xl font-semibold border border-[#bdc8ce] bg-white text-[#3e484d] hover:bg-[#f9f9ff] text-[14px]"
+								>
+									Batal
+								</button>
+								<button
+									type="button"
+									onClick={() => assignAllMutation.mutate()}
+									disabled={
+										assignAllMutation.isPending ||
+										!assignStart ||
+										!assignEnd ||
+										assignEnd < assignStart
+									}
+									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] text-[14px] disabled:opacity-50"
+								>
+									{assignAllMutation.isPending
+										? "Menyimpan..."
+										: "Terapkan ke Semua"}
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
 			)}
 		</motion.div>
 	);
