@@ -80,6 +80,7 @@ export const DeviceSchema = z.object({
 	location: z.string().nullable().optional(),
 	ipAddress: z.string().nullable().optional(),
 	isOnline: z.boolean().default(false),
+	isBlocked: z.boolean().default(false),
 	lastSeen: z.date().nullable().optional(),
 	createdAt: z.date(),
 	updatedAt: z.date(),
@@ -88,6 +89,7 @@ export const DeviceSchema = z.object({
 export const CreateDeviceSchema = DeviceSchema.omit({
 	id: true,
 	isOnline: true,
+	isBlocked: true,
 	lastSeen: true,
 	createdAt: true,
 	updatedAt: true,

@@ -594,6 +594,15 @@ export class DevicesService {
 		if (!result) throw new ApiError(404, `Device with ID ${id} not found`);
 		return { message: "Device deleted successfully" };
 	}
+	async setBlocked(id: number, blocked: boolean) {
+		const [result] = await this.db
+			.update(schema.devices)
+			.set({ isBlocked: blocked, updatedAt: new Date() })
+			.where(eq(schema.devices.id, id))
+			.returning();
+		if (!result) throw new ApiError(404, `Device with ID ${id} not found`);
+		return result;
+	}
 	async getCommands(deviceId: number, filter: PageParams = {}) {
 		const pagination = normalizePageParams(filter);
 		const where = eq(schema.deviceCommands.deviceId, deviceId);

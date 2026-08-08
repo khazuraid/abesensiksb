@@ -736,6 +736,23 @@ export default function DevicesPage() {
 									<Download size={16} className="text-[#087066]" />
 									<h4 className="text-sm font-semibold">Tarik data absensi</h4>
 								</div>
+								<button
+									type="button"
+									disabled={sendCommand.isPending}
+									onClick={() =>
+										sendCommand.mutate({
+											id: selectedDevice.id,
+											command: "log",
+										})
+									}
+									aria-busy={sendCommand.isPending}
+									className="adms-button mb-3 w-full"
+								>
+									<Download size={16} />
+									{sendCommand.isPending
+										? "Mengirim perintah..."
+										: "Tarik SEMUA log"}
+								</button>
 								<div className="grid grid-cols-2 gap-3">
 									<label className="text-[11px] font-semibold text-[#53635d]">
 										Dari tanggal
@@ -882,6 +899,94 @@ export default function DevicesPage() {
 									className="flex min-h-11 w-full items-center justify-center gap-2 border border-[#d9aba7] bg-white px-3 text-xs font-semibold text-[#a9433d] hover:bg-[#f8eae8]"
 								>
 									<Trash2 size={15} /> Hapus seluruh data terminal
+								</button>
+								<div className="mt-2 grid grid-cols-2 gap-2">
+									<button
+										type="button"
+										disabled={sendCommand.isPending}
+										onClick={() =>
+											sendCommand.mutate({
+												id: selectedDevice.id,
+												command: "reboot",
+											})
+										}
+										className="flex min-h-11 items-center justify-center gap-2 border border-[#d5ded9] bg-white px-3 text-xs font-semibold text-[#53635d] hover:bg-[#eaf0ed]"
+									>
+										Restart mesin
+									</button>
+									{selectedDevice.isBlocked ? (
+										<button
+											type="button"
+											onClick={() =>
+												api
+													.patch("/devices/unblock", {
+														deviceId: selectedDevice.id,
+													})
+													.then(() => {
+														queryClient.invalidateQueries({
+															queryKey: ["devices"],
+														});
+														toast.success("Terminal dibuka blokirnya");
+													})
+													.catch(() => toast.error("Gagal membuka blokir"))
+											}
+											className="flex min-h-11 items-center justify-center gap-2 border border-[#087066] bg-white px-3 text-xs font-semibold text-[#087066] hover:bg-[#eaf0ed]"
+										>
+											Buka blokir
+										</button>
+									) : (
+										<button
+											type="button"
+											onClick={() => {
+												if (
+													confirm(
+														"Terminal yang diblokir tidak bisa kirim data. Lanjutkan?",
+													)
+												) {
+													api
+														.patch("/devices/block", {
+															deviceId: selectedDevice.id,
+														})
+														.then(() => {
+															queryClient.invalidateQueries({
+																queryKey: ["devices"],
+															});
+															toast.success("Terminal diblokir");
+														})
+														.catch(() =>
+															toast.error("Gagal memblokir terminal"),
+														);
+												}
+											}}
+											className="flex min-h-11 items-center justify-center gap-2 border border-[#d9aba7] bg-white px-3 text-xs font-semibold text-[#a9433d] hover:bg-[#f8eae8]"
+										>
+											Blokir terminal
+										</button>
+									)}
+								</div>
+								<button
+									type="button"
+									onClick={() => {
+										if (
+											confirm(
+												"Hapus terminal ini dari daftar? Data absensi yang sudah tersimpan tetap ada.",
+											)
+										) {
+											api
+												.delete(`/devices/${selectedDevice.id}`)
+												.then(() => {
+													queryClient.invalidateQueries({
+														queryKey: ["devices"],
+													});
+													setSelectedDevice(null);
+													toast.success("Terminal dihapus");
+												})
+												.catch(() => toast.error("Gagal menghapus terminal"));
+										}
+									}}
+									className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 border border-[#d9aba7] bg-[#a9433d] px-3 text-xs font-semibold text-white hover:bg-[#8f3934]"
+								>
+									<Trash2 size={15} /> Hapus terminal
 								</button>
 							</div>
 						</div>

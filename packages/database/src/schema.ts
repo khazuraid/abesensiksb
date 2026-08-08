@@ -198,6 +198,8 @@ export const devices = pgTable("devices", {
 
 	isOnline: boolean("is_online").default(false).notNull(),
 
+	isBlocked: boolean("is_blocked").default(false).notNull(),
+
 	lastSeen: timestamp("last_seen"),
 
 	createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -555,6 +555,32 @@ export async function PATCH(request: NextRequest) {
 				}
 			case "devices":
 				requireRole(user, [...admin]);
+				if (path[1] === "block") {
+					const deviceId = parseWith(
+						z.object({ deviceId: z.number().int().positive() }),
+						body,
+					).deviceId;
+					return audited(
+						user.userId,
+						"UPDATE",
+						"devices",
+						{ deviceId, blocked: true },
+						() => devices.setBlocked(deviceId, true),
+					);
+				}
+				if (path[1] === "unblock") {
+					const deviceId = parseWith(
+						z.object({ deviceId: z.number().int().positive() }),
+						body,
+					).deviceId;
+					return audited(
+						user.userId,
+						"UPDATE",
+						"devices",
+						{ deviceId, blocked: false },
+						() => devices.setBlocked(deviceId, false),
+					);
+				}
 				return audited(
 					user.userId,
 					"UPDATE",

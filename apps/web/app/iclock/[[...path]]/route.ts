@@ -17,10 +17,9 @@ async function authorize(request: NextRequest) {
 		sn === "unknown"
 			? await adms.findClaimedDevice(ip(request))
 			: await adms.findDevice(sn);
-	return {
-		sn,
-		device: device ?? (await adms.registerDevice(sn, ip(request))),
-	};
+	const resolved = device ?? (await adms.registerDevice(sn, ip(request)));
+	if (resolved?.isBlocked) return { sn, device: null, blocked: true as const };
+	return { sn, device: resolved, blocked: false as const };
 }
 
 function endpoint(request: NextRequest) {
@@ -40,7 +39,8 @@ function ip(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
 	return handle(request, async () => {
-		const { sn, device } = await authorize(request);
+		const { sn, device, blocked } = await authorize(request);
+		if (blocked) return text("BLOCKED", 403);
 		await adms.updateDeviceStatus(sn, ip(request), device?.id);
 		if (endpoint(request) === "getrequest") {
 			return text(await adms.getPendingCommands(sn, device?.id));
@@ -65,7 +65,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
 	return handle(request, async ({ body }) => {
-		const { sn, device } = await authorize(request);
+		const { sn, device, blocked } = await authorize(request);
+		if (blocked) return text("BLOCKED", 403);
 		const path = endpoint(request);
 		const raw = Buffer.from(body as ArrayBuffer)
 			.toString("utf8")
