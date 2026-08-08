@@ -111,8 +111,16 @@ test("ADMS langsung memasukkan mesin ke daftar perangkat", () => {
 	assert.match(admsRoute, /registerDevice\(sn, ip\(request\)/);
 	assert.match(admsRoute, /searchParams\.get\("SN"\) \?\? "unknown"/);
 	assert.match(services, /async registerDevice\(/);
-	assert.match(services, /serialNumber = sn === "unknown"/);
+	assert.match(services, /sn === "unknown" \? `NO-SN-/);
 	assert.match(services, /name: `Terminal \$\{ip\}`/);
+	assert.match(
+		services,
+		/async registerDevice[\s\S]*?command: "DATA QUERY USERINFO"/,
+	);
+	assert.match(
+		services,
+		/async registerClaim[\s\S]*?command: "DATA QUERY USERINFO"/,
+	);
 });
 
 test("registrasi claim memakai ID setelah segmen claims", () => {

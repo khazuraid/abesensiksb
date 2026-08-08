@@ -2194,6 +2194,10 @@ export class AdmsService {
 					lastSeen: now,
 				})
 				.returning();
+			await tx.insert(schema.deviceCommands).values({
+				deviceId: device!.id,
+				command: "DATA QUERY USERINFO",
+			});
 			return device;
 		});
 	}

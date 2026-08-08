@@ -14,8 +14,10 @@ test("device history reads sent commands and received attendance data", () => {
 	assert.doesNotMatch(source, /new Date\(\)\.toLocaleTimeString/);
 });
 
-test("attendance download sends the API command type and date range", () => {
+test("device controls use the X609 employee and attendance query commands", () => {
 	assert.match(source, /type: command/);
+	assert.match(source, /command: "user\.sync"/);
+	assert.match(source, /Tarik pegawai dari mesin/);
 	assert.match(source, /start_date: pullStartDate/);
 	assert.match(source, /end_date: pullEndDate/);
 });

@@ -706,6 +706,35 @@ export default function DevicesPage() {
 							<section className="border-b border-[#d5ded9] p-4 md:p-5">
 								<div className="mb-3 flex items-center gap-2">
 									<Download size={16} className="text-[#087066]" />
+									<h4 className="text-sm font-semibold">
+										Tarik daftar pegawai
+									</h4>
+								</div>
+								<p className="text-[11px] leading-5 text-[#53635d]">
+									Solution X609 akan mengirim USERINFO pada polling berikutnya.
+								</p>
+								<button
+									type="button"
+									disabled={sendCommand.isPending}
+									onClick={() =>
+										sendCommand.mutate({
+											id: selectedDevice.id,
+											command: "user.sync",
+										})
+									}
+									aria-busy={sendCommand.isPending}
+									className="adms-button mt-3 w-full"
+								>
+									<Download size={16} />
+									{sendCommand.isPending
+										? "Mengirim perintah..."
+										: "Tarik pegawai dari mesin"}
+								</button>
+							</section>
+
+							<section className="border-b border-[#d5ded9] p-4 md:p-5">
+								<div className="mb-3 flex items-center gap-2">
+									<Download size={16} className="text-[#087066]" />
 									<h4 className="text-sm font-semibold">Tarik data absensi</h4>
 								</div>
 								<div className="grid grid-cols-2 gap-3">
