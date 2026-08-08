@@ -204,6 +204,7 @@ export const DeviceCommandTypeEnum = z.enum([
 	"user.edit",
 	"user.delete",
 	"user.clone",
+	"user.move",
 	"attendance.download",
 	"attendance.verify",
 	"attendance.clear",

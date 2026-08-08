@@ -629,7 +629,7 @@ export class DevicesService {
 				commands.push("CHECK");
 				break;
 			case "reset":
-				commands.push("REBOOT");
+				commands.push("CHECK");
 				break;
 			case "info":
 				commands.push("INFO");
@@ -694,12 +694,14 @@ export class DevicesService {
 				break;
 			case "user.clone":
 				return this.cloneUser(dto);
+			case "user.move":
+				return this.moveUser(dto);
 			case "attendance.download":
 			case "attendance.verify":
 				if (!dto.start_date || !dto.end_date)
 					throw new ApiError(400, "start_date and end_date required");
 				commands.push(
-					`${dto.type === "attendance.download" ? "DATA QUERY" : "VERIFY SUM"} ATTLOG StartTime=${dto.start_date} EndTime=${dto.end_date}`,
+					`${dto.type === "attendance.download" ? "DATA QUERY" : "VERIFY SUM"} ATTLOG StartTime=${dto.start_date} 00:00:00	EndTime=${dto.end_date} 23:59:59`,
 				);
 				break;
 			case "attendance.clear":
@@ -765,6 +767,27 @@ export class DevicesService {
 				results.push(fp);
 			}
 		}
+		return results;
+	}
+
+	private async moveUser(dto: SendCommand) {
+		const results = await this.cloneUser(dto);
+		const [del1] = await this.db
+			.insert(schema.deviceCommands)
+			.values({
+				deviceId: dto.deviceId,
+				command: `DATA DELETE USERINFO PIN=${dto.user_id}`,
+			})
+			.returning();
+		results.push(del1);
+		const [del2] = await this.db
+			.insert(schema.deviceCommands)
+			.values({
+				deviceId: dto.deviceId,
+				command: `DATA DELETE FINGERTMP PIN=${dto.user_id}`,
+			})
+			.returning();
+		results.push(del2);
 		return results;
 	}
 }
@@ -2213,10 +2236,11 @@ export class AdmsService {
 					lastSeen: now,
 				})
 				.returning();
-			await tx.insert(schema.deviceCommands).values({
-				deviceId: device!.id,
-				command: "DATA QUERY USERINFO",
-			});
+			if (device)
+				await tx.insert(schema.deviceCommands).values({
+					deviceId: device.id,
+					command: "DATA QUERY USERINFO",
+				});
 			return device;
 		});
 	}
@@ -2254,7 +2278,7 @@ export class AdmsService {
 				.from(schema.devices)
 				.where(eq(schema.devices.id, deviceId));
 			if (!device)
-				throw new ApiError(404, "Device with ID ${deviceId} not found");
+				throw new ApiError(404, `Device with ID ${deviceId} not found`);
 			const now = new Date();
 			await tx
 				.update(schema.admsDeviceClaims)
@@ -2302,14 +2326,15 @@ export class AdmsService {
 					lastSeen: now,
 				})
 				.returning();
+			if (!device) throw new ApiError(500, "Failed to create device");
 			await tx.insert(schema.deviceCommands).values({
-				deviceId: device!.id,
+				deviceId: device.id,
 				command: "DATA QUERY USERINFO",
 			});
 			await tx
 				.update(schema.admsDeviceClaims)
 				.set({
-					deviceId: device!.id,
+					deviceId: device.id,
 					status: "APPROVED",
 					resolvedBy: userId,
 					resolvedAt: now,

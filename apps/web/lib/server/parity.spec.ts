@@ -155,8 +155,8 @@ test("ATTLOG dari PIN baru dibuatkan pegawai agar tetap tersimpan", () => {
 	);
 });
 
-test("command tarik ATTLOG pakai spasi tanpa jam", () => {
-	assert.match(services, /ATTLOG StartTime=.* EndTime=/);
+test("command tarik ATTLOG pakai tab + datetime", () => {
+	assert.match(services, /ATTLOG StartTime=.* 00:00:00.EndTime=.* 23:59:59/);
 });
 
 test("handleLogData parse format key=value v3.1.2+", () => {
