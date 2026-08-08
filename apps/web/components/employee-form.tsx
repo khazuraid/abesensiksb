@@ -137,6 +137,23 @@ export default function EmployeeForm({
 								</p>
 							)}
 						</div>
+						<div className="space-y-2">
+							<label
+								htmlFor="biometricId"
+								className="text-[13px] font-semibold text-[#111c2d]"
+							>
+								ID Mesin (PIN)
+							</label>
+							<input
+								{...register("biometricId")}
+								id="biometricId"
+								className="w-full bg-white border border-[#bdc8ce] py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								placeholder="Contoh: 12"
+							/>
+							<p className="text-[11px] text-[#6e797e]">
+								Samakan dengan PIN yang tampil pada mesin X609.
+							</p>
+						</div>
 					</div>
 
 					<div className="space-y-3">

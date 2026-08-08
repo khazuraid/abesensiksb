@@ -94,8 +94,10 @@ export async function POST(request: NextRequest) {
 		}
 		await adms.updateDeviceStatus(sn, ip(request), device?.id);
 		if (!raw) return text("OK");
-		const table = request.nextUrl.searchParams.get("table") ?? "";
-		if (table === "user" || table === "USERINFO")
+		const table = (
+			request.nextUrl.searchParams.get("table") ?? ""
+		).toUpperCase();
+		if (table === "USER" || table === "USERINFO")
 			return text(await adms.handleUserData(sn, raw));
 		if (table === "OPERLOG") {
 			if (raw.includes("FP PIN") || raw.includes("FP\tPIN"))
@@ -103,6 +105,8 @@ export async function POST(request: NextRequest) {
 			if (raw.includes("PIN=")) return text(await adms.handleUserData(sn, raw));
 			return text("OK");
 		}
-		return text(await adms.handleLogData(sn, raw, device?.id));
+		if (table === "ATTLOG")
+			return text(await adms.handleLogData(sn, raw, device?.id));
+		return text("OK");
 	});
 }

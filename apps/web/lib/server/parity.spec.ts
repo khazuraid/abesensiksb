@@ -131,3 +131,19 @@ test("registrasi claim memakai ID setelah segmen claims", () => {
 		/adms\.registerClaim\(idAt\(path, 2\), user\.userId\)/,
 	);
 });
+
+test("sinkronisasi hari libur memasukkan cuti bersama", () => {
+	assert.match(
+		services,
+		/!item\.is_national_holiday && item\.type !== "Joint Holiday"/,
+	);
+	assert.match(services, /"Cuti Bersama"/);
+});
+
+test("sinkronisasi USERINFO mengisi biometricId pegawai yang cocok namanya", () => {
+	assert.match(
+		services,
+		/lower\(trim\(\$\{schema\.employees\.name\}\)\) = lower\(trim\(\$\{name\}\)\)/,
+	);
+	assert.match(services, /biometricId: pin/);
+});

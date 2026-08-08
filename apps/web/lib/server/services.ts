@@ -1314,15 +1314,16 @@ export class HolidaysService {
 		for (const item of rows as {
 			date: string;
 			name: string;
+			type?: string;
 			is_national_holiday: boolean;
 		}[]) {
-			if (!item.is_national_holiday) continue;
+			if (!item.is_national_holiday && item.type !== "Joint Holiday") continue;
 			const inserted = await this.db
 				.insert(schema.holidays)
 				.values({
 					date: item.date,
 					name: item.name,
-					description: "Hari Libur Nasional (sync otomatis)",
+					description: `${item.type === "Joint Holiday" ? "Cuti Bersama" : "Hari Libur Nasional"} (sync otomatis)`,
 				})
 				.onConflictDoNothing({ target: schema.holidays.date })
 				.returning({ id: schema.holidays.id });
@@ -2477,7 +2478,7 @@ export class AdmsService {
 			const pin = fields.PIN || fields["USER PIN"] || fields.UserId,
 				name = fields.Name || fields.name;
 			if (!pin) continue;
-			const [employee] = await this.db
+			let [employee] = await this.db
 				.select()
 				.from(schema.employees)
 				.where(
@@ -2486,6 +2487,23 @@ export class AdmsService {
 						eq(schema.employees.employeeCode, pin),
 					),
 				);
+			if (!employee && name) {
+				const byName = await this.db
+					.select()
+					.from(schema.employees)
+					.where(
+						sql`lower(trim(${schema.employees.name})) = lower(trim(${name}))`,
+					)
+					.limit(2);
+				if (byName.length === 1 && !byName[0]?.biometricId)
+					employee = byName[0];
+				else if (byName.length === 1 && byName[0]?.biometricId !== pin) {
+					this.logger.warn(
+						`Biometric PIN mismatch skipped: ${pin} (${byName[0]?.name})`,
+					);
+					continue;
+				}
+			}
 			if (!employee && name)
 				await this.db.insert(schema.employees).values({
 					employeeCode: pin,
@@ -2498,6 +2516,7 @@ export class AdmsService {
 					.update(schema.employees)
 					.set({
 						...(name && employee.name.startsWith("Pegawai ") ? { name } : {}),
+						...(employee.biometricId ? {} : { biometricId: pin }),
 						biometricSyncedAt: new Date(),
 						updatedAt: new Date(),
 					})
