@@ -151,6 +151,16 @@ test("sinkronisasi USERINFO mengisi biometricId pegawai yang cocok namanya", () 
 test("ATTLOG dari PIN baru dibuatkan pegawai agar tetap tersimpan", () => {
 	assert.match(
 		services,
-		/if \(!employee\)[\s\S]*?insert\(schema\.employees\)[\s\S]*?employeeCode: pin,[\s\S]*?name: `Pegawai \$\{pin\}`,[\s\S]*?biometricId: pin/,
+		/if \(!employee\)[\s\S]*?insert\(schema\.employees\)[\s\S]*?employeeCode: pin,[\s\S]*?name: `Pegawai \${pin}`,[\s\S]*?biometricId: pin/,
 	);
+});
+
+test("command tarik ATTLOG pakai spasi tanpa jam", () => {
+	assert.match(services, /ATTLOG StartTime=.* EndTime=/);
+});
+
+test("handleLogData parse format key=value v3.1.2+", () => {
+	assert.match(services, /line\.includes\("="\)/);
+	assert.match(services, /fields\.PIN \|\| fields\.Pin/);
+	assert.match(services, /fields\.Time \|\| fields\.time/);
 });

@@ -681,7 +681,7 @@ export class DevicesService {
 				if (!dto.start_date || !dto.end_date)
 					throw new ApiError(400, "start_date and end_date required");
 				commands.push(
-					`${dto.type === "attendance.download" ? "DATA QUERY" : "VERIFY SUM"} ATTLOG StartTime=${dto.start_date} 00:00:00\tEndTime=${dto.end_date} 23:59:59`,
+					`${dto.type === "attendance.download" ? "DATA QUERY" : "VERIFY SUM"} ATTLOG StartTime=${dto.start_date} EndTime=${dto.end_date}`,
 				);
 				break;
 			case "attendance.clear":
@@ -2396,12 +2396,31 @@ export class AdmsService {
 		let queued = 0;
 		for (const line of raw.split("\n").filter(Boolean)) {
 			try {
-				const parts = line.split("	");
-				if (parts.length < 5) continue;
-				const pin = parts[0]?.trim();
-				const timestamp = new Date(parts[1]?.trim() ?? "");
-				const type =
-					parts[2]?.trim() === "0" ? ("IN" as const) : ("OUT" as const);
+				let pin: string | undefined;
+				let timestamp: Date;
+				let type: "IN" | "OUT";
+				if (line.includes("=")) {
+					const fields = Object.fromEntries(
+						line
+							.split("	")
+							.map((part) => {
+								const i = part.indexOf("=");
+								return [part.slice(0, i).trim(), part.slice(i + 1).trim()];
+							})
+							.filter(([key]) => key),
+					);
+					pin = fields.PIN || fields.Pin;
+					const time = fields.Time || fields.time;
+					if (!pin || !time) continue;
+					timestamp = new Date(time);
+					type = fields.type === "1" || fields.Type === "1" ? "OUT" : "IN";
+				} else {
+					const parts = line.split("	");
+					if (parts.length < 5) continue;
+					pin = parts[0]?.trim();
+					timestamp = new Date(parts[1]?.trim() ?? "");
+					type = parts[2]?.trim() === "0" ? ("IN" as const) : ("OUT" as const);
+				}
 				if (!pin || Number.isNaN(timestamp.getTime())) continue;
 				let [employee] = await this.db
 					.select()
