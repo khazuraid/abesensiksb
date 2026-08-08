@@ -103,8 +103,11 @@ async function forwardWebhook(
 
 const queueWorker = new Worker<AttendanceLogJob>(
 	"adms-logs",
-	async (job) =>
-		processAttendanceJob(job.data, {
+	async (job) => {
+		console.info(
+			`[worker] processing job ${job.id} emp=${job.data.log.employeeId} ts=${job.data.log.timestamp}`,
+		);
+		return processAttendanceJob(job.data, {
 			insert: async (log) => {
 				await db
 					.insert(schema.attendanceLogs)
@@ -162,7 +165,8 @@ const queueWorker = new Worker<AttendanceLogJob>(
 				job.data.completedEffects = completedEffects;
 				await job.updateData(job.data);
 			},
-		}),
+		});
+	},
 	{
 		connection: redisConnection(),
 		concurrency: Math.max(1, Number(process.env.WORKER_CONCURRENCY) || 2),

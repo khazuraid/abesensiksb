@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import {
 	BadgeCheck,
 	BriefcaseBusiness,
+	Clock,
 	Edit2,
 	Search,
 	Trash2,
@@ -44,6 +45,7 @@ export default function EmployeesPage() {
 	const [bulkShiftStartDate, setBulkShiftStartDate] = useState("");
 	const [bulkShiftEndDate, setBulkShiftEndDate] = useState("");
 	const [bulkShiftError, setBulkShiftError] = useState("");
+	const [bulkShiftAll, setBulkShiftAll] = useState(false);
 	const bulkShiftDialogRef = useRef<HTMLDivElement>(null);
 	const closeBulkShift = useCallback(() => setIsBulkShiftOpen(false), []);
 	useModalAccessibility(bulkShiftDialogRef, closeBulkShift, isBulkShiftOpen);
@@ -106,7 +108,8 @@ export default function EmployeesPage() {
 	const bulkShiftMutation = useMutation({
 		mutationFn: async () => {
 			await api.patch("/employees/bulk/shift", {
-				employeeIds: selectedIds,
+				employeeIds: bulkShiftAll ? undefined : selectedIds,
+				allEmployees: bulkShiftAll || undefined,
 				shiftIds: bulkShiftIds,
 				startDate: bulkShiftStartDate,
 				endDate: bulkShiftEndDate,
@@ -120,6 +123,7 @@ export default function EmployeesPage() {
 			setBulkShiftStartDate("");
 			setBulkShiftEndDate("");
 			setBulkShiftError("");
+			setBulkShiftAll(false);
 			alert("Berhasil memperbarui shift pegawai terpilih.");
 		},
 		onError: (err: {
@@ -194,13 +198,25 @@ export default function EmployeesPage() {
 						satu direktori.
 					</p>
 				</div>
-				<button
-					type="button"
-					onClick={() => setIsFormOpen(true)}
-					className="adms-button w-full sm:w-auto"
-				>
-					<UserPlus size={17} /> Tambah pegawai
-				</button>
+				<div className="flex gap-2">
+					<button
+						type="button"
+						onClick={() => {
+							setBulkShiftAll(true);
+							setIsBulkShiftOpen(true);
+						}}
+						className="adms-button w-full sm:w-auto"
+					>
+						<Clock size={17} /> Atur Shift Semua
+					</button>
+					<button
+						type="button"
+						onClick={() => setIsFormOpen(true)}
+						className="adms-button w-full sm:w-auto"
+					>
+						<UserPlus size={17} /> Tambah pegawai
+					</button>
+				</div>
 			</header>
 
 			<section
@@ -484,8 +500,20 @@ export default function EmployeesPage() {
 						<div className="p-6 space-y-4">
 							<p className="text-[14px] text-[#3e484d]">
 								Atur shift dan periode berlaku untuk{" "}
-								<strong>{selectedIds.length}</strong> pegawai.
+								<strong>{bulkShiftAll ? "semua" : selectedIds.length}</strong>{" "}
+								pegawai.
 							</p>
+							<label className="flex items-center gap-3 cursor-pointer">
+								<input
+									type="checkbox"
+									checked={bulkShiftAll}
+									onChange={(e) => setBulkShiftAll(e.target.checked)}
+									className="w-4 h-4 rounded border-[#bdc8ce] text-[#00647c] focus:ring-[#00647c]/50 cursor-pointer"
+								/>
+								<span className="text-[13px] font-semibold text-[#3e484d]">
+									Terapkan ke semua pegawai
+								</span>
+							</label>
 							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 								<label className="text-[13px] font-semibold text-[#3e484d]">
 									Tanggal mulai
@@ -572,7 +600,8 @@ export default function EmployeesPage() {
 										bulkShiftIds.length === 0 ||
 										!bulkShiftStartDate ||
 										!bulkShiftEndDate ||
-										bulkShiftEndDate < bulkShiftStartDate
+										bulkShiftEndDate < bulkShiftStartDate ||
+										(!bulkShiftAll && selectedIds.length === 0)
 									}
 									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-[14px] disabled:opacity-50"
 								>

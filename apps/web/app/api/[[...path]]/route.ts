@@ -50,11 +50,20 @@ const managerOnlyResources = new Set([
 ]);
 const bulkShiftSchema = z
 	.object({
-		employeeIds: z.array(z.number().int().positive()).min(1),
+		employeeIds: z.array(z.number().int().positive()).optional(),
+		allEmployees: z.boolean().optional(),
 		shiftIds: z.array(z.number().int().positive()).min(1),
 		startDate: z.string().date(),
 		endDate: z.string().date(),
 	})
+	.refine(
+		(data) =>
+			data.allEmployees || (data.employeeIds && data.employeeIds.length > 0),
+		{
+			message: "Pilih pegawai atau aktifkan opsi semua pegawai",
+			path: ["employeeIds"],
+		},
+	)
 	.refine((data) => data.endDate >= data.startDate, {
 		message: "Tanggal selesai tidak boleh sebelum tanggal mulai",
 		path: ["endDate"],
@@ -524,10 +533,14 @@ export async function PATCH(request: NextRequest) {
 							endDate: data.endDate ?? null,
 						},
 						() =>
-							employees.bulkAssignShift(data.employeeIds, data.shiftIds, {
-								startDate: data.startDate,
-								endDate: data.endDate,
-							}),
+							employees.bulkAssignShift(
+								data.allEmployees ? null : data.employeeIds!,
+								data.shiftIds,
+								{
+									startDate: data.startDate,
+									endDate: data.endDate,
+								},
+							),
 					);
 				}
 				{

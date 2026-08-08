@@ -350,7 +350,7 @@ export class EmployeesService {
 		return { message: "Employee deleted successfully" };
 	}
 	async bulkAssignShift(
-		employeeIds: number[],
+		employeeIds: number[] | null,
 		shiftIds: number[],
 		range: ShiftAssignmentRange,
 	) {
@@ -360,11 +360,20 @@ export class EmployeesService {
 			throw new ApiError(400, (error as Error).message);
 		}
 		await this.validateShiftIds(shiftIds);
+		let resolvedIds: number[] = employeeIds ?? [];
+		if (employeeIds === null) {
+			const allEmployees = await this.db
+				.select({ id: schema.employees.id })
+				.from(schema.employees);
+			resolvedIds = allEmployees.map((e) => e.id);
+			if (resolvedIds.length === 0)
+				throw new ApiError(404, "Tidak ada pegawai untuk diberi shift");
+		}
 		const employees = await this.db
 			.select({ id: schema.employees.id })
 			.from(schema.employees)
-			.where(inArray(schema.employees.id, employeeIds));
-		if (employees.length !== new Set(employeeIds).size)
+			.where(inArray(schema.employees.id, resolvedIds));
+		if (employees.length !== new Set(resolvedIds).size)
 			throw new ApiError(404, "Pegawai tidak ditemukan");
 		const conflicts = await this.db
 			.select({
@@ -380,7 +389,7 @@ export class EmployeesService {
 			)
 			.where(
 				and(
-					inArray(schema.employeeShiftAssignments.employeeId, employeeIds),
+					inArray(schema.employeeShiftAssignments.employeeId, resolvedIds),
 					or(
 						isNull(schema.employeeShiftAssignments.endDate),
 						gte(schema.employeeShiftAssignments.endDate, range.startDate),
@@ -402,7 +411,7 @@ export class EmployeesService {
 		const assignmentGroupId = randomUUID();
 		await this.db.transaction(async (tx) => {
 			await tx.insert(schema.employeeShiftAssignments).values(
-				employeeIds.flatMap((employeeId) =>
+				resolvedIds.flatMap((employeeId) =>
 					shiftIds.map((shiftId) => ({
 						employeeId,
 						shiftId,
@@ -415,9 +424,9 @@ export class EmployeesService {
 			await tx
 				.update(schema.employees)
 				.set({ shiftIds, updatedAt: new Date() })
-				.where(inArray(schema.employees.id, employeeIds));
+				.where(inArray(schema.employees.id, resolvedIds));
 		});
-		return { message: `Shift diterapkan ke ${employeeIds.length} pegawai` };
+		return { message: `Shift diterapkan ke ${resolvedIds.length} pegawai` };
 	}
 	async resolveEmployeeId(userId: number) {
 		const [employee] = await this.db
@@ -2394,6 +2403,9 @@ export class AdmsService {
 					: eq(schema.devices.serialNumber, sn),
 			);
 		let queued = 0;
+		this.logger.info(
+			`[ATTLOG] handleLogData sn=${sn} deviceId=${deviceId ?? "none"} lines=${raw.split("\n").filter(Boolean).length}`,
+		);
 		for (const line of raw.split("\n").filter(Boolean)) {
 			try {
 				let pin: string | undefined;
@@ -2493,9 +2505,15 @@ export class AdmsService {
 						removeOnFail: 5000,
 					},
 				);
+				this.logger.info(
+					`[ATTLOG] enqueued pin=${pin} emp=${employee.id} ts=${timestamp.toISOString()} type=${type} status=${status}`,
+				);
 				queued++;
 			} catch (error) {
-				this.logger.warn("ADMS line rejected", error);
+				this.logger.warn(
+					`[ATTLOG] line rejected: ${line.substring(0, 80)}`,
+					error,
+				);
 			}
 		}
 		return `OK: ${queued}`;
