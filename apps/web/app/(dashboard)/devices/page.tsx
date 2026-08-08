@@ -382,8 +382,7 @@ export default function DevicesPage() {
 						<label className="text-xs font-semibold text-[#53635d]">
 							Serial number
 							<input
-								required
-								placeholder="Contoh: ADMS-001"
+								placeholder="Opsional — kosongkan jika tidak ada"
 								value={form.serialNumber}
 								onChange={(event) =>
 									setForm({ ...form, serialNumber: event.target.value })

@@ -75,7 +75,7 @@ export type AttendanceLog = z.infer<typeof AttendanceLogSchema> & {
 
 export const DeviceSchema = z.object({
 	id: z.number(),
-	serialNumber: z.string().min(1, "Serial Number wajib diisi"),
+	serialNumber: z.string().optional().default(""),
 	name: z.string().min(1, "Nama Perangkat wajib diisi"),
 	location: z.string().nullable().optional(),
 	ipAddress: z.string().nullable().optional(),
