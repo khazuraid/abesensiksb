@@ -591,6 +591,10 @@ export class DevicesService {
 				commands.push("CHECK");
 				break;
 			case "reset":
+				await this.db
+					.update(schema.devices)
+					.set({ stamp: "0", opStamp: "0", updatedAt: new Date() })
+					.where(eq(schema.devices.id, dto.deviceId));
 				commands.push("CHECK");
 				break;
 			case "info":

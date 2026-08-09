@@ -699,6 +699,20 @@ export default function DevicesPage() {
 											Sinkronkan waktu
 										</span>
 									</button>
+									<button
+										type="button"
+										disabled={sendCommand.isPending}
+										onClick={() =>
+											sendCommand.mutate({
+												id: selectedDevice.id,
+												command: "reset",
+											})
+										}
+										className="flex min-h-16 flex-col items-start justify-between border border-[#d5ded9] bg-[#f7faf8] p-3 text-left hover:border-[#087066] hover:bg-[#eef5f2]"
+									>
+										<RefreshCw size={17} className="text-[#087066]" />
+										<span className="text-xs font-semibold">Reset stamp</span>
+									</button>
 								</div>
 							</section>
 
