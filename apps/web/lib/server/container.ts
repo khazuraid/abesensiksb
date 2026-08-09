@@ -52,7 +52,7 @@ export function getAdmsQueue() {
 
 export async function getRedisClient() {
 	const redis = globalState.admsRedis ?? new IORedis(redisConnection());
-	if (process.env.NODE_ENV !== "production") globalState.admsRedis = redis;
+	globalState.admsRedis = redis;
 	return redis;
 }
 
