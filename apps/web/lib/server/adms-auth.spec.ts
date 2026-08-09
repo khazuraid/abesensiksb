@@ -29,5 +29,5 @@ test("ADMS langsung mendaftarkan terminal yang belum ada", async () => {
 	assert.match(source, /await adms\.findClaimedDevice\(ip\(request\)\)/);
 	assert.match(source, /await adms\.registerDevice\(sn, ip\(request\)\)/);
 	assert.match(source, /updateDeviceStatus\(sn, ip\(request\), device\?\.id\)/);
-	assert.match(source, /getPendingCommands\(sn, device\?\.id\)/);
+	assert.match(source, /getPendingCommands\(sn, device\?\.id, info\)/);
 });

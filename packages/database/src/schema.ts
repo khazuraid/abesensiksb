@@ -200,6 +200,18 @@ export const devices = pgTable("devices", {
 
 	isBlocked: boolean("is_blocked").default(false).notNull(),
 
+	stamp: varchar("stamp", { length: 50 }).default("0"),
+	opStamp: varchar("op_stamp", { length: 50 }).default("0"),
+
+	firmwareVersion: varchar("firmware_version", { length: 100 }),
+	model: varchar("model", { length: 100 }),
+	macAddress: varchar("mac_address", { length: 50 }),
+	totalUsers: integer("total_users"),
+	totalFingerprints: integer("total_fingerprints"),
+	totalAttendances: integer("total_attendances"),
+	deviceTimezone: varchar("device_timezone", { length: 10 }).default("7"),
+	rawData: text("raw_data"),
+
 	lastSeen: timestamp("last_seen"),
 
 	createdAt: timestamp("created_at").defaultNow().notNull(),

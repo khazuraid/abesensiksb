@@ -43,19 +43,20 @@ export async function GET(request: NextRequest) {
 		if (blocked) return text("BLOCKED", 403);
 		await adms.updateDeviceStatus(sn, ip(request), device?.id);
 		if (endpoint(request) === "getrequest") {
-			return text(await adms.getPendingCommands(sn, device?.id));
+			const info = request.nextUrl.searchParams.get("info") ?? undefined;
+			return text(await adms.getPendingCommands(sn, device?.id, info));
 		}
 		return text(
 			[
 				`GET OPTION FROM: ${sn}`,
-				"Stamp=0",
-				"OpStamp=0",
+				`Stamp=${device?.stamp ?? "0"}`,
+				`OpStamp=${device?.opStamp ?? "0"}`,
 				`Delay=${device?.delay ?? 30}`,
 				`ErrorDelay=${device?.errorDelay ?? 60}`,
 				"TransTimes=00:00;14:05",
 				"TransInterval=1",
 				"TransFlag=1111000000",
-				"TimeZone=7",
+				`TimeZone=${device?.deviceTimezone ?? 7}`,
 				"Realtime=1",
 				"Encrypt=0",
 			].join("\n"),
@@ -90,6 +91,7 @@ export async function POST(request: NextRequest) {
 					(raw.match(/Return[=:](\d+)/)?.[1] ?? "0") === "0",
 					sn,
 					device?.id,
+					raw,
 				);
 			return text("OK");
 		}
@@ -101,13 +103,18 @@ export async function POST(request: NextRequest) {
 		if (table === "USER" || table === "USERINFO")
 			return text(await adms.handleUserData(sn, raw));
 		if (table === "OPERLOG") {
-			if (raw.includes("FP PIN") || raw.includes("FP\tPIN"))
+			const opStamp = request.nextUrl.searchParams.get("opstamp");
+			if (opStamp && device?.id) await adms.updateOpStamp(device.id, opStamp);
+			if (raw.includes("FP PIN") || raw.includes("FP	PIN"))
 				return text(await adms.handleFingerprintData(sn, raw));
 			if (raw.includes("PIN=")) return text(await adms.handleUserData(sn, raw));
 			return text("OK");
 		}
-		if (table === "ATTLOG")
+		if (table === "ATTLOG") {
+			const stamp = request.nextUrl.searchParams.get("stamp");
+			if (stamp && device?.id) await adms.updateStamp(device.id, stamp);
 			return text(await adms.handleLogData(sn, raw, device?.id));
+		}
 		return text("OK");
 	});
 }

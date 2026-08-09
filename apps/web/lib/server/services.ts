@@ -2358,7 +2358,19 @@ export class AdmsService {
 					: eq(schema.devices.serialNumber, sn),
 			);
 	}
-	async getPendingCommands(sn: string, deviceId?: number) {
+	updateStamp(deviceId: number, stamp: string) {
+		return this.db
+			.update(schema.devices)
+			.set({ stamp, updatedAt: new Date() })
+			.where(eq(schema.devices.id, deviceId));
+	}
+	updateOpStamp(deviceId: number, opStamp: string) {
+		return this.db
+			.update(schema.devices)
+			.set({ opStamp, updatedAt: new Date() })
+			.where(eq(schema.devices.id, deviceId));
+	}
+	async getPendingCommands(sn: string, deviceId?: number, info?: string) {
 		const [device] = await this.db
 			.select()
 			.from(schema.devices)
@@ -2368,6 +2380,22 @@ export class AdmsService {
 					: eq(schema.devices.serialNumber, sn),
 			);
 		if (!device) return "OK";
+
+		if (info) {
+			const parts = info.split(",");
+			await this.db
+				.update(schema.devices)
+				.set({
+					firmwareVersion: parts[0] || null,
+					totalUsers: parts[1] ? Number(parts[1]) : null,
+					totalFingerprints: parts[2] ? Number(parts[2]) : null,
+					totalAttendances: parts[3] ? Number(parts[3]) : null,
+					ipAddress: parts[4] || device.ipAddress,
+					rawData: info,
+					updatedAt: new Date(),
+				})
+				.where(eq(schema.devices.id, device.id));
+		}
 		const stale = new Date(
 			Date.now() - Number(process.env.COMMAND_ACK_TIMEOUT_MS || 60_000),
 		);
@@ -2407,6 +2435,7 @@ export class AdmsService {
 		success: boolean,
 		sn: string,
 		deviceId?: number,
+		rawBody?: string,
 	) {
 		const [device] = await this.db
 			.select({ id: schema.devices.id })
@@ -2426,6 +2455,44 @@ export class AdmsService {
 					eq(schema.deviceCommands.deviceId, device.id),
 				),
 			);
+
+		if (rawBody) {
+			const fields = Object.fromEntries(
+				rawBody
+					.split(/[\n&]/)
+					.map((part) => {
+						const i = part.indexOf("=");
+						return [
+							part.slice(0, i).trim().toLowerCase(),
+							part.slice(i + 1).trim(),
+						];
+					})
+					.filter(([key]) => key),
+			);
+			if (fields.cmd === "VERIFY SUM" && fields.attlogsum) {
+				const attlogSum = Number(fields.attlogsum);
+				const startTime = fields.starttime;
+				const endTime = fields.endtime;
+				if (attlogSum > 0 && startTime && endTime) {
+					const attendanceCount = await this.db
+						.select({ count: sql<number>`count(*)::int` })
+						.from(schema.attendanceLogs)
+						.where(
+							and(
+								eq(schema.attendanceLogs.deviceId, device.id),
+								gte(schema.attendanceLogs.timestamp, new Date(startTime)),
+								lte(schema.attendanceLogs.timestamp, new Date(endTime)),
+							),
+						);
+					if (attlogSum > (attendanceCount[0]?.count ?? 0)) {
+						await this.db.insert(schema.deviceCommands).values({
+							deviceId: device.id,
+							command: `DATA QUERY ATTLOG StartTime=${startTime}	EndTime=${endTime}`,
+						});
+					}
+				}
+			}
+		}
 	}
 	async handleLogData(sn: string, raw: string, deviceId?: number) {
 		const [device] = await this.db
