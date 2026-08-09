@@ -2358,19 +2358,11 @@ export class AdmsService {
 				})
 				.where(eq(schema.devices.id, device.id));
 		}
-		const stale = new Date(
-			Date.now() - Number(process.env.COMMAND_ACK_TIMEOUT_MS || 60_000),
-		);
-		await this.db
-			.update(schema.deviceCommands)
-			.set({ status: "PENDING", updatedAt: new Date() })
-			.where(
-				and(
-					eq(schema.deviceCommands.deviceId, device.id),
-					eq(schema.deviceCommands.status, "SENT"),
-					lte(schema.deviceCommands.updatedAt, stale),
-				),
-			);
+		// ponytail: sejator parity — do NOT mark commands as SENT on getrequest.
+		// The terminal polls getrequest repeatedly; if it sees OK (empty) on the
+		// next poll before acking, it may abort command execution. Keeping
+		// commands PENDING until devicecmd ack ensures the terminal always
+		// receives the command on every poll, matching sejator behavior.
 		const commands = await this.db
 			.select()
 			.from(schema.deviceCommands)
@@ -2381,15 +2373,6 @@ export class AdmsService {
 				),
 			);
 		if (!commands.length) return "OK";
-		await this.db
-			.update(schema.deviceCommands)
-			.set({ status: "SENT", updatedAt: new Date() })
-			.where(
-				inArray(
-					schema.deviceCommands.id,
-					commands.map((c) => c.id),
-				),
-			);
 		return commands.map((c) => `C:${c.id}:${c.command}`).join("\n");
 	}
 	async ackCommand(
