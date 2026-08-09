@@ -105,6 +105,8 @@ export async function POST(request: NextRequest) {
 		if (table === "OPERLOG") {
 			const opStamp = request.nextUrl.searchParams.get("opstamp");
 			if (opStamp && device?.id) await adms.updateOpStamp(device.id, opStamp);
+			if (/^OPLOG/i.test(raw))
+				return text(await adms.handleOplog(sn, raw, device?.id));
 			if (raw.includes("FP PIN") || raw.includes("FP	PIN"))
 				return text(await adms.handleFingerprintData(sn, raw));
 			if (raw.includes("PIN=")) return text(await adms.handleUserData(sn, raw));

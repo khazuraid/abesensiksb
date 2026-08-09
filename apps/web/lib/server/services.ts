@@ -2619,6 +2619,43 @@ export class AdmsService {
 		}
 		return `OK: ${queued}`;
 	}
+	async handleOplog(sn: string, raw: string, deviceId?: number) {
+		const [device] = await this.db
+			.select({ id: schema.devices.id })
+			.from(schema.devices)
+			.where(
+				deviceId
+					? eq(schema.devices.id, deviceId)
+					: eq(schema.devices.serialNumber, sn),
+			);
+		if (!device) return "OK";
+		for (const line of raw.split("\n").filter(Boolean)) {
+			if (!/^OPLOG/i.test(line)) continue;
+			const parts = line.split("	");
+			if (parts.length < 5) continue;
+			const type = parseInt((parts[0] ?? "").replace(/\D+/g, ""), 10);
+			const newUserId = parts[3]?.trim() ?? "";
+			if (!newUserId) continue;
+			if (type === 9) {
+				await this.db
+					.insert(schema.deviceCommands)
+					.values({
+						deviceId: device.id,
+						command: `DATA DELETE USERINFO PIN=${newUserId}`,
+					})
+					.onConflictDoNothing();
+			} else if ([4, 30, 36, 70, 71].includes(type)) {
+				await this.db
+					.insert(schema.deviceCommands)
+					.values({
+						deviceId: device.id,
+						command: `DATA QUERY USERINFO PIN=${newUserId}`,
+					})
+					.onConflictDoNothing();
+			}
+		}
+		return "OK";
+	}
 	async handleUserData(_sn: string, raw: string) {
 		let synced = 0;
 		for (const rawLine of raw.split("\n").filter(Boolean)) {
