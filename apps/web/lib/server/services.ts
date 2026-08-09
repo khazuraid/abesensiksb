@@ -37,10 +37,6 @@ import {
 	normalizePageParams,
 	type PageParams,
 } from "./pagination";
-import {
-	assertValidShiftAssignmentRange,
-	type ShiftAssignmentRange,
-} from "./shift-assignment";
 
 type Db = typeof schema.db;
 type DbExecutor = Pick<Db, "execute" | "select">;
@@ -349,16 +345,7 @@ export class EmployeesService {
 		if (!result) throw new ApiError(404, `Employee with ID ${id} not found`);
 		return { message: "Employee deleted successfully" };
 	}
-	async bulkAssignShift(
-		employeeIds: number[] | null,
-		shiftIds: number[],
-		range: ShiftAssignmentRange,
-	) {
-		try {
-			assertValidShiftAssignmentRange(range.startDate, range.endDate);
-		} catch (error) {
-			throw new ApiError(400, (error as Error).message);
-		}
+	async bulkAssignShift(employeeIds: number[] | null, shiftIds: number[]) {
 		await this.validateShiftIds(shiftIds);
 		let resolvedIds: number[] = employeeIds ?? [];
 		if (employeeIds === null) {
@@ -375,50 +362,25 @@ export class EmployeesService {
 			.where(inArray(schema.employees.id, resolvedIds));
 		if (employees.length !== new Set(resolvedIds).size)
 			throw new ApiError(404, "Pegawai tidak ditemukan");
-		const conflicts = await this.db
-			.select({
-				employeeId: schema.employeeShiftAssignments.employeeId,
-				employeeName: schema.employees.name,
-				startDate: schema.employeeShiftAssignments.startDate,
-				endDate: schema.employeeShiftAssignments.endDate,
-			})
-			.from(schema.employeeShiftAssignments)
-			.innerJoin(
-				schema.employees,
-				eq(schema.employees.id, schema.employeeShiftAssignments.employeeId),
-			)
-			.where(
-				and(
-					inArray(schema.employeeShiftAssignments.employeeId, resolvedIds),
-					or(
-						isNull(schema.employeeShiftAssignments.endDate),
-						gte(schema.employeeShiftAssignments.endDate, range.startDate),
-					),
-					lte(
-						schema.employeeShiftAssignments.startDate,
-						range.endDate ?? range.startDate,
-					),
-				),
-			);
-		if (conflicts.length)
-			throw new ApiError(
-				409,
-				"Periode shift bentrok dengan jadwal yang sudah ada",
-				{
-					conflicts,
-				},
-			);
+		const shiftsData = await this.db
+			.select()
+			.from(schema.shifts)
+			.where(inArray(schema.shifts.id, shiftIds));
+		const today = new Date().toLocaleDateString("en-CA");
 		const assignmentGroupId = randomUUID();
 		await this.db.transaction(async (tx) => {
 			await tx.insert(schema.employeeShiftAssignments).values(
 				resolvedIds.flatMap((employeeId) =>
-					shiftIds.map((shiftId) => ({
-						employeeId,
-						shiftId,
-						assignmentGroupId,
-						startDate: range.startDate,
-						endDate: range.endDate ?? null,
-					})),
+					shiftIds.map((shiftId) => {
+						const shift = shiftsData.find((s) => s.id === shiftId);
+						return {
+							employeeId,
+							shiftId,
+							assignmentGroupId,
+							startDate: shift?.effectiveFrom ?? today,
+							endDate: shift?.effectiveTo ?? null,
+						};
+					}),
 				),
 			);
 			await tx

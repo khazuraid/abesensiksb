@@ -42,8 +42,6 @@ export default function EmployeesPage() {
 	const [page, setPage] = useState(1);
 	const [isBulkShiftOpen, setIsBulkShiftOpen] = useState(false);
 	const [bulkShiftIds, setBulkShiftIds] = useState<number[]>([]);
-	const [bulkShiftStartDate, setBulkShiftStartDate] = useState("");
-	const [bulkShiftEndDate, setBulkShiftEndDate] = useState("");
 	const [bulkShiftError, setBulkShiftError] = useState("");
 	const [bulkShiftAll, setBulkShiftAll] = useState(false);
 	const bulkShiftDialogRef = useRef<HTMLDivElement>(null);
@@ -111,8 +109,6 @@ export default function EmployeesPage() {
 				employeeIds: bulkShiftAll ? undefined : selectedIds,
 				allEmployees: bulkShiftAll || undefined,
 				shiftIds: bulkShiftIds,
-				startDate: bulkShiftStartDate,
-				endDate: bulkShiftEndDate,
 			});
 		},
 		onSuccess: () => {
@@ -120,8 +116,6 @@ export default function EmployeesPage() {
 			setIsBulkShiftOpen(false);
 			setSelectedIds([]);
 			setBulkShiftIds([]);
-			setBulkShiftStartDate("");
-			setBulkShiftEndDate("");
 			setBulkShiftError("");
 			setBulkShiftAll(false);
 			alert("Berhasil memperbarui shift pegawai terpilih.");
@@ -499,9 +493,9 @@ export default function EmployeesPage() {
 
 						<div className="p-6 space-y-4">
 							<p className="text-[14px] text-[#3e484d]">
-								Atur shift dan periode berlaku untuk{" "}
+								Atur shift untuk{" "}
 								<strong>{bulkShiftAll ? "semua" : selectedIds.length}</strong>{" "}
-								pegawai.
+								pegawai. Periode berlaku mengikuti pengaturan shift.
 							</p>
 							<label className="flex items-center gap-3 cursor-pointer">
 								<input
@@ -514,34 +508,6 @@ export default function EmployeesPage() {
 									Terapkan ke semua pegawai
 								</span>
 							</label>
-							<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-								<label className="text-[13px] font-semibold text-[#3e484d]">
-									Tanggal mulai
-									<input
-										type="date"
-										value={bulkShiftStartDate}
-										max={bulkShiftEndDate || undefined}
-										onChange={(event) => {
-											setBulkShiftStartDate(event.target.value);
-											setBulkShiftError("");
-										}}
-										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
-									/>
-								</label>
-								<label className="text-[13px] font-semibold text-[#3e484d]">
-									Tanggal selesai
-									<input
-										type="date"
-										value={bulkShiftEndDate}
-										min={bulkShiftStartDate || undefined}
-										onChange={(event) => {
-											setBulkShiftEndDate(event.target.value);
-											setBulkShiftError("");
-										}}
-										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
-									/>
-								</label>
-							</div>
 							<div className="space-y-2 max-h-[250px] overflow-y-auto custom-scrollbar border rounded-xl p-2 border-black/5">
 								{shifts?.map((shift) => (
 									<label
@@ -598,9 +564,6 @@ export default function EmployeesPage() {
 									disabled={
 										bulkShiftMutation.isPending ||
 										bulkShiftIds.length === 0 ||
-										!bulkShiftStartDate ||
-										!bulkShiftEndDate ||
-										bulkShiftEndDate < bulkShiftStartDate ||
 										(!bulkShiftAll && selectedIds.length === 0)
 									}
 									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-[14px] disabled:opacity-50"

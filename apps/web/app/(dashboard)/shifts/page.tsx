@@ -352,8 +352,6 @@ export default function ShiftsPage() {
 	const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
 	const [page, setPage] = useState(1);
 	const [assignShift, setAssignShift] = useState<Shift | null>(null);
-	const [assignStart, setAssignStart] = useState("");
-	const [assignEnd, setAssignEnd] = useState("");
 	const [assignError, setAssignError] = useState("");
 	const assignDialogRef = useRef<HTMLDivElement>(null);
 	const closeAssign = () => setAssignShift(null);
@@ -397,15 +395,11 @@ export default function ShiftsPage() {
 			await api.patch("/employees/bulk/shift", {
 				allEmployees: true,
 				shiftIds: [assignShift!.id],
-				startDate: assignStart,
-				endDate: assignEnd,
 			});
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["employees"] });
 			setAssignShift(null);
-			setAssignStart("");
-			setAssignEnd("");
 			setAssignError("");
 			alert(`Shift "${assignShift?.name}" diterapkan ke semua pegawai.`);
 		},
@@ -636,38 +630,9 @@ export default function ShiftsPage() {
 								<strong className="capitalize">{assignShift.name}</strong> (
 								{assignShift.startTime.slice(0, 5)}–
 								{assignShift.endTime.slice(0, 5)}) ke{" "}
-								<strong>semua pegawai</strong>.
+								<strong>semua pegawai</strong>. Periode berlaku mengikuti
+								pengaturan shift.
 							</p>
-							<div className="grid grid-cols-2 gap-3">
-								<label className="text-[13px] font-semibold text-[#3e484d]">
-									Tanggal mulai
-									<input
-										type="date"
-										required
-										value={assignStart}
-										max={assignEnd || undefined}
-										onChange={(e) => {
-											setAssignStart(e.target.value);
-											setAssignError("");
-										}}
-										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
-									/>
-								</label>
-								<label className="text-[13px] font-semibold text-[#3e484d]">
-									Tanggal selesai
-									<input
-										type="date"
-										required
-										value={assignEnd}
-										min={assignStart || undefined}
-										onChange={(e) => {
-											setAssignEnd(e.target.value);
-											setAssignError("");
-										}}
-										className="mt-1 w-full border border-[#bdc8ce] px-3 py-2 text-[14px]"
-									/>
-								</label>
-							</div>
 							{assignError && (
 								<p
 									role="alert"
@@ -687,12 +652,7 @@ export default function ShiftsPage() {
 								<button
 									type="button"
 									onClick={() => assignAllMutation.mutate()}
-									disabled={
-										assignAllMutation.isPending ||
-										!assignStart ||
-										!assignEnd ||
-										assignEnd < assignStart
-									}
+									disabled={assignAllMutation.isPending}
 									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] text-[14px] disabled:opacity-50"
 								>
 									{assignAllMutation.isPending

@@ -53,8 +53,6 @@ const bulkShiftSchema = z
 		employeeIds: z.array(z.number().int().positive()).optional(),
 		allEmployees: z.boolean().optional(),
 		shiftIds: z.array(z.number().int().positive()).min(1),
-		startDate: z.string().date(),
-		endDate: z.string().date(),
 	})
 	.refine(
 		(data) =>
@@ -63,11 +61,7 @@ const bulkShiftSchema = z
 			message: "Pilih pegawai atau aktifkan opsi semua pegawai",
 			path: ["employeeIds"],
 		},
-	)
-	.refine((data) => data.endDate >= data.startDate, {
-		message: "Tanggal selesai tidak boleh sebelum tanggal mulai",
-		path: ["endDate"],
-	});
+	);
 const leaveSchema = z.object({
 	employeeId: z.number().int().positive(),
 	type: z.enum(["ANNUAL", "SICK", "PERMISSION", "MATERNITY", "OTHER"]),
@@ -527,19 +521,11 @@ export async function PATCH(request: NextRequest) {
 						user.userId,
 						"UPDATE",
 						"employees",
-						{
-							bulk: true,
-							startDate: data.startDate,
-							endDate: data.endDate ?? null,
-						},
+						{ bulk: true, shiftIds: data.shiftIds },
 						() =>
 							employees.bulkAssignShift(
 								data.allEmployees ? null : data.employeeIds!,
 								data.shiftIds,
-								{
-									startDate: data.startDate,
-									endDate: data.endDate,
-								},
 							),
 					);
 				}
