@@ -8,6 +8,7 @@ import {
 	ChevronDown,
 	Download,
 	Eye,
+	FileText,
 	Search,
 	TimerOff,
 	Users,
@@ -128,6 +129,252 @@ export default function ReportsPage() {
 		}
 	};
 
+	const handleExportPdf = async () => {
+		if (!reportData || reportData.length === 0) return;
+
+		const { jsPDF } = await import("jspdf");
+		await import("jspdf-autotable");
+		const {
+			PDF_COLORS,
+			drawHeader,
+			drawStatCards,
+			drawSectionTitle,
+			drawFormulaNote,
+			drawFooter,
+			TABLE_STYLES,
+			computePenalty,
+		} = await import("@/lib/pdf-design");
+
+		const doc = new jsPDF("p", "pt", "a4");
+		const pageWidth = doc.internal.pageSize.getWidth();
+		const pageHeight = doc.internal.pageSize.getHeight();
+
+		// --- Header ---
+		drawHeader(
+			doc,
+			`LAPORAN PERFORMA PEGAWAI`,
+			`Periode ${monthName} ${year} — Analitik Kehadiran & Kedisiplinan`,
+			pageWidth,
+		);
+
+		// --- Stat cards ---
+		drawStatCards(
+			doc,
+			[
+				{
+					label: "Total Pegawai",
+					value: `${stats.totalEmployees}`,
+					color: PDF_COLORS.primary,
+				},
+				{
+					label: "Rata-rata Hadir",
+					value: `${stats.avgAttendance}`,
+					unit: "%",
+					color: PDF_COLORS.green,
+				},
+				{
+					label: "Total Terlambat",
+					value: `${stats.totalLate}`,
+					unit: "kali",
+					color: PDF_COLORS.amber,
+				},
+				{
+					label: "Tingkat Alpa",
+					value: `${stats.absentRate}`,
+					unit: "%",
+					color: PDF_COLORS.red,
+				},
+			],
+			72,
+			pageWidth,
+		);
+
+		// --- Section: Ringkasan Performa ---
+		drawSectionTitle(doc, "Ringkasan Performa Individu", 152);
+
+		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+		doc.autoTable({
+			...TABLE_STYLES.primary,
+			head: [
+				["Nama", "NIK", "Departemen", "Hadir", "Telat", "Alpa", "Cuti/Izin"],
+			],
+			body: reportData.map((row) => {
+				const totalDays = row.totalPresent + row.totalAbsent + row.totalLeave;
+				return [
+					row.name,
+					row.employeeCode,
+					row.department || "-",
+					`${row.totalPresent}/${totalDays}`,
+					`${row.totalLate}`,
+					`${row.totalAbsent}`,
+					`${row.totalLeave}`,
+				];
+			}),
+			startY: 160,
+			styles: { fontSize: 8, cellPadding: 4, lineColor: PDF_COLORS.border },
+			columnStyles: {
+				0: { cellWidth: 130, fontStyle: "bold" },
+				3: { halign: "center" },
+				4: { halign: "center" },
+				5: { halign: "center" },
+				6: { halign: "center" },
+			},
+		});
+
+		// --- Penalty calculation per employee ---
+		const penaltyRows: (string | number)[][] = [];
+		let grandTotalMins = 0;
+		let grandTotalPunch = 0;
+		let grandTotalAbsent = 0;
+		let grandTotalLeave = 0;
+		let grandTotalPenalty = 0;
+
+		for (const row of reportData) {
+			const res = await api
+				.get(
+					`/reports/daily-recap?month=${month}&year=${year}&employeeId=${row.id}&page=1&limit=1`,
+				)
+				.catch(() => null);
+			const emp = res?.data?.data?.[0];
+			if (!emp) continue;
+			const p = computePenalty(emp);
+			grandTotalMins += p.totalMins;
+			grandTotalPunch += p.penaltyPunch;
+			grandTotalAbsent += p.totalAbsent;
+			grandTotalLeave += p.totalLeave;
+			grandTotalPenalty += p.total;
+			penaltyRows.push([
+				row.name,
+				`${p.totalLateMins} + ${p.totalEarlyMins} = ${p.totalMins} mnt`,
+				`${p.totalMins} ÷ 420 = ${p.penaltyMins}`,
+				`${p.missed} ÷ 2 = ${p.penaltyPunch}`,
+				`${p.totalAbsent}`,
+				`${p.totalLeave}`,
+				`${p.total}`,
+			]);
+		}
+
+		// --- Section: Rincian Perhitungan Potongan ---
+		// @ts-expect-error lastAutoTable injected by autotable
+		let afterY = doc.lastAutoTable?.finalY ?? 160;
+		afterY += 28;
+
+		// Add page break if not enough space
+		if (afterY > pageHeight - 220) {
+			doc.addPage();
+			afterY = 72;
+		}
+
+		drawSectionTitle(doc, "Rincian Perhitungan Potongan (Hari)", afterY);
+
+		drawFormulaNote(
+			doc,
+			[
+				"Akumulasi Jam = (Total Telat + Total Pulang Cepat) ÷ 420 menit — dibulatkan ke bawah",
+				"Lupa Absen = Jumlah absen tidak lengap ÷ 2 — dibulatkan ke bawah",
+				"Alpa = Total hari tidak hadir tanpa keterangan",
+				"Cuti/Izin = Total hari cuti/izin yang disetujui",
+			],
+			afterY + 14,
+		);
+
+		if (penaltyRows.length > 0) {
+			// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+			doc.autoTable({
+				...TABLE_STYLES.primary,
+				head: [
+					[
+						"Nama",
+						"Menit Terlambat\n+ Pulang Cepat",
+						"Akumulasi\n(÷ 420)",
+						"Lupa Absen\n(÷ 2)",
+						"Alpa",
+						"Cuti/Izin",
+						"Total\nPotongan",
+					],
+				],
+				body: penaltyRows,
+				startY: afterY + 68,
+				styles: {
+					fontSize: 7,
+					cellPadding: 3,
+					lineColor: PDF_COLORS.border,
+					valign: "middle",
+				},
+				headStyles: {
+					...TABLE_STYLES.primary.headStyles,
+					fontSize: 7,
+				},
+				columnStyles: {
+					0: { cellWidth: 100, fontStyle: "bold" },
+					1: { halign: "center", cellWidth: 80 },
+					2: { halign: "center", cellWidth: 60 },
+					3: { halign: "center", cellWidth: 55 },
+					4: { halign: "center", cellWidth: 40 },
+					5: { halign: "center", cellWidth: 45 },
+					6: {
+						halign: "center",
+						cellWidth: 50,
+						fontStyle: "bold",
+						fillColor: PDF_COLORS.lightBg,
+					},
+				},
+				didParseCell: (data: {
+					section: string;
+					column: number;
+					cell: { styles: { textColor: number[]; fontStyle: string } };
+				}) => {
+					if (data.section === "body" && data.column === 6) {
+						data.cell.styles.textColor = [...PDF_COLORS.red];
+						data.cell.styles.fontStyle = "bold";
+					}
+				},
+			});
+
+			// --- Grand total row ---
+			// @ts-expect-error lastAutoTable injected by autotable
+			afterY = doc.lastAutoTable?.finalY ?? afterY + 68;
+			// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+			doc.autoTable({
+				...TABLE_STYLES.primary,
+				head: [],
+				body: [
+					[
+						"TOTAL KESELURUHAN",
+						"",
+						`${grandTotalMins} mnt`,
+						`${grandTotalPunch}`,
+						`${grandTotalAbsent}`,
+						`${grandTotalLeave}`,
+						`${grandTotalPenalty}`,
+					],
+				],
+				startY: afterY + 2,
+				styles: {
+					fontSize: 8,
+					cellPadding: 4,
+					fillColor: PDF_COLORS.primary,
+					textColor: PDF_COLORS.white,
+					fontStyle: "bold",
+					lineColor: PDF_COLORS.primary,
+				},
+				columnStyles: {
+					0: { cellWidth: 100 },
+					1: { cellWidth: 80 },
+					2: { halign: "center", cellWidth: 60 },
+					3: { halign: "center", cellWidth: 55 },
+					4: { halign: "center", cellWidth: 40 },
+					5: { halign: "center", cellWidth: 45 },
+					6: { halign: "center", cellWidth: 50 },
+				},
+				theme: "grid",
+			});
+		}
+
+		drawFooter(doc, pageWidth, pageHeight);
+		doc.save(`Laporan-Performa-${monthName}-${year}.pdf`);
+	};
+
 	const monthName = new Date(0, month - 1).toLocaleString("id-ID", {
 		month: "long",
 	});
@@ -226,7 +473,15 @@ export default function ReportsPage() {
 						className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#bdc8ce] text-[#00647c] rounded-lg font-semibold text-[13px] hover:bg-[#dee8ff]/50 hover:border-[#00647c]/50 transition-colors shadow-sm active:scale-95"
 					>
 						<Download size={18} />
-						Export Laporan
+						Export Excel
+					</button>
+					<button
+						type="button"
+						onClick={handleExportPdf}
+						className="flex items-center gap-2 px-5 py-2.5 bg-[#00647c] border border-[#00647c] text-white rounded-lg font-semibold text-[13px] hover:bg-[#004e61] transition-colors shadow-sm active:scale-95"
+					>
+						<FileText size={18} />
+						Export PDF
 					</button>
 				</div>
 			</div>
@@ -527,7 +782,7 @@ export default function ReportsPage() {
 												selectedEmployeeDetail.totalLateMinutesSum || 0;
 											const totalEarly =
 												selectedEmployeeDetail.totalEarlyOutMinutesSum || 0;
-											const penaltyMins = Math.round(
+											const penaltyMins = Math.floor(
 												(totalLate + totalEarly) / 420,
 											);
 

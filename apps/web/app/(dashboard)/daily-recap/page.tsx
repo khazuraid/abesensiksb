@@ -41,6 +41,8 @@ interface EmployeeRecap {
 	totalEarlyOut: number;
 	totalAbsent: number;
 	totalLeave: number;
+	totalLateMinutesSum: number;
+	totalEarlyOutMinutesSum: number;
 }
 
 export default function DailyRecapPage() {
@@ -226,11 +228,60 @@ export default function DailyRecapPage() {
 		// Dynamically import jsPDF and autoTable to avoid Next.js SSR Turbopack errors
 		const { jsPDF } = await import("jspdf");
 		await import("jspdf-autotable");
+		const {
+			PDF_COLORS,
+			drawHeader,
+			drawStatCards,
+			drawSectionTitle,
+			drawFormulaNote,
+			drawFooter,
+			TABLE_STYLES,
+			computePenalty,
+		} = await import("@/lib/pdf-design");
 
 		const doc = new jsPDF("l", "pt", "a4");
+		const pageWidth = doc.internal.pageSize.getWidth();
+		const pageHeight = doc.internal.pageSize.getHeight();
 
-		doc.setFontSize(16);
-		doc.text(`Rekap Harian - ${months[month - 1]} ${year}`, 40, 40);
+		// --- Header ---
+		drawHeader(
+			doc,
+			`REKAP HARIAN PEGAWAI`,
+			`Periode ${months[month - 1]} ${year} — Matriks Kehadiran Harian`,
+			pageWidth,
+		);
+
+		// --- Stat cards ---
+		drawStatCards(
+			doc,
+			[
+				{
+					label: "Pegawai Tampil",
+					value: `${data.length}`,
+					color: PDF_COLORS.primary,
+				},
+				{
+					label: "Total Hadir",
+					value: `${pageSummary.present}`,
+					color: PDF_COLORS.green,
+				},
+				{
+					label: "Total Telat",
+					value: `${pageSummary.late}`,
+					color: PDF_COLORS.amber,
+				},
+				{
+					label: "Total Alpa",
+					value: `${pageSummary.absent}`,
+					color: PDF_COLORS.red,
+				},
+			],
+			72,
+			pageWidth,
+		);
+
+		// --- Section: Matriks Kehadiran ---
+		drawSectionTitle(doc, "Matriks Kehadiran Harian", 152);
 
 		const daysInMonth = new Date(year, month, 0).getDate();
 		const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -268,18 +319,216 @@ export default function DailyRecapPage() {
 
 		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
 		doc.autoTable({
+			...TABLE_STYLES.primary,
 			head,
 			body,
-			startY: 60,
-			styles: { fontSize: 7, cellPadding: 2, halign: "center" },
+			startY: 160,
+			styles: {
+				fontSize: 7,
+				cellPadding: 2,
+				halign: "center",
+				lineColor: PDF_COLORS.border,
+			},
+			headStyles: {
+				...TABLE_STYLES.primary.headStyles,
+				fontSize: 7,
+				halign: "center",
+			},
 			columnStyles: {
-				0: { halign: "left", cellWidth: 20 },
-				1: { halign: "left", cellWidth: 60 },
+				0: { halign: "left", cellWidth: 20, fontStyle: "bold" },
+				1: { halign: "left", cellWidth: 70, fontStyle: "bold" },
 				2: { halign: "left", cellWidth: 40 },
+				...Object.fromEntries([
+					...daysArray.map((_, i) => [i + 3, { cellWidth: 16 }]),
+				] as [number, object][]),
+				[daysArray.length + 3]: {
+					halign: "center",
+					cellWidth: 25,
+					fontStyle: "bold",
+					fillColor: PDF_COLORS.lightBg,
+				},
+				[daysArray.length + 4]: {
+					halign: "center",
+					cellWidth: 25,
+					fontStyle: "bold",
+				},
+				[daysArray.length + 5]: {
+					halign: "center",
+					cellWidth: 25,
+					fontStyle: "bold",
+				},
+				[daysArray.length + 6]: {
+					halign: "center",
+					cellWidth: 25,
+					fontStyle: "bold",
+				},
+			},
+		});
+
+		// --- Legend ---
+		// @ts-expect-error lastAutoTable injected by autotable
+		let afterY = doc.lastAutoTable?.finalY ?? 160;
+		afterY += 24;
+
+		if (afterY > pageHeight - 200) {
+			doc.addPage();
+			afterY = 72;
+		}
+
+		doc.setFontSize(8);
+		doc.setFont("helvetica", "bold");
+		doc.setTextColor(...PDF_COLORS.gray);
+		doc.text("Keterangan:", 40, afterY);
+		doc.setFont("helvetica", "normal");
+		doc.text(
+			"H = Hadir   T = Telat   PC = Pulang Cepat   A = Alpa   C = Cuti/Izin   L = Libur   O = Off   … = Sedang Berjalan",
+			95,
+			afterY,
+		);
+		doc.setTextColor(...PDF_COLORS.dark);
+
+		// --- Section: Rincian Perhitungan Potongan ---
+		afterY += 22;
+		if (afterY > pageHeight - 220) {
+			doc.addPage();
+			afterY = 72;
+		}
+
+		drawSectionTitle(doc, "Rincian Perhitungan Potongan (Hari)", afterY);
+
+		drawFormulaNote(
+			doc,
+			[
+				"Akumulasi Jam = (Total Telat + Total Pulang Cepat) ÷ 420 menit — dibulatkan ke bawah",
+				"Lupa Absen = Jumlah absen tidak lengkap ÷ 2 — dibulatkan ke bawah",
+				"Alpa = Total hari tidak hadir tanpa keterangan",
+				"Cuti/Izin = Total hari cuti/izin yang disetujui",
+			],
+			afterY + 14,
+		);
+
+		// Penalty summary section
+		const penaltyRows = data.map((emp) => {
+			const p = computePenalty(emp);
+			return [
+				emp.name,
+				`${p.totalLateMins} + ${p.totalEarlyMins} = ${p.totalMins} mnt`,
+				`${p.totalMins} ÷ 420 = ${p.penaltyMins}`,
+				`${p.missed} ÷ 2 = ${p.penaltyPunch}`,
+				`${p.totalAbsent}`,
+				`${p.totalLeave}`,
+				`${p.total}`,
+			];
+		});
+
+		const grandTotalMins = data.reduce(
+			(s, e) =>
+				s + (e.totalLateMinutesSum || 0) + (e.totalEarlyOutMinutesSum || 0),
+			0,
+		);
+		const grandTotalPunch = data.reduce(
+			(s, e) => s + computePenalty(e).penaltyPunch,
+			0,
+		);
+		const grandTotalAbsent = data.reduce((s, e) => s + e.totalAbsent, 0);
+		const grandTotalLeave = data.reduce((s, e) => s + e.totalLeave, 0);
+		const grandTotalPenalty = data.reduce(
+			(s, e) => s + computePenalty(e).total,
+			0,
+		);
+
+		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+		doc.autoTable({
+			...TABLE_STYLES.primary,
+			head: [
+				[
+					"Nama",
+					"Menit Terlambat\n+ Pulang Cepat",
+					"Akumulasi\n(÷ 420)",
+					"Lupa Absen\n(÷ 2)",
+					"Alpa",
+					"Cuti/Izin",
+					"Total\nPotongan",
+				],
+			],
+			body: penaltyRows,
+			startY: afterY + 68,
+			styles: {
+				fontSize: 7,
+				cellPadding: 3,
+				lineColor: PDF_COLORS.border,
+				valign: "middle",
+			},
+			headStyles: {
+				...TABLE_STYLES.primary.headStyles,
+				fontSize: 7,
+			},
+			columnStyles: {
+				0: { cellWidth: 120, fontStyle: "bold" },
+				1: { halign: "center", cellWidth: 100 },
+				2: { halign: "center", cellWidth: 80 },
+				3: { halign: "center", cellWidth: 70 },
+				4: { halign: "center", cellWidth: 50 },
+				5: { halign: "center", cellWidth: 55 },
+				6: {
+					halign: "center",
+					cellWidth: 60,
+					fontStyle: "bold",
+					fillColor: PDF_COLORS.lightBg,
+				},
+			},
+			didParseCell: (data: {
+				section: string;
+				column: number;
+				cell: { styles: { textColor: number[]; fontStyle: string } };
+			}) => {
+				if (data.section === "body" && data.column === 6) {
+					data.cell.styles.textColor = [...PDF_COLORS.red];
+					data.cell.styles.fontStyle = "bold";
+				}
+			},
+		});
+
+		// --- Grand total row ---
+		// @ts-expect-error lastAutoTable injected by autotable
+		afterY = doc.lastAutoTable?.finalY ?? afterY + 68;
+		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+		doc.autoTable({
+			...TABLE_STYLES.primary,
+			head: [],
+			body: [
+				[
+					"TOTAL KESELURUHAN",
+					"",
+					`${grandTotalMins} mnt`,
+					`${grandTotalPunch}`,
+					`${grandTotalAbsent}`,
+					`${grandTotalLeave}`,
+					`${grandTotalPenalty}`,
+				],
+			],
+			startY: afterY + 2,
+			styles: {
+				fontSize: 8,
+				cellPadding: 4,
+				fillColor: PDF_COLORS.primary,
+				textColor: PDF_COLORS.white,
+				fontStyle: "bold",
+				lineColor: PDF_COLORS.primary,
+			},
+			columnStyles: {
+				0: { cellWidth: 120 },
+				1: { cellWidth: 100 },
+				2: { halign: "center", cellWidth: 80 },
+				3: { halign: "center", cellWidth: 70 },
+				4: { halign: "center", cellWidth: 50 },
+				5: { halign: "center", cellWidth: 55 },
+				6: { halign: "center", cellWidth: 60 },
 			},
 			theme: "grid",
 		});
 
+		drawFooter(doc, pageWidth, pageHeight);
 		doc.save(`Rekap-Harian-${months[month - 1]}-${year}.pdf`);
 	};
 	const daysInMonth = new Date(year, month, 0).getDate();
