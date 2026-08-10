@@ -1651,53 +1651,805 @@ export class ReportsService {
 		};
 	}
 	async generateExcel(month: number, year: number) {
-		const workbook = new Workbook(),
-			sheet = workbook.addWorksheet("Laporan Absensi");
+		const recaps = await this.buildDailyRecap(month, year);
+		const workbook = new Workbook();
+		const sheet = workbook.addWorksheet("Laporan Performa", {
+			views: [{ showGridLines: false }],
+		});
+
+		const C = {
+			primary: "FF00647C",
+			primaryDark: "FF004E61",
+			dark: "FF111C2D",
+			gray: "FF6E797E",
+			lightBg: "FFF0F3FF",
+			green: "FF006C49",
+			amber: "FF894E00",
+			red: "FFBA1A1A",
+			white: "FFFFFFFF",
+			border: "FFD2DADE",
+		};
+
+		// --- Column widths (7 data + 1 spacer) ---
 		sheet.columns = [
-			{ header: "NAMA PEGAWAI", key: "name", width: 30 },
-			{ header: "NIP", key: "employeeCode", width: 20 },
-			{ header: "DEPARTEMEN", key: "department", width: 20 },
-			{ header: "HADIR", key: "totalPresent", width: 10 },
-			{ header: "TERLAMBAT", key: "totalLate", width: 15 },
-			{ header: "ALPA", key: "totalAbsent", width: 10 },
-			{ header: "CUTI/IZIN", key: "totalLeave", width: 15 },
+			{ width: 30 }, // A: Nama
+			{ width: 18 }, // B: NIK
+			{ width: 20 }, // C: Departemen
+			{ width: 12 }, // D: Hadir
+			{ width: 12 }, // E: Telat
+			{ width: 12 }, // F: Alpa
+			{ width: 12 }, // G: Cuti/Izin
 		];
-		for (const row of (await this.buildDailyRecap(month, year)).map((e) => ({
-			id: e.id,
+
+		// --- Title banner (rows 1-3) ---
+		sheet.mergeCells("A1:G1");
+		const titleCell = sheet.getCell("A1");
+		titleCell.value = "LAPORAN PERFORMA PEGAWAI";
+		titleCell.font = { size: 16, bold: true, color: { argb: C.white } };
+		titleCell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			bgColor: { argb: C.primary },
+		};
+		titleCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+		sheet.getRow(1).height = 30;
+
+		sheet.mergeCells("A2:G2");
+		const subCell = sheet.getCell("A2");
+		const monthNames = [
+			"Januari",
+			"Februari",
+			"Maret",
+			"April",
+			"Mei",
+			"Juni",
+			"Juli",
+			"Agustus",
+			"September",
+			"Oktober",
+			"November",
+			"Desember",
+		];
+		subCell.value = `Periode ${monthNames[month - 1]} ${year} — Analitik Kehadiran & Kedisiplinan`;
+		subCell.font = { size: 10, color: { argb: C.white } };
+		subCell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			bgColor: { argb: C.primaryDark },
+		};
+		subCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+		sheet.getRow(2).height = 20;
+
+		sheet.getRow(3).height = 8; // spacer
+
+		// --- Stat cards (row 4) ---
+		const totalEmployees = recaps.length;
+		const totalPresentAll = recaps.reduce((s, e) => s + e.totalPresent, 0);
+		const totalDaysAll = recaps.reduce(
+			(s, e) => s + e.totalPresent + e.totalAbsent + e.totalLeave,
+			0,
+		);
+		const totalLateAll = recaps.reduce((s, e) => s + e.totalLate, 0);
+		const totalAbsentAll = recaps.reduce((s, e) => s + e.totalAbsent, 0);
+		const avgAttendance =
+			totalDaysAll > 0 ? Math.round((totalPresentAll / totalDaysAll) * 100) : 0;
+		const absentRate =
+			totalDaysAll > 0 ? Math.round((totalAbsentAll / totalDaysAll) * 100) : 0;
+
+		const statCards = [
+			{ label: "TOTAL PEGAWAI", value: `${totalEmployees}`, color: C.primary },
+			{ label: "RATA-RATA HADIR", value: `${avgAttendance}%`, color: C.green },
+			{
+				label: "TOTAL TERLAMBAT",
+				value: `${totalLateAll} kali`,
+				color: C.amber,
+			},
+			{ label: "TINGKAT ALPA", value: `${absentRate}%`, color: C.red },
+		] as const;
+		const [cardTotal, cardHadir, cardTelat, cardAlpa] = statCards;
+		// 4 cards across A:G
+		const cardLayout = [
+			{
+				range: "A4:B4",
+				label: cardTotal.label,
+				value: cardTotal.value,
+				color: cardTotal.color,
+			},
+			{
+				range: "C4:D4",
+				label: cardHadir.label,
+				value: cardHadir.value,
+				color: cardHadir.color,
+			},
+			{
+				range: "E4:F4",
+				label: cardTelat.label,
+				value: cardTelat.value,
+				color: cardTelat.color,
+			},
+			{
+				range: "G4:G4",
+				label: cardAlpa.label,
+				value: cardAlpa.value,
+				color: cardAlpa.color,
+			},
+		] as const;
+		for (const card of cardLayout) {
+			const rangeStart = card.range.split(":")[0]!;
+			sheet.mergeCells(card.range);
+			const cell = sheet.getCell(rangeStart);
+			cell.value = `${card.value}`;
+			cell.font = { size: 14, bold: true, color: { argb: C.dark } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.lightBg },
+			};
+			cell.border = {
+				top: { style: "thick", color: { argb: card.color } },
+				left: { style: "thin", color: { argb: C.border } },
+				right: { style: "thin", color: { argb: C.border } },
+				bottom: { style: "thin", color: { argb: C.border } },
+			};
+			cell.alignment = { vertical: "middle", horizontal: "center" };
+		}
+		// Label row (row 5)
+		const labelLayout = ["A5:B5", "C5:D5", "E5:F5", "G5:G5"] as const;
+		const labelVals = [
+			cardTotal.label,
+			cardHadir.label,
+			cardTelat.label,
+			cardAlpa.label,
+		];
+		for (let i = 0; i < labelLayout.length; i++) {
+			const range = labelLayout[i]!;
+			const rangeStart = range.split(":")[0]!;
+			sheet.mergeCells(range);
+			const cell = sheet.getCell(rangeStart);
+			cell.value = labelVals[i];
+			cell.font = { size: 8, color: { argb: C.gray }, bold: true };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.lightBg },
+			};
+			cell.border = {
+				left: { style: "thin", color: { argb: C.border } },
+				right: { style: "thin", color: { argb: C.border } },
+				bottom: { style: "thin", color: { argb: C.border } },
+			};
+			cell.alignment = { vertical: "middle", horizontal: "center" };
+		}
+		sheet.getRow(4).height = 28;
+		sheet.getRow(5).height = 16;
+		sheet.getRow(6).height = 8; // spacer
+
+		// --- Section title: Ringkasan Performa ---
+		sheet.mergeCells("A7:G7");
+		const sec1 = sheet.getCell("A7");
+		sec1.value = "Ringkasan Performa Individu";
+		sec1.font = { size: 12, bold: true, color: { argb: C.primary } };
+		sheet.getRow(7).height = 22;
+
+		// --- Table header (row 8) ---
+		const headers = [
+			"Nama",
+			"NIK",
+			"Departemen",
+			"Hadir",
+			"Telat",
+			"Alpa",
+			"Cuti/Izin",
+		];
+		for (let i = 0; i < headers.length; i++) {
+			const cell = sheet.getCell(8, i + 1);
+			cell.value = headers[i];
+			cell.font = { size: 9, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = {
+				vertical: "middle",
+				horizontal: i < 3 ? "left" : "center",
+				indent: i < 3 ? 1 : 0,
+			};
+			cell.border = {
+				top: { style: "thin", color: { argb: C.primary } },
+				left: { style: "thin", color: { argb: C.primary } },
+				right: { style: "thin", color: { argb: C.primary } },
+				bottom: { style: "thin", color: { argb: C.primary } },
+			};
+		}
+		sheet.getRow(8).height = 22;
+
+		// --- Data rows ---
+		let row = 9;
+		const summaryData = recaps.map((e) => ({
 			name: e.name,
 			employeeCode: e.employeeCode,
-			department: e.department,
+			department: e.department ?? "",
 			totalPresent: e.totalPresent,
 			totalLate: e.totalLate,
 			totalAbsent: e.totalAbsent,
 			totalLeave: e.totalLeave,
-		})))
-			sheet.addRow(row);
+		}));
+		for (const r of summaryData) {
+			const totalDays = r.totalPresent + r.totalAbsent + r.totalLeave;
+			const values = [
+				r.name,
+				r.employeeCode,
+				r.department || "-",
+				`${r.totalPresent}/${totalDays}`,
+				`${r.totalLate}`,
+				`${r.totalAbsent}`,
+				`${r.totalLeave}`,
+			];
+			for (let i = 0; i < values.length; i++) {
+				const cell = sheet.getCell(row, i + 1);
+				cell.value = values[i];
+				cell.font = { size: 9, bold: i === 0, color: { argb: C.dark } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: { argb: row % 2 === 0 ? C.lightBg : C.white },
+				};
+				cell.alignment = {
+					vertical: "middle",
+					horizontal: i < 3 ? "left" : "center",
+					indent: i < 3 ? 1 : 0,
+				};
+				cell.border = {
+					top: { style: "thin", color: { argb: C.border } },
+					left: { style: "thin", color: { argb: C.border } },
+					right: { style: "thin", color: { argb: C.border } },
+					bottom: { style: "thin", color: { argb: C.border } },
+				};
+			}
+			sheet.getRow(row).height = 18;
+			row++;
+		}
+
+		// --- Spacer ---
+		row += 1;
+
+		// --- Section title: Rincian Perhitungan Potongan ---
+		sheet.mergeCells(row, 1, row, 7);
+		const sec2 = sheet.getCell(row, 1);
+		sec2.value = "Rincian Perhitungan Potongan (Hari)";
+		sec2.font = { size: 12, bold: true, color: { argb: C.primary } };
+		sheet.getRow(row).height = 22;
+		row++;
+
+		// --- Formula notes ---
+		const formulas = [
+			"Akumulasi Jam = (Total Telat + Total Pulang Cepat) ÷ 420 menit — dibulatkan ke bawah",
+			"Lupa Absen = Jumlah absen tidak lengkap ÷ 2 — dibulatkan ke bawah",
+			"Alpa = Total hari tidak hadir tanpa keterangan",
+			"Cuti/Izin = Total hari cuti/izin yang disetujui",
+		];
+		for (const f of formulas) {
+			sheet.mergeCells(row, 1, row, 7);
+			const cell = sheet.getCell(row, 1);
+			cell.value = `  ${f}`;
+			cell.font = { size: 8, italic: true, color: { argb: C.gray } };
+			sheet.getRow(row).height = 14;
+			row++;
+		}
+		row++;
+
+		// --- Penalty table header ---
+		// 7 columns: Nama | Menit (Telat+PC) | Akumulasi (÷420) | Lupa Absen (÷2) | Alpa | Cuti/Izin | Total Potongan
+		const penaltyHeaders = [
+			"Nama",
+			"Menit Terlambat\n+ Pulang Cepat",
+			"Akumulasi\n(÷ 420)",
+			"Lupa Absen\n(÷ 2)",
+			"Alpa",
+			"Cuti/Izin",
+			"Total\nPotongan",
+		];
+		for (let i = 0; i < penaltyHeaders.length; i++) {
+			const cell = sheet.getCell(row, i + 1);
+			cell.value = penaltyHeaders[i];
+			cell.font = { size: 8, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = {
+				vertical: "middle",
+				horizontal: i === 0 ? "left" : "center",
+				wrapText: true,
+				indent: i === 0 ? 1 : 0,
+			};
+			cell.border = {
+				top: { style: "thin", color: { argb: C.primary } },
+				left: { style: "thin", color: { argb: C.primary } },
+				right: { style: "thin", color: { argb: C.primary } },
+				bottom: { style: "thin", color: { argb: C.primary } },
+			};
+		}
+		sheet.getRow(row).height = 30;
+		row++;
+
+		// --- Penalty data rows ---
+		let grandMins = 0,
+			grandPunch = 0,
+			grandAbsent = 0,
+			grandLeave = 0,
+			grandTotal = 0;
+		for (const e of recaps) {
+			const totalLateMins = e.totalLateMinutesSum || 0;
+			const totalEarlyMins = e.totalEarlyOutMinutesSum || 0;
+			const totalMins = totalLateMins + totalEarlyMins;
+			const penaltyMins = Math.floor(totalMins / 420);
+			let missed = 0;
+			e.days.forEach((d) => {
+				if (
+					d.isWorkDay &&
+					!d.isHoliday &&
+					d.status !== "LEAVE" &&
+					Boolean(d.clockIn) !== Boolean(d.clockOut)
+				)
+					missed++;
+			});
+			const penaltyPunch = Math.floor(missed / 2);
+			const total = penaltyMins + penaltyPunch + e.totalAbsent + e.totalLeave;
+			grandMins += totalMins;
+			grandPunch += penaltyPunch;
+			grandAbsent += e.totalAbsent;
+			grandLeave += e.totalLeave;
+			grandTotal += total;
+
+			const values = [
+				e.name,
+				`${totalLateMins} + ${totalEarlyMins} = ${totalMins} mnt`,
+				`${totalMins} ÷ 420 = ${penaltyMins}`,
+				`${missed} ÷ 2 = ${penaltyPunch}`,
+				`${e.totalAbsent}`,
+				`${e.totalLeave}`,
+				`${total}`,
+			];
+			for (let i = 0; i < values.length; i++) {
+				const cell = sheet.getCell(row, i + 1);
+				cell.value = values[i];
+				cell.font = {
+					size: 8,
+					bold: i === 0 || i === 6,
+					color: { argb: i === 6 ? C.red : C.dark },
+				};
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: {
+						argb: i === 6 ? C.lightBg : row % 2 === 0 ? C.lightBg : C.white,
+					},
+				};
+				cell.alignment = {
+					vertical: "middle",
+					horizontal: i === 0 ? "left" : "center",
+					indent: i === 0 ? 1 : 0,
+				};
+				cell.border = {
+					top: { style: "thin", color: { argb: C.border } },
+					left: { style: "thin", color: { argb: C.border } },
+					right: { style: "thin", color: { argb: C.border } },
+					bottom: { style: "thin", color: { argb: C.border } },
+				};
+			}
+			sheet.getRow(row).height = 18;
+			row++;
+		}
+
+		// --- Grand total row ---
+		const grandValues = [
+			"TOTAL KESELURUHAN",
+			"",
+			`${grandMins} mnt`,
+			`${grandPunch}`,
+			`${grandAbsent}`,
+			`${grandLeave}`,
+			`${grandTotal}`,
+		];
+		for (let i = 0; i < grandValues.length; i++) {
+			const cell = sheet.getCell(row, i + 1);
+			cell.value = grandValues[i];
+			cell.font = { size: 9, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = {
+				vertical: "middle",
+				horizontal: i === 0 ? "left" : "center",
+				indent: i === 0 ? 1 : 0,
+			};
+			cell.border = {
+				top: { style: "thin", color: { argb: C.primary } },
+				left: { style: "thin", color: { argb: C.primary } },
+				right: { style: "thin", color: { argb: C.primary } },
+				bottom: { style: "thin", color: { argb: C.primary } },
+			};
+		}
+		sheet.getRow(row).height = 22;
+
 		return workbook;
 	}
 	async generateDailyRecapExcel(month: number, year: number) {
+		const recaps = await this.buildDailyRecap(month, year);
+		const monthNames = [
+			"Januari",
+			"Februari",
+			"Maret",
+			"April",
+			"Mei",
+			"Juni",
+			"Juli",
+			"Agustus",
+			"September",
+			"Oktober",
+			"November",
+			"Desember",
+		];
 		const workbook = new Workbook();
-		for (const employee of await this.buildDailyRecap(month, year)) {
+
+		const C = {
+			primary: "FF00647C",
+			primaryDark: "FF004E61",
+			dark: "FF111C2D",
+			gray: "FF6E797E",
+			lightBg: "FFF0F3FF",
+			green: "FF006C49",
+			amber: "FF894E00",
+			red: "FFBA1A1A",
+			white: "FFFFFFFF",
+			border: "FFD2DADE",
+		};
+		const thin = (color: string) => ({
+			top: { style: "thin" as const, color: { argb: color } },
+			left: { style: "thin" as const, color: { argb: color } },
+			right: { style: "thin" as const, color: { argb: color } },
+			bottom: { style: "thin" as const, color: { argb: color } },
+		});
+
+		for (const employee of recaps) {
 			const sheet = workbook.addWorksheet(
 				employee.name.substring(0, 31).replace(/[*?:/\\[\]]/g, ""),
 			);
+			// 6 columns: Tanggal, Hari, Masuk, Pulang, Status, Telat, Pulang Cepat -> 7
 			sheet.columns = [
-				{ header: "Tanggal", key: "date", width: 15 },
-				{ header: "Masuk", key: "clockIn", width: 10 },
-				{ header: "Pulang", key: "clockOut", width: 10 },
-				{ header: "Status", key: "status", width: 12 },
-				{ header: "Telat (mnt)", key: "late", width: 12 },
-				{ header: "Pulang Cepat (mnt)", key: "early", width: 18 },
+				{ width: 14 }, // Tanggal
+				{ width: 34 }, // Nama (header banner)
+				{ width: 12 }, // Masuk
+				{ width: 12 }, // Pulang
+				{ width: 14 }, // Status
+				{ width: 12 }, // Telat
+				{ width: 16 }, // Pulang Cepat
 			];
-			for (const day of employee.days)
-				sheet.addRow({
-					date: day.date,
-					clockIn: day.clockIn ?? "-",
-					clockOut: day.clockOut ?? "-",
-					status: day.status,
-					late: day.lateMinutes || "-",
-					early: day.earlyOutMinutes || "-",
-				});
+
+			// --- Header banner ---
+			sheet.mergeCells("A1:G1");
+			const title = sheet.getCell("A1");
+			title.value = `REKAP HARIAN PEGAWAI`;
+			title.font = { size: 16, bold: true, color: { argb: C.white } };
+			title.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			title.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+			sheet.getRow(1).height = 30;
+
+			sheet.mergeCells("A2:G2");
+			const sub = sheet.getCell("A2");
+			sub.value = `${employee.name} — ${employee.employeeCode} — Periode ${monthNames[month - 1]} ${year}`;
+			sub.font = { size: 10, bold: true, color: { argb: C.white } };
+			sub.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primaryDark },
+			};
+			sub.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+			sheet.getRow(2).height = 20;
+
+			sheet.getRow(3).height = 8;
+
+			// --- Stat cards row 4-5 ---
+			const totalLateMins = employee.totalLateMinutesSum || 0;
+			const totalEarlyMins = employee.totalEarlyOutMinutesSum || 0;
+			const totalMins = totalLateMins + totalEarlyMins;
+			const penaltyMins = Math.floor(totalMins / 420);
+			let missed = 0;
+			employee.days.forEach((d) => {
+				if (
+					d.isWorkDay &&
+					!d.isHoliday &&
+					d.status !== "LEAVE" &&
+					Boolean(d.clockIn) !== Boolean(d.clockOut)
+				)
+					missed++;
+			});
+			const penaltyPunch = Math.floor(missed / 2);
+			const grandTotal =
+				penaltyMins + penaltyPunch + employee.totalAbsent + employee.totalLeave;
+
+			const cards = [
+				{
+					range: "A4:B4",
+					v: `${employee.totalPresent}`,
+					l: "HADIR",
+					c: C.green,
+				},
+				{ range: "C4:D4", v: `${employee.totalLate}`, l: "TELAT", c: C.amber },
+				{ range: "E4:F4", v: `${employee.totalAbsent}`, l: "ALPA", c: C.red },
+				{
+					range: "G4:G4",
+					v: `${employee.totalLeave}`,
+					l: "CUTI/IZIN",
+					c: C.primary,
+				},
+			] as const;
+			for (const card of cards) {
+				const start = card.range.split(":")[0]!;
+				sheet.mergeCells(card.range);
+				const cell = sheet.getCell(start);
+				cell.value = card.v;
+				cell.font = { size: 13, bold: true, color: { argb: C.dark } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: { argb: C.lightBg },
+				};
+				cell.border = {
+					top: { style: "thick", color: { argb: card.c } },
+					left: { style: "thin", color: { argb: C.border } },
+					right: { style: "thin", color: { argb: C.border } },
+					bottom: { style: "thin", color: { argb: C.border } },
+				};
+				cell.alignment = { vertical: "middle", horizontal: "center" };
+			}
+			sheet.getRow(4).height = 26;
+			const labels = ["A5:B5", "C5:D5", "E5:F5", "G5:G5"] as const;
+			const labelVals = cards.map((c) => c.l);
+			for (let i = 0; i < labels.length; i++) {
+				const r = labels[i]!;
+				const start = r.split(":")[0]!;
+				sheet.mergeCells(r);
+				const cell = sheet.getCell(start);
+				cell.value = labelVals[i];
+				cell.font = { size: 8, bold: true, color: { argb: C.gray } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: { argb: C.lightBg },
+				};
+				cell.border = {
+					left: { style: "thin", color: { argb: C.border } },
+					right: { style: "thin", color: { argb: C.border } },
+					bottom: { style: "thin", color: { argb: C.border } },
+				};
+				cell.alignment = { vertical: "middle", horizontal: "center" };
+			}
+			sheet.getRow(5).height = 15;
+			sheet.getRow(6).height = 8;
+
+			// --- Table header row 7 ---
+			const headers = [
+				"Tanggal",
+				"Shift",
+				"Masuk",
+				"Pulang",
+				"Status",
+				"Telat (mnt)",
+				"Pulang Cepat (mnt)",
+			];
+			for (let i = 0; i < headers.length; i++) {
+				const cell = sheet.getCell(7, i + 1);
+				cell.value = headers[i];
+				cell.font = { size: 9, bold: true, color: { argb: C.white } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: { argb: C.primary },
+				};
+				cell.alignment = {
+					vertical: "middle",
+					horizontal: i === 1 ? "left" : "center",
+					indent: i === 1 ? 1 : 0,
+				};
+				cell.border = thin(C.primary);
+			}
+			sheet.getRow(7).height = 22;
+
+			// --- Daily data rows ---
+			let row = 8;
+			for (const day of employee.days) {
+				const statusLabel = day.isHoliday
+					? "Libur"
+					: !day.isWorkDay
+						? "Off"
+						: day.status === "PRESENT"
+							? "Hadir"
+							: day.status === "LATE"
+								? "Telat"
+								: day.status === "EARLY_OUT"
+									? "Pulang Cepat"
+									: day.status === "ABSENT"
+										? "Alpa"
+										: day.status === "LEAVE"
+											? "Cuti/Izin"
+											: day.status === "IN_PROGRESS"
+												? "Berjalan"
+												: day.status;
+				const values = [
+					day.date,
+					employee.shiftName || "-",
+					day.clockIn ?? "-",
+					day.clockOut ?? "-",
+					statusLabel,
+					day.lateMinutes > 0 ? `${day.lateMinutes}` : "-",
+					day.earlyOutMinutes > 0 ? `${day.earlyOutMinutes}` : "-",
+				];
+				for (let i = 0; i < values.length; i++) {
+					const cell = sheet.getCell(row, i + 1);
+					cell.value = values[i];
+					cell.font = { size: 9, color: { argb: C.dark } };
+					cell.fill = {
+						type: "pattern",
+						pattern: "solid",
+						bgColor: { argb: row % 2 === 0 ? C.white : C.lightBg },
+					};
+					cell.alignment = {
+						vertical: "middle",
+						horizontal: i === 1 ? "left" : "center",
+						indent: i === 1 ? 1 : 0,
+					};
+					cell.border = thin(C.border);
+				}
+				// Color-code status cell
+				const statusCell = sheet.getCell(row, 5);
+				const statusColor = day.isHoliday
+					? C.amber
+					: !day.isWorkDay
+						? C.gray
+						: day.status === "ABSENT"
+							? C.red
+							: day.status === "LATE" || day.status === "EARLY_OUT"
+								? C.amber
+								: day.status === "LEAVE"
+									? C.primary
+									: C.green;
+				statusCell.font = { size: 9, bold: true, color: { argb: statusColor } };
+				sheet.getRow(row).height = 16;
+				row++;
+			}
+
+			// --- Spacer ---
+			row += 1;
+
+			// --- Penalty summary header ---
+			sheet.mergeCells(row, 1, row, 7);
+			const sec = sheet.getCell(row, 1);
+			sec.value = "Rincian Perhitungan Potongan (Hari)";
+			sec.font = { size: 12, bold: true, color: { argb: C.primary } };
+			sheet.getRow(row).height = 22;
+			row++;
+
+			const formulas = [
+				"Akumulasi Jam = (Total Telat + Total Pulang Cepat) ÷ 420 menit — dibulatkan ke bawah",
+				"Lupa Absen = Jumlah absen tidak lengkap ÷ 2 — dibulatkan ke bawah",
+				"Alpa = Total hari tidak hadir tanpa keterangan",
+				"Cuti/Izin = Total hari cuti/izin yang disetujui",
+			];
+			for (const f of formulas) {
+				sheet.mergeCells(row, 1, row, 7);
+				const cell = sheet.getCell(row, 1);
+				cell.value = `  ${f}`;
+				cell.font = { size: 8, italic: true, color: { argb: C.gray } };
+				sheet.getRow(row).height = 14;
+				row++;
+			}
+			row++;
+
+			const penaltyHeaders = [
+				"Komponen",
+				"Perhitungan",
+				"Hasil",
+				"",
+				"",
+				"",
+				"",
+			];
+			for (let i = 0; i < 7; i++) {
+				const cell = sheet.getCell(row, i + 1);
+				cell.value = i < 3 ? penaltyHeaders[i] : "";
+				cell.font = { size: 9, bold: true, color: { argb: C.white } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: { argb: C.primary },
+				};
+				cell.alignment = {
+					vertical: "middle",
+					horizontal: i === 0 ? "left" : "center",
+					indent: i === 0 ? 1 : 0,
+				};
+				cell.border = thin(C.primary);
+			}
+			sheet.getRow(row).height = 20;
+			row++;
+
+			const penaltyRows = [
+				{
+					label: "Akumulasi Jam (÷ 420)",
+					calc: `${totalMins} ÷ 420`,
+					result: `${penaltyMins}`,
+				},
+				{
+					label: "Lupa Absen (÷ 2)",
+					calc: `${missed} ÷ 2`,
+					result: `${penaltyPunch}`,
+				},
+				{
+					label: "Alpa (Tidak Hadir)",
+					calc: "-",
+					result: `${employee.totalAbsent}`,
+				},
+				{ label: "Cuti / Izin", calc: "-", result: `${employee.totalLeave}` },
+			];
+			for (const p of penaltyRows) {
+				const values = [p.label, p.calc, p.result, "", "", "", ""];
+				for (let i = 0; i < 7; i++) {
+					const cell = sheet.getCell(row, i + 1);
+					cell.value = values[i];
+					cell.font = { size: 9, bold: i === 0, color: { argb: C.dark } };
+					cell.fill = {
+						type: "pattern",
+						pattern: "solid",
+						bgColor: { argb: row % 2 === 0 ? C.white : C.lightBg },
+					};
+					cell.alignment = {
+						vertical: "middle",
+						horizontal: i === 0 ? "left" : "center",
+						indent: i === 0 ? 1 : 0,
+					};
+					cell.border = thin(C.border);
+				}
+				sheet.getRow(row).height = 18;
+				row++;
+			}
+
+			// Total row
+			const totalValues = [
+				"TOTAL POTONGAN",
+				"",
+				`${grandTotal} Hari`,
+				"",
+				"",
+				"",
+				"",
+			];
+			for (let i = 0; i < 7; i++) {
+				const cell = sheet.getCell(row, i + 1);
+				cell.value = totalValues[i];
+				cell.font = { size: 9, bold: true, color: { argb: C.white } };
+				cell.fill = {
+					type: "pattern",
+					pattern: "solid",
+					bgColor: { argb: C.primary },
+				};
+				cell.alignment = {
+					vertical: "middle",
+					horizontal: i === 0 ? "left" : "center",
+					indent: i === 0 ? 1 : 0,
+				};
+				cell.border = thin(C.primary);
+			}
+			sheet.getRow(row).height = 22;
 		}
 		return workbook;
 	}
