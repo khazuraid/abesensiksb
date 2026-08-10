@@ -133,11 +133,10 @@ test("registrasi claim memakai ID setelah segmen claims", () => {
 });
 
 test("sinkronisasi hari libur memasukkan cuti bersama", () => {
-	assert.match(
-		services,
-		/!item\.is_national_holiday && item\.type !== "Joint Holiday"/,
-	);
-	assert.match(services, /"Cuti Bersama"/);
+	assert.match(services, /Cuti Bersama/);
+	assert.match(services, /balasai\.id/);
+	assert.match(services, /tanggal/);
+	assert.match(services, /keterangan/);
 });
 
 test("sinkronisasi USERINFO mengisi biometricId pegawai yang cocok namanya", () => {

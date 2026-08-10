@@ -145,12 +145,12 @@ export default function SettingsPage() {
 							onChange={(e) =>
 								setForm({ ...changes, HOLIDAY_API_URL: e.target.value })
 							}
-							placeholder="https://use.api.co.id/holidays/indonesia/?year={year}"
+							placeholder="https://balasai.id/api/v1/holidays?year={year}"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow placeholder:text-[#6e797e]"
 						/>
 						<p className="font-sans text-[11px] text-[#6e797e] mt-1">
 							Endpoint API untuk hari libur. Biarkan kosong jika ingin
-							menggunakan URL bawaan (api.co.id)
+							menggunakan URL bawaan (balasai.id)
 						</p>
 					</div>
 
@@ -168,7 +168,7 @@ export default function SettingsPage() {
 							onChange={(e) =>
 								setForm({ ...changes, HOLIDAY_API_KEY: e.target.value })
 							}
-							placeholder="Masukkan API Key (jika menggunakan api.co.id)"
+							placeholder="Masukkan API Key (hanya jika menggunakan api.co.id)"
 							className="w-full bg-white text-[#111c2d] border border-[#bdc8ce] rounded-lg px-4 py-3 text-[14px] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c] transition-shadow font-mono tracking-widest placeholder:text-[#6e797e] placeholder:tracking-normal placeholder:font-sans"
 						/>
 						<p className="font-sans text-[11px] text-[#6e797e] mt-1">

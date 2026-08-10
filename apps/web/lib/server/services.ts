@@ -1288,24 +1288,30 @@ export class HolidaysService {
 	async syncFromExternal(year = new Date().getFullYear()) {
 		const configured = await this.settings.get("HOLIDAY_API_URL");
 		const url = new URL(
-			(
-				configured || "https://use.api.co.id/holidays/indonesia/?year={year}"
-			).replace("{year}", String(year)),
+			(configured || "https://balasai.id/api/v1/holidays?year={year}").replace(
+				"{year}",
+				String(year),
+			),
 		);
 		if (
 			url.protocol !== "https:" ||
-			!["use.api.co.id", "api.co.id"].includes(url.hostname)
+			!["balasai.id", "use.api.co.id", "api.co.id"].includes(url.hostname)
 		)
 			throw new ApiError(400, "Holiday API host is not allowed");
 		if (!url.searchParams.has("year"))
 			url.searchParams.set("year", String(year));
+		const headers: Record<string, string> = {};
 		const apiKey =
 			(await this.settings.get("HOLIDAY_API_KEY")) ||
 			process.env.HOLIDAY_API_KEY;
-		if (!apiKey) throw new ApiError(400, "API Key hari libur belum diatur");
+		if (
+			apiKey &&
+			(url.hostname === "use.api.co.id" || url.hostname === "api.co.id")
+		)
+			headers["x-api-co-id"] = apiKey;
 		this.logger.log(`Syncing holidays from ${url.origin}`);
 		const response = await fetch(url, {
-			headers: { "x-api-co-id": apiKey },
+			headers,
 			signal: AbortSignal.timeout(10_000),
 		});
 		if (!response.ok)
@@ -1318,19 +1324,25 @@ export class HolidaysService {
 		if (!Array.isArray(rows))
 			throw new ApiError(400, "Format respons hari libur tidak dikenali");
 		let synced = 0;
-		for (const item of rows as {
-			date: string;
-			name: string;
-			type?: string;
-			is_national_holiday: boolean;
-		}[]) {
-			if (!item.is_national_holiday && item.type !== "Joint Holiday") continue;
+		for (const item of rows as Record<string, unknown>[]) {
+			// BalasAI: { tanggal, keterangan } | api.co.id: { date, name, type, is_national_holiday }
+			const date = (item.tanggal ?? item.date) as string | undefined;
+			const name = (item.keterangan ?? item.name) as string | undefined;
+			if (!date || !name) continue;
+			if (
+				item.is_national_holiday !== undefined &&
+				!item.is_national_holiday &&
+				item.type !== "Joint Holiday"
+			)
+				continue;
+			const isCutiBersama =
+				item.type === "Joint Holiday" || name.startsWith("Cuti Bersama");
 			const inserted = await this.db
 				.insert(schema.holidays)
 				.values({
-					date: item.date,
-					name: item.name,
-					description: `${item.type === "Joint Holiday" ? "Cuti Bersama" : "Hari Libur Nasional"} (sync otomatis)`,
+					date,
+					name,
+					description: `${isCutiBersama ? "Cuti Bersama" : "Hari Libur Nasional"} (sync otomatis)`,
 				})
 				.onConflictDoNothing({ target: schema.holidays.date })
 				.returning({ id: schema.holidays.id });
