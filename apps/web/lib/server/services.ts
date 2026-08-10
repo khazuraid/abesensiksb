@@ -2146,7 +2146,7 @@ export class ReportsService {
 
 			sheet.mergeCells("A2:G2");
 			const sub = sheet.getCell("A2");
-			sub.value = `${employee.name} — ${employee.employeeCode} — Periode ${monthNames[month - 1]} ${year}`;
+			sub.value = `${employee.name} — ${employee.employeeCode} — ${employee.shiftName || "-"} — Periode ${monthNames[month - 1]} ${year}`;
 			sub.font = { size: 10, bold: true, color: { argb: C.white } };
 			sub.fill = {
 				type: "pattern",
@@ -2240,7 +2240,7 @@ export class ReportsService {
 			// --- Table header row 7 ---
 			const headers = [
 				"Tanggal",
-				"Shift",
+				"Hari",
 				"Masuk",
 				"Pulang",
 				"Status",
@@ -2285,9 +2285,18 @@ export class ReportsService {
 											: day.status === "IN_PROGRESS"
 												? "Berjalan"
 												: day.status;
+				const dayNames = [
+					"Minggu",
+					"Senin",
+					"Selasa",
+					"Rabu",
+					"Kamis",
+					"Jumat",
+					"Sabtu",
+				];
 				const values = [
 					day.date,
-					employee.shiftName || "-",
+					dayNames[new Date(`${day.date}T00:00:00`).getDay()],
 					day.clockIn ?? "-",
 					day.clockOut ?? "-",
 					statusLabel,
