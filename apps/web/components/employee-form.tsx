@@ -215,7 +215,7 @@ export default function EmployeeForm({
 							<input
 								{...register("department")}
 								id="department"
-								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
 								placeholder="Contoh: IT"
 							/>
 						</div>
@@ -229,8 +229,59 @@ export default function EmployeeForm({
 							<input
 								{...register("position")}
 								id="position"
-								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
 								placeholder="Contoh: Manager"
+							/>
+						</div>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+						<div className="space-y-2">
+							<label
+								htmlFor="golongan"
+								className="text-[13px] font-semibold text-[#111c2d]"
+							>
+								Golongan
+							</label>
+							<input
+								{...register("golongan")}
+								id="golongan"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+								placeholder="Contoh: III, IV, 9"
+							/>
+						</div>
+						<div className="space-y-2">
+							<label
+								htmlFor="pendidikan"
+								className="text-[13px] font-semibold text-[#111c2d]"
+							>
+								Pendidikan
+							</label>
+							<select
+								{...register("pendidikan")}
+								id="pendidikan"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
+							>
+								<option value="">- Pilih -</option>
+								<option value="SMA">SMA</option>
+								<option value="D3">D3</option>
+								<option value="S1">S1</option>
+								<option value="S2">S2</option>
+								<option value="S3">S3</option>
+							</select>
+						</div>
+						<div className="space-y-2">
+							<label
+								htmlFor="joinDate"
+								className="text-[13px] font-semibold text-[#111c2d]"
+							>
+								Tanggal Masuk
+							</label>
+							<input
+								{...register("joinDate")}
+								id="joinDate"
+								type="date"
+								className="w-full bg-white border border-[#bdc8ce]  py-2.5 px-4 text-[14px] text-[#14211d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] transition-all"
 							/>
 						</div>
 					</div>

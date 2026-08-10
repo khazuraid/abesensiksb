@@ -2482,6 +2482,10 @@ export class JaspelService {
 				id: schema.employees.id,
 				name: schema.employees.name,
 				employeeCode: schema.employees.employeeCode,
+				position: schema.employees.position,
+				golongan: schema.employees.golongan,
+				pendidikan: schema.employees.pendidikan,
+				joinDate: schema.employees.joinDate,
 			})
 			.from(schema.employees)
 			.where(where)
@@ -2504,32 +2508,42 @@ export class JaspelService {
 			.from(schema.employees)
 			.where(where);
 		return {
-			data: employees.map((employee) => ({
-				employeeId: employee.id,
-				name: employee.name,
-				employeeCode: employee.employeeCode,
-				basicIndex:
-					values.find((v) => v.employeeId === employee.id)?.basicIndex ?? 0,
-				positionIndex:
-					values.find((v) => v.employeeId === employee.id)?.positionIndex ?? 0,
-				riskIndex:
-					values.find((v) => v.employeeId === employee.id)?.riskIndex ?? 0,
-			})),
+			data: employees.map((employee) => {
+				const v = values.find((val) => val.employeeId === employee.id);
+				return {
+					employeeId: employee.id,
+					name: employee.name,
+					employeeCode: employee.employeeCode,
+					position: employee.position,
+					golongan: employee.golongan,
+					pendidikan: employee.pendidikan,
+					joinDate: employee.joinDate,
+					jenisKetenagaanPoin: v?.jenisKetenagaanPoin ?? 0,
+					masaKerja: v?.masaKerja ?? 0,
+					masaKerjaPoin: v?.masaKerjaPoin ?? 0,
+					rangkapTugas: v?.rangkapTugas ?? 0,
+					tanggungJawabKlaster: v?.tanggungJawabKlaster ?? 0,
+				};
+			}),
 			meta: createPageMeta(total, pagination),
 		};
 	}
 	async updateVariable(
 		employeeId: number,
-		basicIndex: number,
-		positionIndex: number,
-		riskIndex: number,
+		data: {
+			jenisKetenagaanPoin: number;
+			masaKerja: number;
+			masaKerjaPoin: number;
+			rangkapTugas: number;
+			tanggungJawabKlaster: number;
+		},
 	) {
 		await this.db
 			.insert(schema.employeeJaspelVariables)
-			.values({ employeeId, basicIndex, positionIndex, riskIndex })
+			.values({ employeeId, ...data })
 			.onConflictDoUpdate({
 				target: schema.employeeJaspelVariables.employeeId,
-				set: { basicIndex, positionIndex, riskIndex, updatedAt: new Date() },
+				set: { ...data, updatedAt: new Date() },
 			});
 		return { success: true };
 	}
@@ -2561,15 +2575,21 @@ export class JaspelService {
 				employeeId: schema.jaspelDistributions.employeeId,
 				name: schema.employees.name,
 				employeeCode: schema.employees.employeeCode,
-				basicIndex: schema.jaspelDistributions.basicIndex,
-				positionIndex: schema.jaspelDistributions.positionIndex,
-				riskIndex: schema.jaspelDistributions.riskIndex,
-				totalLateMins: schema.jaspelDistributions.totalLateMins,
-				totalEarlyMins: schema.jaspelDistributions.totalEarlyMins,
-				missedPunches: schema.jaspelDistributions.missedPunches,
-				penaltyDays: schema.jaspelDistributions.penaltyDays,
-				totalIndex: schema.jaspelDistributions.totalIndex,
-				finalPoint: schema.jaspelDistributions.finalPoint,
+				position: schema.employees.position,
+				golongan: schema.employees.golongan,
+				pendidikan: schema.employees.pendidikan,
+				jenisKetenagaanPoin: schema.jaspelDistributions.jenisKetenagaanPoin,
+				masaKerja: schema.jaspelDistributions.masaKerja,
+				masaKerjaPoin: schema.jaspelDistributions.masaKerjaPoin,
+				rangkapTugas: schema.jaspelDistributions.rangkapTugas,
+				tanggungJawabKlaster: schema.jaspelDistributions.tanggungJawabKlaster,
+				hariMasukKerja: schema.jaspelDistributions.hariMasukKerja,
+				hariKerja: schema.jaspelDistributions.hariKerja,
+				poinVariabelKetenagaan:
+					schema.jaspelDistributions.poinVariabelKetenagaan,
+				persentaseKehadiran: schema.jaspelDistributions.persentaseKehadiran,
+				jumlahTotalPoin: schema.jaspelDistributions.jumlahTotalPoin,
+				pagu: schema.jaspelDistributions.pagu,
 				finalAmount: schema.jaspelDistributions.finalAmount,
 			})
 			.from(schema.jaspelDistributions)
@@ -2595,7 +2615,16 @@ export class JaspelService {
 			meta: createPageMeta(total, pagination),
 		};
 	}
-	async calculate(month: number, year: number, totalFund: number) {
+	async calculate(
+		month: number,
+		year: number,
+		totalFund: number,
+		extra?: {
+			pendapatan?: number;
+			operasional?: number;
+			namaPuskesmas?: string;
+		},
+	) {
 		return this.db.transaction(async (tx) => {
 			await tx.execute(sql`SELECT pg_advisory_xact_lock(${year}, ${month})`);
 			const [existing] = await tx
@@ -2612,11 +2641,8 @@ export class JaspelService {
 				throw new ApiError(409, "Jaspel period is locked");
 			const reports = new ReportsService(tx);
 			const ruleSnapshot = {
-				formula: "RBFI",
-				formulaVersion: "RBFI-2026.1",
-				workdayMinutes: 420,
-				missedPunchesPerPenaltyDay: 2,
-				complianceFloor: 0,
+				formula: "Ketenagaan-Puskesmas",
+				formulaVersion: "KETENAGAAN-2026.1",
 			};
 			const recaps = await reports.buildDailyRecapForCalculation(month, year),
 				variables = await tx.select().from(schema.employeeJaspelVariables),
@@ -2626,46 +2652,43 @@ export class JaspelService {
 				const variable = variables.find(
 					(v) => v.employeeId === employee.id,
 				) ?? {
-					basicIndex: 0,
-					positionIndex: 0,
-					riskIndex: 0,
+					jenisKetenagaanPoin: 0,
+					masaKerja: 0,
+					masaKerjaPoin: 0,
+					rangkapTugas: 0,
+					tanggungJawabKlaster: 0,
 				};
-				const missedPunches = employee.days.filter(
-					(d) =>
-						d.isWorkDay &&
-						!d.isHoliday &&
-						d.status !== "LEAVE" &&
-						Boolean(d.clockIn) !== Boolean(d.clockOut),
-				).length;
-				const penaltyDays =
-					Math.round(
-						(employee.totalLateMinutesSum + employee.totalEarlyOutMinutesSum) /
-							ruleSnapshot.workdayMinutes,
-					) +
-					Math.floor(missedPunches / ruleSnapshot.missedPunchesPerPenaltyDay) +
-					employee.totalAbsent;
-				const workingDays =
-					employee.days.filter((d) => d.isWorkDay).length || 1;
-				const totalIndex =
-					variable.basicIndex + variable.positionIndex + variable.riskIndex;
-				const finalPoint =
-					(totalIndex *
-						Math.max(ruleSnapshot.complianceFloor, workingDays - penaltyDays)) /
-					workingDays;
-				totalPoints += finalPoint;
+				// Col 4: Hari Masuk Kerja (dari absensi)
+				const hariMasukKerja = employee.totalPresent;
+				// Col 5: Hari Kerja (total hari kerja bulan itu)
+				const hariKerja = employee.days.filter((d) => d.isWorkDay).length;
+				// Col 8 = 1 + 3 + 6 + 7
+				const poinVariabelKetenagaan =
+					variable.jenisKetenagaanPoin +
+					variable.masaKerjaPoin +
+					variable.rangkapTugas +
+					variable.tanggungJawabKlaster;
+				// Col 9 = Col4 / Col5 (persentase)
+				const persentaseKehadiran =
+					hariKerja > 0 ? hariMasukKerja / hariKerja : 0;
+				// Col 10 = Col8 × Col4 / Col5
+				const jumlahTotalPoin = poinVariabelKetenagaan * persentaseKehadiran;
+				totalPoints += jumlahTotalPoin;
 				rows.push({
 					month,
 					year,
 					employeeId: employee.id,
-					basicIndex: variable.basicIndex,
-					positionIndex: variable.positionIndex,
-					riskIndex: variable.riskIndex,
-					totalLateMins: employee.totalLateMinutesSum,
-					totalEarlyMins: employee.totalEarlyOutMinutesSum,
-					missedPunches,
-					penaltyDays,
-					totalIndex,
-					finalPoint,
+					jenisKetenagaanPoin: variable.jenisKetenagaanPoin,
+					masaKerja: variable.masaKerja,
+					masaKerjaPoin: variable.masaKerjaPoin,
+					rangkapTugas: variable.rangkapTugas,
+					tanggungJawabKlaster: variable.tanggungJawabKlaster,
+					hariMasukKerja,
+					hariKerja,
+					poinVariabelKetenagaan,
+					persentaseKehadiran,
+					jumlahTotalPoin,
+					pagu: totalFund,
 					finalAmount: 0,
 				});
 			}
@@ -2677,7 +2700,7 @@ export class JaspelService {
 					index === rows.length - 1
 						? totalFund - allocated
 						: totalPoints
-							? Math.floor((row.finalPoint / totalPoints) * totalFund)
+							? Math.floor((row.jumlahTotalPoin / totalPoints) * totalFund)
 							: 0;
 				allocated += row.finalAmount;
 			}
@@ -2694,6 +2717,9 @@ export class JaspelService {
 					month,
 					year,
 					totalFund,
+					pendapatan: extra?.pendapatan ?? 0,
+					operasional: extra?.operasional ?? 0,
+					namaPuskesmas: extra?.namaPuskesmas ?? "",
 					status: "DRAFT",
 					formulaVersion: ruleSnapshot.formulaVersion,
 					ruleSnapshot,
@@ -2703,6 +2729,9 @@ export class JaspelService {
 					.update(schema.jaspelFunds)
 					.set({
 						totalFund,
+						pendapatan: extra?.pendapatan ?? existing.pendapatan,
+						operasional: extra?.operasional ?? existing.operasional,
+						namaPuskesmas: extra?.namaPuskesmas ?? existing.namaPuskesmas,
 						formulaVersion: ruleSnapshot.formulaVersion,
 						ruleSnapshot,
 						updatedAt: new Date(),
@@ -2774,20 +2803,283 @@ export class JaspelService {
 			return result;
 		});
 	}
+	async getHistory() {
+		return this.db
+			.select({
+				month: schema.jaspelFunds.month,
+				year: schema.jaspelFunds.year,
+				totalFund: schema.jaspelFunds.totalFund,
+				pendapatan: schema.jaspelFunds.pendapatan,
+				operasional: schema.jaspelFunds.operasional,
+				namaPuskesmas: schema.jaspelFunds.namaPuskesmas,
+				status: schema.jaspelFunds.status,
+				formulaVersion: schema.jaspelFunds.formulaVersion,
+				createdAt: schema.jaspelFunds.createdAt,
+				updatedAt: schema.jaspelFunds.updatedAt,
+			})
+			.from(schema.jaspelFunds)
+			.orderBy(desc(schema.jaspelFunds.year), desc(schema.jaspelFunds.month));
+	}
 	async generateExcel(month: number, year: number) {
 		const data = await this.getDistributions(month, year, {
 			page: 1,
 			limit: 10000,
 		});
-		const workbook = new Workbook(),
-			sheet = workbook.addWorksheet("Distribusi Jaspel");
-		sheet.columns = [
-			{ header: "NIP", key: "employeeCode", width: 18 },
-			{ header: "PEGAWAI", key: "name", width: 30 },
-			{ header: "POIN", key: "finalPoint", width: 14 },
-			{ header: "NOMINAL", key: "finalAmount", width: 20 },
+		const fund = data.fund;
+		const workbook = new Workbook();
+		const sheet = workbook.addWorksheet("Jaspel", {
+			views: [{ showGridLines: false }],
+		});
+		const C = {
+			primary: "FF00647C",
+			dark: "FF111C2D",
+			gray: "FF6E797E",
+			white: "FFFFFFFF",
+			lightBg: "FFF0F3FF",
+			border: "FFD2DADE",
+		};
+		const thin = (color: string) => ({
+			top: { style: "thin" as const, color: { argb: color } },
+			left: { style: "thin" as const, color: { argb: color } },
+			bottom: { style: "thin" as const, color: { argb: color } },
+			right: { style: "thin" as const, color: { argb: color } },
+		});
+		const bulanNama = new Date(year, month - 1).toLocaleDateString("id-ID", {
+			month: "long",
+			year: "numeric",
+		});
+		const fmtRp = (n: number) => new Intl.NumberFormat("id-ID").format(n || 0);
+
+		// 17 columns: A..Q
+		const widths = [
+			5, 26, 20, 7, 9, 10, 9, 10, 10, 10, 13, 12, 12, 12, 14, 14, 14,
 		];
-		for (const row of data.distributions) sheet.addRow(row);
+		for (let i = 0; i < widths.length; i++)
+			sheet.getColumn(i + 1).width = widths[i];
+
+		// --- Header ---
+		sheet.mergeCells("A1:Q1");
+		sheet.getCell("A1").value = "DAFTAR PENGHITUNGAN JASA PELAYANAN MEDIS";
+		sheet.getCell("A1").font = {
+			size: 14,
+			bold: true,
+			color: { argb: C.dark },
+		};
+		sheet.getCell("A1").alignment = { horizontal: "center" };
+		sheet.getRow(1).height = 24;
+
+		sheet.mergeCells("A2:Q2");
+		sheet.getCell("A2").value = `BULAN ${bulanNama.toUpperCase()}`;
+		sheet.getCell("A2").font = {
+			size: 12,
+			bold: true,
+			color: { argb: C.primary },
+		};
+		sheet.getCell("A2").alignment = { horizontal: "center" };
+		sheet.getRow(2).height = 20;
+
+		sheet.mergeCells("A3:G3");
+		sheet.getCell("A3").value =
+			`NAMA PUSKESMAS : ${fund?.namaPuskesmas || "PUSKESMAS"}`;
+		sheet.getCell("A3").font = {
+			size: 10,
+			bold: true,
+			color: { argb: C.dark },
+		};
+		sheet.getCell("A3").alignment = { horizontal: "left" };
+
+		sheet.mergeCells("A4:G4");
+		sheet.getCell("A4").value =
+			`JML. PENDAPATAN KAPITASI + F : ${fmtRp(fund?.pendapatan ?? 0)}`;
+		sheet.getCell("A4").font = { size: 10, color: { argb: C.dark } };
+		sheet.mergeCells("H4:Q4");
+		sheet.getCell("H4").value =
+			`JUMLAH JASPEL : ${fmtRp(fund?.totalFund ?? 0)}`;
+		sheet.getCell("H4").font = { size: 10, color: { argb: C.dark } };
+		sheet.mergeCells("A5:G5");
+		sheet.getCell("A5").value =
+			`JUMLAH OPERASIONAL : ${fmtRp(fund?.operasional ?? 0)}`;
+		sheet.getCell("A5").font = { size: 10, color: { argb: C.dark } };
+
+		// --- Table header ---
+		const headerRow = 7;
+		// Row 7: group headers. Col 1-5 individual, 6-8 POIN KETENAGAAN, 9-10 KEHADIRAN, 11-17 individual
+		const groupHeaders: Array<{ start: number; end: number; label: string }> = [
+			{ start: 1, end: 1, label: "NO" },
+			{ start: 2, end: 2, label: "NAMA" },
+			{ start: 3, end: 3, label: "JABATAN" },
+			{ start: 4, end: 4, label: "GOL" },
+			{ start: 5, end: 5, label: "PENDIDIKAN" },
+			{ start: 6, end: 8, label: "POIN KETENAGAAN" },
+			{ start: 9, end: 10, label: "KEHADIRAN" },
+			{ start: 11, end: 11, label: "RANGKAP TUGAS ADMINISTRASI" },
+			{ start: 12, end: 12, label: "TANGGUNG JAWAB KLASTER" },
+			{ start: 13, end: 13, label: "POIN VARIABEL KETENAGAAN" },
+			{ start: 14, end: 14, label: "PERSENTASE KEHADIRAN" },
+			{ start: 15, end: 15, label: "JUMLAH TOTAL SELURUH POINT" },
+			{ start: 16, end: 16, label: "Jumlah nilai pagu" },
+			{ start: 17, end: 17, label: "Jumlah Jasa Pelayanan" },
+		];
+		for (const g of groupHeaders) {
+			if (g.end > g.start)
+				sheet.mergeCells(headerRow, g.start, headerRow, g.end);
+			const cell = sheet.getCell(headerRow, g.start);
+			cell.value = g.label;
+			cell.font = { size: 8, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = {
+				vertical: "middle",
+				horizontal: "center",
+				wrapText: true,
+			};
+			cell.border = thin(C.border);
+		}
+
+		// Row 8: sub-headers
+		const subHeaders = [
+			"",
+			"",
+			"",
+			"",
+			"",
+			"1 JENIS KETENAGAAN",
+			"2 MASA KERJA (DLM THN)",
+			"3 POIN MASA KERJA",
+			"4 JUMLAH HARI MASUK KERJA",
+			"5 JUMLAH HARI KERJA",
+			"6",
+			"7",
+			"8 = 1+3+6+7",
+			"9 = 4/5 x 100",
+			"10 = 8 x 9",
+			"11",
+			"12",
+		];
+		for (let i = 0; i < subHeaders.length; i++) {
+			const cell = sheet.getCell(headerRow + 1, i + 1);
+			cell.value = subHeaders[i];
+			cell.font = { size: 8, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = {
+				vertical: "middle",
+				horizontal: "center",
+				wrapText: true,
+			};
+			cell.border = thin(C.border);
+		}
+		// Fill style for merged group cells (all cells in the merge range)
+		for (const g of groupHeaders)
+			if (g.end > g.start)
+				for (let c = g.start; c <= g.end; c++) {
+					const cell = sheet.getCell(headerRow, c);
+					cell.fill = {
+						type: "pattern",
+						pattern: "solid",
+						bgColor: { argb: C.primary },
+					};
+					cell.border = thin(C.border);
+				}
+		sheet.getRow(headerRow).height = 28;
+		sheet.getRow(headerRow + 1).height = 28;
+
+		// --- Data rows ---
+		let row = headerRow + 2;
+		const dist = data.distributions;
+		let sumJenis = 0,
+			sumMasaPoin = 0,
+			sumPoinVar = 0,
+			sumTotal = 0,
+			sumFinal = 0;
+		let i = 0;
+		for (const d of dist) {
+			const values: (string | number)[] = [
+				i + 1,
+				d.name,
+				d.position || "-",
+				d.golongan || "-",
+				d.pendidikan || "-",
+				d.jenisKetenagaanPoin,
+				d.masaKerja,
+				d.masaKerjaPoin,
+				d.hariMasukKerja,
+				d.hariKerja,
+				d.rangkapTugas || "-",
+				d.tanggungJawabKlaster || "-",
+				Number(d.poinVariabelKetenagaan.toFixed(2)),
+				Number((d.persentaseKehadiran * 100).toFixed(2)),
+				Number(d.jumlahTotalPoin.toFixed(2)),
+				d.pagu,
+				d.finalAmount,
+			];
+			sumJenis += d.jenisKetenagaanPoin;
+			sumMasaPoin += d.masaKerjaPoin;
+			sumPoinVar += d.poinVariabelKetenagaan;
+			sumTotal += d.jumlahTotalPoin;
+			sumFinal += d.finalAmount;
+			for (let col = 0; col < values.length; col++) {
+				const cell = sheet.getCell(row, col + 1);
+				cell.value = values[col];
+				cell.font = { size: 9, color: { argb: C.dark } };
+				cell.alignment = {
+					vertical: "middle",
+					horizontal: col === 1 || col === 2 ? "left" : "center",
+				};
+				cell.border = thin(C.border);
+				if (row % 2 === 0) {
+					cell.fill = {
+						type: "pattern",
+						pattern: "solid",
+						bgColor: { argb: C.lightBg },
+					};
+				}
+			}
+			sheet.getRow(row).height = 16;
+			row++;
+			i++;
+		}
+
+		// --- Summary row ---
+		const sumCell = (c: number, v: number, fmt = "0.00") => {
+			const cell = sheet.getCell(row, c);
+			cell.value = Number(v.toFixed(2));
+			cell.numFmt = fmt;
+			cell.font = { size: 9, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = { vertical: "middle", horizontal: "center" };
+			cell.border = thin(C.border);
+		};
+		sheet.mergeCells(row, 1, row, 5);
+		{
+			const cell = sheet.getCell(row, 1);
+			cell.value = "JUMLAH";
+			cell.font = { size: 9, bold: true, color: { argb: C.white } };
+			cell.fill = {
+				type: "pattern",
+				pattern: "solid",
+				bgColor: { argb: C.primary },
+			};
+			cell.alignment = { vertical: "middle", horizontal: "right" };
+			cell.border = thin(C.border);
+		}
+		sumCell(6, sumJenis);
+		sumCell(8, sumMasaPoin);
+		sumCell(13, sumPoinVar);
+		sumCell(15, sumTotal);
+		sumCell(16, fund?.totalFund ?? 0, "#,##0");
+		sumCell(17, sumFinal, "#,##0");
+		sheet.getRow(row).height = 20;
 		return workbook;
 	}
 }

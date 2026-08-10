@@ -14,6 +14,7 @@ const files = [
 	"migrations/0010_adms_device_claims.sql",
 	"migrations/0011_device_block.sql",
 	"migrations/0012_device_info.sql",
+	"migrations/0013_jaspel_ketenagaan.sql",
 ];
 
 async function run() {

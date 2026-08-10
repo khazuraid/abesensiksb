@@ -84,14 +84,19 @@ const reviewSchema = z.object({
 	rejectionReason: z.string().max(2000).optional(),
 });
 const jaspelVariableSchema = z.object({
-	basicIndex: z.number().nonnegative(),
-	positionIndex: z.number().nonnegative(),
-	riskIndex: z.number().nonnegative(),
+	jenisKetenagaanPoin: z.number().nonnegative(),
+	masaKerja: z.number().int().nonnegative(),
+	masaKerjaPoin: z.number().nonnegative(),
+	rangkapTugas: z.number().nonnegative(),
+	tanggungJawabKlaster: z.number().nonnegative(),
 });
 const jaspelCalculateSchema = z.object({
 	month: z.number().int().min(1).max(12),
 	year: z.number().int().min(2000).max(2200),
 	totalFund: z.number().int().nonnegative(),
+	pendapatan: z.number().int().nonnegative().optional(),
+	operasional: z.number().int().nonnegative().optional(),
+	namaPuskesmas: z.string().max(255).optional(),
 });
 const userCreateSchema = z.object({
 	email: z.string().email(),
@@ -271,6 +276,7 @@ export async function GET(request: NextRequest) {
 			}
 			case "jaspel":
 				requireRole(user, [...managers]);
+				if (path[1] === "history") return jaspel.getHistory();
 				if (path[1] === "variables")
 					return jaspel.getVariables(pageParams(request));
 				if (path[1] === "distributions") {
@@ -482,7 +488,11 @@ export async function POST(request: NextRequest) {
 				if (path[1] === "calculate") {
 					const data = parseWith(jaspelCalculateSchema, body);
 					return audited(user.userId, "CALCULATE", "jaspel", data, () =>
-						jaspel.calculate(data.month, data.year, data.totalFund),
+						jaspel.calculate(data.month, data.year, data.totalFund, {
+							pendapatan: data.pendapatan,
+							operasional: data.operasional,
+							namaPuskesmas: data.namaPuskesmas,
+						}),
 					);
 				}
 				break;
@@ -676,13 +686,7 @@ export async function PUT(request: NextRequest) {
 				"UPDATE",
 				"jaspel-variables",
 				{ employeeId: idAt(path, 2) },
-				() =>
-					jaspel.updateVariable(
-						idAt(path, 2),
-						data.basicIndex,
-						data.positionIndex,
-						data.riskIndex,
-					),
+				() => jaspel.updateVariable(idAt(path, 2), data),
 			);
 		}
 		throw new ApiError(404, "Route not found");

@@ -42,42 +42,49 @@ CREATE TABLE IF NOT EXISTS "fingerprint_templates" (
 );
 
 CREATE TABLE IF NOT EXISTS "jaspel_funds" (
-    "id"         serial PRIMARY KEY,
-    "month"      integer NOT NULL,
-    "year"       integer NOT NULL,
-    "total_fund" integer NOT NULL,
-    "created_at" timestamp NOT NULL DEFAULT now(),
-    "updated_at" timestamp NOT NULL DEFAULT now()
+    "id"             serial PRIMARY KEY,
+    "month"          integer NOT NULL,
+    "year"           integer NOT NULL,
+    "total_fund"     integer NOT NULL,
+    "pendapatan"     integer NOT NULL DEFAULT 0,
+    "operasional"    integer NOT NULL DEFAULT 0,
+    "nama_puskesmas" varchar(255) NOT NULL DEFAULT '',
+    "created_at"     timestamp NOT NULL DEFAULT now(),
+    "updated_at"     timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS "idx_jaspel_funds_month_year"
     ON "jaspel_funds" ("month", "year");
 
 CREATE TABLE IF NOT EXISTS "employee_jaspel_variables" (
-    "id"             serial PRIMARY KEY,
-    "employee_id"    integer NOT NULL UNIQUE REFERENCES "employees"("id") ON DELETE CASCADE,
-    "basic_index"    double precision NOT NULL DEFAULT 0,
-    "position_index" double precision NOT NULL DEFAULT 0,
-    "risk_index"     double precision NOT NULL DEFAULT 0,
-    "created_at"     timestamp NOT NULL DEFAULT now(),
-    "updated_at"     timestamp NOT NULL DEFAULT now()
+    "id"                       serial PRIMARY KEY,
+    "employee_id"              integer NOT NULL UNIQUE REFERENCES "employees"("id") ON DELETE CASCADE,
+    "jenis_ketenagaan_poin"    double precision NOT NULL DEFAULT 0,
+    "masa_kerja"               integer NOT NULL DEFAULT 0,
+    "masa_kerja_poin"          double precision NOT NULL DEFAULT 0,
+    "rangkap_tugas"            double precision NOT NULL DEFAULT 0,
+    "tanggung_jawab_klaster"   double precision NOT NULL DEFAULT 0,
+    "created_at"               timestamp NOT NULL DEFAULT now(),
+    "updated_at"               timestamp NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS "jaspel_distributions" (
-    "id"                serial PRIMARY KEY,
-    "month"             integer NOT NULL,
-    "year"              integer NOT NULL,
-    "employee_id"       integer NOT NULL REFERENCES "employees"("id") ON DELETE CASCADE,
-    "basic_index"       double precision NOT NULL,
-    "position_index"    double precision NOT NULL,
-    "risk_index"        double precision NOT NULL,
-    "total_late_mins"   integer NOT NULL,
-    "total_early_mins"  integer NOT NULL,
-    "missed_punches"    integer NOT NULL,
-    "penalty_days"      integer NOT NULL,
-    "total_index"       double precision NOT NULL,
-    "final_point"       double precision NOT NULL,
-    "final_amount"      integer NOT NULL,
-    "created_at"        timestamp NOT NULL DEFAULT now()
+    "id"                        serial PRIMARY KEY,
+    "month"                     integer NOT NULL,
+    "year"                      integer NOT NULL,
+    "employee_id"               integer NOT NULL REFERENCES "employees"("id") ON DELETE CASCADE,
+    "jenis_ketenagaan_poin"     double precision NOT NULL DEFAULT 0,
+    "masa_kerja"                integer NOT NULL DEFAULT 0,
+    "masa_kerja_poin"           double precision NOT NULL DEFAULT 0,
+    "rangkap_tugas"             double precision NOT NULL DEFAULT 0,
+    "tanggung_jawab_klaster"    double precision NOT NULL DEFAULT 0,
+    "hari_masuk_kerja"          integer NOT NULL DEFAULT 0,
+    "hari_kerja"                integer NOT NULL DEFAULT 0,
+    "poin_variabel_ketenagaan"  double precision NOT NULL DEFAULT 0,
+    "persentase_kehadiran"      double precision NOT NULL DEFAULT 0,
+    "jumlah_total_poin"         double precision NOT NULL DEFAULT 0,
+    "pagu"                      integer NOT NULL DEFAULT 0,
+    "final_amount"              integer NOT NULL DEFAULT 0,
+    "created_at"                timestamp NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS "idx_jaspel_dist_month_year"
     ON "jaspel_distributions" ("month", "year");

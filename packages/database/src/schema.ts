@@ -75,6 +75,11 @@ export const employees = pgTable("employees", {
 	position: varchar("position", { length: 100 }),
 	branch: varchar("branch", { length: 100 }),
 
+	// Untuk perhitungan Jaspel
+	golongan: varchar("golongan", { length: 20 }),
+	pendidikan: varchar("pendidikan", { length: 20 }),
+	joinDate: date("join_date"),
+
 	// Array of shift IDs that apply to this employee
 	shiftIds: jsonb("shift_ids").$type<number[]>().default([]).notNull(),
 
@@ -510,7 +515,12 @@ export const jaspelFunds = pgTable(
 		id: serial("id").primaryKey(),
 		month: integer("month").notNull(),
 		year: integer("year").notNull(),
-		totalFund: integer("total_fund").notNull(), // Disimpan dalam Rupiah utuh
+		totalFund: integer("total_fund").notNull(), // Jumlah Jasa Pelayanan (dibagikan)
+		pendapatan: integer("pendapatan").default(0).notNull(), // Pendapatan Kapitasi
+		operasional: integer("operasional").default(0).notNull(), // Biaya Operasional
+		namaPuskesmas: varchar("nama_puskesmas", { length: 255 })
+			.default("")
+			.notNull(),
 		status: jaspelStatusEnum("status").default("DRAFT").notNull(),
 		formulaVersion: varchar("formula_version", { length: 50 })
 			.default("RBFI-2026.1")
@@ -538,9 +548,20 @@ export const employeeJaspelVariables = pgTable("employee_jaspel_variables", {
 		.notNull()
 		.unique()
 		.references(() => employees.id, { onDelete: "cascade" }),
-	basicIndex: doublePrecision("basic_index").default(0).notNull(),
-	positionIndex: doublePrecision("position_index").default(0).notNull(),
-	riskIndex: doublePrecision("risk_index").default(0).notNull(),
+	// Col 1: Poin Jenis Ketenagaan (150/100/80/60/dll)
+	jenisKetenagaanPoin: doublePrecision("jenis_ketenagaan_poin")
+		.default(0)
+		.notNull(),
+	// Col 2: Masa Kerja (tahun)
+	masaKerja: integer("masa_kerja").default(0).notNull(),
+	// Col 3: Poin Masa Kerja (2/5/10/15/25)
+	masaKerjaPoin: doublePrecision("masa_kerja_poin").default(0).notNull(),
+	// Col 6: Rangkap Tugas Administrasi
+	rangkapTugas: doublePrecision("rangkap_tugas").default(0).notNull(),
+	// Col 7: Tanggung Jawab Klaster
+	tanggungJawabKlaster: doublePrecision("tanggung_jawab_klaster")
+		.default(0)
+		.notNull(),
 	createdAt: timestamp("created_at").defaultNow().notNull(),
 	updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -556,20 +577,24 @@ export const jaspelDistributions = pgTable(
 			.references(() => employees.id, { onDelete: "cascade" }),
 
 		// Data histori (supaya tidak berubah jika variabel diedit)
-		basicIndex: doublePrecision("basic_index").notNull(),
-		positionIndex: doublePrecision("position_index").notNull(),
-		riskIndex: doublePrecision("risk_index").notNull(),
+		jenisKetenagaanPoin: doublePrecision("jenis_ketenagaan_poin").notNull(),
+		masaKerja: integer("masa_kerja").notNull(),
+		masaKerjaPoin: doublePrecision("masa_kerja_poin").notNull(),
+		rangkapTugas: doublePrecision("rangkap_tugas").notNull(),
+		tanggungJawabKlaster: doublePrecision("tanggung_jawab_klaster").notNull(),
 
-		// Variabel Kehadiran (diambil saat hitung)
-		totalLateMins: integer("total_late_mins").notNull(),
-		totalEarlyMins: integer("total_early_mins").notNull(),
-		missedPunches: integer("missed_punches").notNull(),
-		penaltyDays: integer("penalty_days").notNull(),
+		// Kehadiran (dari absensi)
+		hariMasukKerja: integer("hari_masuk_kerja").notNull(), // Col 4
+		hariKerja: integer("hari_kerja").notNull(), // Col 5
 
-		// Skor Akhir
-		totalIndex: doublePrecision("total_index").notNull(),
-		finalPoint: doublePrecision("final_point").notNull(),
-		finalAmount: integer("final_amount").notNull(), // Uang jaspel
+		// Hasil perhitungan
+		poinVariabelKetenagaan: doublePrecision(
+			"poin_variabel_ketenagaan",
+		).notNull(), // Col 8 = 1+3+6+7
+		persentaseKehadiran: doublePrecision("persentase_kehadiran").notNull(), // Col 9 = 4/5
+		jumlahTotalPoin: doublePrecision("jumlah_total_poin").notNull(), // Col 10 = 8 × 4/5
+		pagu: integer("pagu").notNull(), // Col 11 (dana total)
+		finalAmount: integer("final_amount").notNull(), // Col 12 = uang jaspel
 
 		createdAt: timestamp("created_at").defaultNow().notNull(),
 	},

@@ -20,39 +20,77 @@ interface JaspelVariable {
 	employeeId: number;
 	name: string;
 	employeeCode: string;
-	basicIndex: number;
-	positionIndex: number;
-	riskIndex: number;
+	position: string | null;
+	golongan: string | null;
+	pendidikan: string | null;
+	joinDate: string | null;
+	jenisKetenagaanPoin: number;
+	masaKerja: number;
+	masaKerjaPoin: number;
+	rangkapTugas: number;
+	tanggungJawabKlaster: number;
 }
 
 interface JaspelDistribution {
 	employeeId: number;
 	name: string;
 	employeeCode: string;
-	penaltyDays: number;
-	totalIndex: number;
-	finalPoint: number;
+	position: string | null;
+	golongan: string | null;
+	pendidikan: string | null;
+	jenisKetenagaanPoin: number;
+	masaKerja: number;
+	masaKerjaPoin: number;
+	rangkapTugas: number;
+	tanggungJawabKlaster: number;
+	hariMasukKerja: number;
+	hariKerja: number;
+	poinVariabelKetenagaan: number;
+	persentaseKehadiran: number;
+	jumlahTotalPoin: number;
+	pagu: number;
 	finalAmount: number;
 }
 
+interface JaspelFund {
+	totalFund: number;
+	pendapatan: number;
+	operasional: number;
+	namaPuskesmas: string;
+	status: "DRAFT" | "REVIEWED" | "FINAL" | "LOCKED";
+	formulaVersion: string;
+}
+
 interface JaspelDistributions {
-	fund?: {
-		totalFund: number;
-		status: "DRAFT" | "REVIEWED" | "FINAL" | "LOCKED";
-		formulaVersion: string;
-	};
+	fund: JaspelFund | null;
 	distributions: JaspelDistribution[];
 	meta: PageMeta;
 }
 
+interface HistoryItem {
+	month: number;
+	year: number;
+	totalFund: number;
+	pendapatan: number;
+	operasional: number;
+	namaPuskesmas: string;
+	status: string;
+	formulaVersion: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
 export default function JaspelPage() {
 	const queryClient = useQueryClient();
-	const [activeTab, setActiveTab] = useState<"variables" | "simulation">(
-		"variables",
-	);
+	const [activeTab, setActiveTab] = useState<
+		"variables" | "simulation" | "history"
+	>("variables");
 	const [month, setMonth] = useState(new Date().getMonth() + 1);
 	const [year, setYear] = useState(new Date().getFullYear());
 	const [totalFundInput, setTotalFundInput] = useState<string>("");
+	const [pendapatanInput, setPendapatanInput] = useState<string>("");
+	const [operasionalInput, setOperasionalInput] = useState<string>("");
+	const [namaPuskesmasInput, setNamaPuskesmasInput] = useState<string>("");
 	const [variablesPage, setVariablesPage] = useState(1);
 	const [distributionsPage, setDistributionsPage] = useState(1);
 
@@ -81,19 +119,36 @@ export default function JaspelPage() {
 		queryKey: ["jaspel-distributions", month, year, distributionsPage],
 		queryFn: async () => {
 			const res = await api.get(
-				`/jaspel/distributions?month=${month}&year=${year}&page=${distributionsPage}&limit=10`,
+				`/jaspel/distributions?month=${month}&year=${year}&page=${distributionsPage}&limit=100`,
 			);
+			return res.data;
+		},
+	});
+
+	// History Query
+	const { data: historyData, isLoading: isHistoryLoading } = useQuery<
+		HistoryItem[]
+	>({
+		queryKey: ["jaspel-history"],
+		queryFn: async () => {
+			const res = await api.get("/jaspel/history");
 			return res.data;
 		},
 	});
 
 	// Calculate Mutation
 	const calculateMutation = useMutation({
-		mutationFn: async (totalFund: number) => {
+		mutationFn: async () => {
+			const fund = Number(totalFundInput.replace(/\D/g, ""));
+			const pendapatan = Number(pendapatanInput.replace(/\D/g, ""));
+			const operasional = Number(operasionalInput.replace(/\D/g, ""));
 			const res = await api.post("/jaspel/calculate", {
 				month,
 				year,
-				totalFund,
+				totalFund: fund,
+				pendapatan: pendapatan || 0,
+				operasional: operasional || 0,
+				namaPuskesmas: namaPuskesmasInput || undefined,
 			});
 			return res.data;
 		},
@@ -101,21 +156,26 @@ export default function JaspelPage() {
 			queryClient.invalidateQueries({
 				queryKey: ["jaspel-distributions", month, year],
 			});
+			queryClient.invalidateQueries({ queryKey: ["jaspel-history"] });
 		},
 	});
 
 	const handleCalculate = () => {
 		const fund = Number(totalFundInput.replace(/\D/g, ""));
-		if (fund > 0) calculateMutation.mutate(fund);
+		if (fund > 0) calculateMutation.mutate();
 	};
+
 	const transition = useMutation({
 		mutationFn: async (action: "review" | "finalize" | "lock") =>
 			api.patch(`/jaspel/${action}`, { month, year }),
-		onSuccess: () =>
+		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["jaspel-distributions", month, year],
-			}),
+			});
+			queryClient.invalidateQueries({ queryKey: ["jaspel-history"] });
+		},
 	});
+
 	const handleExport = async () => {
 		const response = await api.get(
 			`/jaspel/export?month=${month}&year=${year}`,
@@ -129,6 +189,10 @@ export default function JaspelPage() {
 		URL.revokeObjectURL(url);
 	};
 
+	const fmtRp = (n: number) => new Intl.NumberFormat("id-ID").format(n || 0);
+	const bulanNama = (m: number) =>
+		new Date(2000, m - 1).toLocaleString("id-ID", { month: "long" });
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, y: 10 }}
@@ -141,73 +205,92 @@ export default function JaspelPage() {
 						Kalkulator Jasa Pelayanan
 					</h1>
 					<p className="text-[#6e797e] text-[14px] sm:text-[15px] mt-1">
-						Kelola variabel indeks pegawai dan hitung otomatis pembagian Jaspel.
+						Penghitungan Jasa Pelayanan Medis berdasarkan poin ketenagaan,
+						kehadiran, dan tanggung jawab.
 					</p>
 				</div>
 			</div>
 
 			{/* Tabs */}
-			<div className="grid w-full grid-cols-2 rounded-lg border border-black/5 bg-white p-1 shadow-sm sm:w-fit">
+			<div className="grid w-full grid-cols-3 rounded-lg border border-black/5 bg-white p-1 shadow-sm sm:w-fit">
 				<button
 					type="button"
 					onClick={() => setActiveTab("variables")}
-					className={`flex items-center gap-2 px-6 py-2.5 rounded-md text-[14px] font-medium transition-all ${
+					className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all ${
 						activeTab === "variables"
 							? "bg-[#00647c] text-white shadow-md"
 							: "text-[#6e797e] hover:bg-[#f0f3ff] hover:text-[#111c2d]"
 					}`}
 				>
 					<Users className="w-4 h-4" />
-					Variabel Pegawai
+					Variabel
 				</button>
 				<button
 					type="button"
 					onClick={() => setActiveTab("simulation")}
-					className={`flex items-center gap-2 px-6 py-2.5 rounded-md text-[14px] font-medium transition-all ${
+					className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all ${
 						activeTab === "simulation"
 							? "bg-[#00647c] text-white shadow-md"
 							: "text-[#6e797e] hover:bg-[#f0f3ff] hover:text-[#111c2d]"
 					}`}
 				>
 					<Calculator className="w-4 h-4" />
-					Simulasi Pembagian
+					Perhitungan
+				</button>
+				<button
+					type="button"
+					onClick={() => setActiveTab("history")}
+					className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all ${
+						activeTab === "history"
+							? "bg-[#00647c] text-white shadow-md"
+							: "text-[#6e797e] hover:bg-[#f0f3ff] hover:text-[#111c2d]"
+					}`}
+				>
+					<RefreshCw className="w-4 h-4" />
+					History
 				</button>
 			</div>
 
-			{activeTab === "variables" ? (
+			{activeTab === "variables" && (
 				<div className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
 					<div className="p-5 border-b border-black/5 bg-[#f0f3ff]/50">
 						<h3 className="font-semibold text-[#111c2d]">
-							Pengaturan Indeks Pegawai
+							Pengaturan Variabel Ketenagaan
 						</h3>
 						<p className="text-[13px] text-[#6e797e] mt-1">
-							Atur bobot Poin Pendidikan/Dasar, Poin Jabatan, dan Poin Risiko
-							untuk setiap pegawai.
+							Atur poin jenis ketenagaan, masa kerja, rangkap tugas, dan
+							tanggung jawab klaster untuk setiap pegawai.
 						</p>
 					</div>
 					<div className="mobile-scroll-hint">
-						Geser tabel untuk mengatur seluruh indeks
+						Geser tabel untuk mengatur seluruh variabel
 					</div>
 					<div className="overflow-x-auto">
 						<table className="w-full text-left border-collapse">
 							<thead>
 								<tr className="bg-[#f8f9fa] border-b border-black/5">
-									<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider whitespace-nowrap">
 										Pegawai
 									</th>
-									<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-										Indeks Dasar
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+										1. Poin Jenis Ketenagaan
 									</th>
-									<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-										Indeks Jabatan
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+										2. Masa Kerja (thn)
 									</th>
-									<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-										Indeks Risiko
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+										3. Poin Masa Kerja
 									</th>
-									<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-										Total Poin
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+										6. Rangkap Tugas
 									</th>
-									<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+										7. Tg Jawab Klaster
+									</th>
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+										8 = 1+3+6+7
+									</th>
+									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-right whitespace-nowrap">
 										Aksi
 									</th>
 								</tr>
@@ -215,16 +298,14 @@ export default function JaspelPage() {
 							<tbody className="divide-y divide-black/5">
 								{isVariablesLoading ? (
 									<tr>
-										<td colSpan={6} className="text-center py-10">
-											<div className="flex justify-center">
-												<RefreshCw className="w-6 h-6 animate-spin text-[#00647c]" />
-											</div>
+										<td colSpan={8} className="text-center py-10">
+											<RefreshCw className="w-6 h-6 animate-spin text-[#00647c] mx-auto" />
 										</td>
 									</tr>
 								) : variables?.length === 0 ? (
 									<tr>
 										<td
-											colSpan={6}
+											colSpan={8}
 											className="text-center py-10 text-[#6e797e]"
 										>
 											Belum ada data pegawai aktif.
@@ -244,11 +325,13 @@ export default function JaspelPage() {
 						disabled={isVariablesFetching}
 					/>
 				</div>
-			) : (
+			)}
+
+			{activeTab === "simulation" && (
 				<div className="space-y-6">
-					{/* Controls for Simulation */}
+					{/* Controls */}
 					<div className="bg-white rounded-xl border border-black/5 shadow-sm p-6">
-						<div className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
 							<div>
 								<label
 									htmlFor="month"
@@ -264,9 +347,7 @@ export default function JaspelPage() {
 								>
 									{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
 										<option key={m} value={m}>
-											{new Date(2000, m - 1).toLocaleString("id-ID", {
-												month: "long",
-											})}
+											{bulanNama(m)}
 										</option>
 									))}
 								</select>
@@ -288,15 +369,79 @@ export default function JaspelPage() {
 							</div>
 							<div>
 								<label
+									htmlFor="namaPuskesmas"
+									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
+								>
+									Nama Puskesmas
+								</label>
+								<input
+									id="namaPuskesmas"
+									type="text"
+									value={namaPuskesmasInput}
+									onChange={(e) => setNamaPuskesmasInput(e.target.value)}
+									placeholder="Contoh: PUSKESMAS KESAMBI"
+									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20"
+								/>
+							</div>
+						</div>
+						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+							<div>
+								<label
+									htmlFor="pendapatan"
+									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
+								>
+									Pendapatan Kapitasi (Rp)
+								</label>
+								<input
+									id="pendapatan"
+									type="text"
+									placeholder="0"
+									value={pendapatanInput}
+									onChange={(e) => {
+										const val = e.target.value.replace(/\D/g, "");
+										setPendapatanInput(
+											val
+												? new Intl.NumberFormat("id-ID").format(Number(val))
+												: "",
+										);
+									}}
+									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20 font-semibold text-[#00647c]"
+								/>
+							</div>
+							<div>
+								<label
+									htmlFor="operasional"
+									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
+								>
+									Biaya Operasional (Rp)
+								</label>
+								<input
+									id="operasional"
+									type="text"
+									placeholder="0"
+									value={operasionalInput}
+									onChange={(e) => {
+										const val = e.target.value.replace(/\D/g, "");
+										setOperasionalInput(
+											val
+												? new Intl.NumberFormat("id-ID").format(Number(val))
+												: "",
+										);
+									}}
+									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20 font-semibold text-[#00647c]"
+								/>
+							</div>
+							<div>
+								<label
 									htmlFor="totalFund"
 									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
 								>
-									Total Dana Dibagikan (Rp)
+									Jumlah Jaspel (Rp)
 								</label>
 								<input
 									id="totalFund"
 									type="text"
-									placeholder="Contoh: 10000000"
+									placeholder="Contoh: 45570456"
 									value={totalFundInput}
 									onChange={(e) => {
 										const val = e.target.value.replace(/\D/g, "");
@@ -309,48 +454,48 @@ export default function JaspelPage() {
 									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20 font-semibold text-[#00647c]"
 								/>
 							</div>
-							<div className="flex gap-2">
+						</div>
+						<div className="flex gap-2">
+							<button
+								type="button"
+								onClick={handleCalculate}
+								disabled={calculateMutation.isPending}
+								className="flex-1 h-[42px] bg-[#00647c] text-white rounded-lg font-medium text-[14px] hover:bg-[#005266] transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+							>
+								{calculateMutation.isPending ? (
+									<RefreshCw className="w-4 h-4 animate-spin" />
+								) : (
+									<Calculator className="w-4 h-4" />
+								)}
+								Hitung Jaspel
+							</button>
+							{distributionsData?.fund?.status === "DRAFT" && (
 								<button
 									type="button"
-									onClick={handleCalculate}
-									disabled={calculateMutation.isPending}
-									className="flex-1 h-[42px] bg-[#00647c] text-white rounded-lg font-medium text-[14px] hover:bg-[#005266] transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+									className="adms-button"
+									onClick={() => transition.mutate("review")}
 								>
-									{calculateMutation.isPending ? (
-										<RefreshCw className="w-4 h-4 animate-spin" />
-									) : (
-										<Calculator className="w-4 h-4" />
-									)}
-									Hitung Jaspel
+									Review
 								</button>
-								{distributionsData?.fund?.status === "DRAFT" && (
-									<button
-										type="button"
-										className="adms-button"
-										onClick={() => transition.mutate("review")}
-									>
-										Review
-									</button>
-								)}
-								{distributionsData?.fund?.status === "REVIEWED" && (
-									<button
-										type="button"
-										className="adms-button"
-										onClick={() => transition.mutate("finalize")}
-									>
-										Finalisasi
-									</button>
-								)}
-								{distributionsData?.fund?.status === "FINAL" && (
-									<button
-										type="button"
-										className="adms-button"
-										onClick={() => transition.mutate("lock")}
-									>
-										Kunci
-									</button>
-								)}
-							</div>
+							)}
+							{distributionsData?.fund?.status === "REVIEWED" && (
+								<button
+									type="button"
+									className="adms-button"
+									onClick={() => transition.mutate("finalize")}
+								>
+									Finalisasi
+								</button>
+							)}
+							{distributionsData?.fund?.status === "FINAL" && (
+								<button
+									type="button"
+									className="adms-button"
+									onClick={() => transition.mutate("lock")}
+								>
+									Kunci
+								</button>
+							)}
 						</div>
 					</div>
 
@@ -359,17 +504,14 @@ export default function JaspelPage() {
 						<div className="p-5 border-b border-black/5 flex justify-between items-center bg-[#f0f3ff]/50">
 							<div>
 								<h3 className="font-semibold text-[#111c2d]">
-									Hasil Pembagian
+									Hasil Penghitungan
 								</h3>
 								{distributionsData?.fund && (
 									<p className="text-[13px] text-[#006c49] mt-1 font-medium flex items-center gap-1">
 										<CheckCircle2 className="w-3.5 h-3.5" />
-										Telah dihitung dari total Rp{" "}
-										{new Intl.NumberFormat("id-ID").format(
-											distributionsData.fund.totalFund,
-										)}
-										· {distributionsData.fund.status} ·{" "}
-										{distributionsData.fund.formulaVersion}
+										{distributionsData.fund.namaPuskesmas || "PUSKESMAS"} ·{" "}
+										Jaspel Rp {fmtRp(distributionsData.fund.totalFund)} ·{" "}
+										{distributionsData.fund.status}
 									</p>
 								)}
 							</div>
@@ -385,87 +527,167 @@ export default function JaspelPage() {
 							)}
 						</div>
 						<div className="mobile-scroll-hint">
-							Geser tabel untuk melihat rincian pembagian
+							Geser tabel untuk melihat seluruh kolom perhitungan
 						</div>
 						<div className="overflow-x-auto">
 							<table className="w-full text-left border-collapse">
 								<thead>
 									<tr className="bg-[#f8f9fa] border-b border-black/5">
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-											Pegawai
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											No
 										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-											Potongan Kehadiran
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider whitespace-nowrap">
+											Nama
 										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-											Total Indeks (Poin)
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider whitespace-nowrap">
+											Jabatan
 										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-											Poin Akhir
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											Gol
 										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-bold text-[#111c2d] uppercase tracking-wider text-right">
-											Nominal Jaspel
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											Pend
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											1 Poin Ket.
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											3 Poin MK
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											4 Hadir
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											5 Hr Kerja
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											6 Rangkap
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											7 Tg Jawab
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											8 Poin Var
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											9 % Hadir
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
+											10 Total Poin
+										</th>
+										<th className="px-2 py-3 font-sans text-[10px] font-bold text-[#111c2d] uppercase tracking-wider text-right whitespace-nowrap">
+											Jasa Pelayanan
 										</th>
 									</tr>
 								</thead>
 								<tbody className="divide-y divide-black/5">
 									{isDistributionsLoading ? (
 										<tr>
-											<td colSpan={5} className="text-center py-10">
+											<td colSpan={15} className="text-center py-10">
 												<RefreshCw className="w-6 h-6 animate-spin text-[#00647c] mx-auto" />
 											</td>
 										</tr>
 									) : distributionsData?.distributions?.length === 0 ? (
 										<tr>
 											<td
-												colSpan={5}
+												colSpan={15}
 												className="text-center py-12 text-[#6e797e]"
 											>
 												<Calculator className="w-10 h-10 mx-auto mb-3 opacity-20" />
-												<p>Belum ada data simulasi untuk bulan ini.</p>
+												<p>Belum ada data perhitungan untuk bulan ini.</p>
 												<p className="text-[13px] mt-1">
 													Masukkan nominal dana dan klik Hitung Jaspel.
 												</p>
 											</td>
 										</tr>
 									) : (
-										distributionsData?.distributions?.map((dist) => (
+										distributionsData?.distributions?.map((dist, i) => (
 											<tr key={dist.employeeId} className="hover:bg-[#f9f9ff]">
-												<td className="px-5 py-4">
-													<p className="font-medium text-[#111c2d] text-[14px]">
+												<td className="px-2 py-3 text-center text-[12px] text-[#6e797e]">
+													{i + 1}
+												</td>
+												<td className="px-2 py-3">
+													<p className="font-medium text-[#111c2d] text-[13px]">
 														{dist.name}
 													</p>
-													<p className="text-[12px] text-[#6e797e]">
+													<p className="text-[10px] text-[#6e797e]">
 														{dist.employeeCode}
 													</p>
 												</td>
-												<td className="px-5 py-4 text-center">
-													{dist.penaltyDays > 0 ? (
-														<span className="inline-flex px-2 py-1 bg-[#ba1a1a]/10 text-[#ba1a1a] rounded text-[12px] font-bold">
-															- {dist.penaltyDays} Hari
-														</span>
-													) : (
-														<span className="text-[13px] text-[#6e797e]">
-															-
-														</span>
-													)}
+												<td className="px-2 py-3 text-[12px] text-[#3e484d]">
+													{dist.position || "-"}
 												</td>
-												<td className="px-5 py-4 text-center text-[14px] font-medium text-[#3e484d]">
-													{dist.totalIndex.toFixed(1)}
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.golongan || "-"}
 												</td>
-												<td className="px-5 py-4 text-center text-[14px] font-semibold text-[#00647c]">
-													{dist.finalPoint.toFixed(2)}
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.pendidikan || "-"}
 												</td>
-												<td className="px-5 py-4 text-right text-[15px] font-bold text-[#111c2d]">
-													Rp{" "}
-													{new Intl.NumberFormat("id-ID").format(
-														dist.finalAmount,
-													)}
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.jenisKetenagaanPoin}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.masaKerjaPoin}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.hariMasukKerja}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.hariKerja}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.rangkapTugas || "-"}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
+													{dist.tanggungJawabKlaster || "-"}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] font-medium text-[#3e484d]">
+													{dist.poinVariabelKetenagaan.toFixed(2)}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] font-medium text-[#3e484d]">
+													{(dist.persentaseKehadiran * 100).toFixed(2)}
+												</td>
+												<td className="px-2 py-3 text-center text-[12px] font-semibold text-[#00647c]">
+													{dist.jumlahTotalPoin.toFixed(2)}
+												</td>
+												<td className="px-2 py-3 text-right text-[13px] font-bold text-[#111c2d]">
+													{dist.finalAmount > 0 ? fmtRp(dist.finalAmount) : "-"}
 												</td>
 											</tr>
 										))
 									)}
 								</tbody>
+								{distributionsData?.distributions?.length ? (
+									<tfoot>
+										<tr className="bg-[#00647c] text-white">
+											<td
+												colSpan={11}
+												className="px-2 py-3 text-right text-[12px] font-bold"
+											>
+												JUMLAH
+											</td>
+											<td className="px-2 py-3 text-center text-[12px] font-bold">
+												{distributionsData.distributions
+													.reduce((s, d) => s + d.poinVariabelKetenagaan, 0)
+													.toFixed(2)}
+											</td>
+											<td className="px-2 py-3" />
+											<td className="px-2 py-3 text-center text-[12px] font-bold">
+												{distributionsData.distributions
+													.reduce((s, d) => s + d.jumlahTotalPoin, 0)
+													.toFixed(2)}
+											</td>
+											<td className="px-2 py-3 text-right text-[12px] font-bold">
+												{fmtRp(
+													distributionsData.distributions.reduce(
+														(s, d) => s + d.finalAmount,
+														0,
+													),
+												)}
+											</td>
+										</tr>
+									</tfoot>
+								) : null}
 							</table>
 						</div>
 						<PaginationControls
@@ -476,23 +698,126 @@ export default function JaspelPage() {
 					</div>
 				</div>
 			)}
+
+			{activeTab === "history" && (
+				<div className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
+					<div className="p-5 border-b border-black/5 bg-[#f0f3ff]/50">
+						<h3 className="font-semibold text-[#111c2d]">
+							History Perhitungan
+						</h3>
+						<p className="text-[13px] text-[#6e797e] mt-1">
+							Daftar perhitungan jaspel yang pernah dilakukan per bulan.
+						</p>
+					</div>
+					{isHistoryLoading ? (
+						<div className="text-center py-10">
+							<RefreshCw className="w-6 h-6 animate-spin text-[#00647c] mx-auto" />
+						</div>
+					) : !historyData?.length ? (
+						<div className="text-center py-12 text-[#6e797e]">
+							<p>Belum ada history perhitungan.</p>
+						</div>
+					) : (
+						<div className="overflow-x-auto">
+							<table className="w-full text-left border-collapse">
+								<thead>
+									<tr className="bg-[#f8f9fa] border-b border-black/5">
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
+											Periode
+										</th>
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
+											Puskesmas
+										</th>
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
+											Pendapatan
+										</th>
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
+											Operasional
+										</th>
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
+											Jaspel
+										</th>
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
+											Status
+										</th>
+										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
+											Aksi
+										</th>
+									</tr>
+								</thead>
+								<tbody className="divide-y divide-black/5">
+									{historyData?.map((item) => (
+										<tr
+											key={`${item.year}-${item.month}`}
+											className="hover:bg-[#f9f9ff] cursor-pointer"
+											onClick={() => {
+												setMonth(item.month);
+												setYear(item.year);
+												setActiveTab("simulation");
+											}}
+										>
+											<td className="px-5 py-4 text-[14px] font-medium text-[#111c2d]">
+												{bulanNama(item.month)} {item.year}
+											</td>
+											<td className="px-5 py-4 text-[13px] text-[#3e484d]">
+												{item.namaPuskesmas || "-"}
+											</td>
+											<td className="px-5 py-4 text-right text-[13px] text-[#3e484d]">
+												Rp {fmtRp(item.pendapatan)}
+											</td>
+											<td className="px-5 py-4 text-right text-[13px] text-[#3e484d]">
+												Rp {fmtRp(item.operasional)}
+											</td>
+											<td className="px-5 py-4 text-right text-[14px] font-bold text-[#111c2d]">
+												Rp {fmtRp(item.totalFund)}
+											</td>
+											<td className="px-5 py-4 text-center">
+												<span
+													className={`inline-flex px-2 py-1 rounded text-[11px] font-bold ${
+														item.status === "LOCKED"
+															? "bg-[#ba1a1a]/10 text-[#ba1a1a]"
+															: item.status === "FINAL"
+																? "bg-[#006c49]/10 text-[#006c49]"
+																: item.status === "REVIEWED"
+																	? "bg-[#894e00]/10 text-[#894e00]"
+																	: "bg-[#00647c]/10 text-[#00647c]"
+													}`}
+												>
+													{item.status}
+												</span>
+											</td>
+											<td className="px-5 py-4 text-center text-[12px] text-[#00647c]">
+												Lihat detail →
+											</td>
+										</tr>
+									))}
+								</tbody>
+							</table>
+						</div>
+					)}
+				</div>
+			)}
 		</motion.div>
 	);
 }
 
 function VariableRow({ employee }: { employee: JaspelVariable }) {
 	const queryClient = useQueryClient();
-	const [basic, setBasic] = useState(employee.basicIndex);
-	const [position, setPosition] = useState(employee.positionIndex);
-	const [risk, setRisk] = useState(employee.riskIndex);
+	const [jenis, setJenis] = useState(employee.jenisKetenagaanPoin);
+	const [masaKerja, setMasaKerja] = useState(employee.masaKerja);
+	const [masaKerjaPoin, setMasaKerjaPoin] = useState(employee.masaKerjaPoin);
+	const [rangkap, setRangkap] = useState(employee.rangkapTugas);
+	const [klaster, setKlaster] = useState(employee.tanggungJawabKlaster);
 	const [isEditing, setIsEditing] = useState(false);
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
 			await api.put(`/jaspel/variables/${employee.employeeId}`, {
-				basicIndex: Number(basic),
-				positionIndex: Number(position),
-				riskIndex: Number(risk),
+				jenisKetenagaanPoin: Number(jenis),
+				masaKerja: Number(masaKerja),
+				masaKerjaPoin: Number(masaKerjaPoin),
+				rangkapTugas: Number(rangkap),
+				tanggungJawabKlaster: Number(klaster),
 			});
 		},
 		onSuccess: () => {
@@ -501,56 +826,89 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 		},
 	});
 
-	const total = Number(basic) + Number(position) + Number(risk);
+	const total =
+		Number(jenis) + Number(masaKerjaPoin) + Number(rangkap) + Number(klaster);
+
+	const inputClass =
+		"w-16 px-2 py-1 border border-black/20 rounded text-[12px] text-center";
 
 	return (
 		<tr className="hover:bg-[#f9f9ff]">
-			<td className="px-5 py-3">
-				<p className="font-medium text-[#111c2d] text-[14px]">
+			<td className="px-3 py-3">
+				<p className="font-medium text-[#111c2d] text-[13px]">
 					{employee.name}
 				</p>
-				<p className="text-[12px] text-[#6e797e]">{employee.employeeCode}</p>
+				<p className="text-[11px] text-[#6e797e]">
+					{employee.employeeCode}
+					{employee.position ? ` · ${employee.position}` : ""}
+				</p>
 			</td>
-			<td className="px-5 py-3">
+			<td className="px-3 py-3 text-center">
 				{isEditing ? (
 					<input
 						type="number"
-						value={basic}
-						onChange={(e) => setBasic(Number(e.target.value))}
-						className="w-20 px-2 py-1 border border-black/20 rounded text-[13px]"
+						value={jenis}
+						onChange={(e) => setJenis(Number(e.target.value))}
+						className={inputClass}
 					/>
 				) : (
-					<span className="text-[14px]">{employee.basicIndex}</span>
+					<span className="text-[13px]">{employee.jenisKetenagaanPoin}</span>
 				)}
 			</td>
-			<td className="px-5 py-3">
+			<td className="px-3 py-3 text-center">
 				{isEditing ? (
 					<input
 						type="number"
-						value={position}
-						onChange={(e) => setPosition(Number(e.target.value))}
-						className="w-20 px-2 py-1 border border-black/20 rounded text-[13px]"
+						value={masaKerja}
+						onChange={(e) => setMasaKerja(Number(e.target.value))}
+						className={inputClass}
 					/>
 				) : (
-					<span className="text-[14px]">{employee.positionIndex}</span>
+					<span className="text-[13px]">{employee.masaKerja}</span>
 				)}
 			</td>
-			<td className="px-5 py-3">
+			<td className="px-3 py-3 text-center">
 				{isEditing ? (
 					<input
 						type="number"
-						value={risk}
-						onChange={(e) => setRisk(Number(e.target.value))}
-						className="w-20 px-2 py-1 border border-black/20 rounded text-[13px]"
+						value={masaKerjaPoin}
+						onChange={(e) => setMasaKerjaPoin(Number(e.target.value))}
+						className={inputClass}
 					/>
 				) : (
-					<span className="text-[14px]">{employee.riskIndex}</span>
+					<span className="text-[13px]">{employee.masaKerjaPoin}</span>
 				)}
 			</td>
-			<td className="px-5 py-3 font-semibold text-[#00647c]">
-				{total.toFixed(1)}
+			<td className="px-3 py-3 text-center">
+				{isEditing ? (
+					<input
+						type="number"
+						value={rangkap}
+						onChange={(e) => setRangkap(Number(e.target.value))}
+						className={inputClass}
+					/>
+				) : (
+					<span className="text-[13px]">{employee.rangkapTugas || "-"}</span>
+				)}
 			</td>
-			<td className="px-5 py-3 text-right">
+			<td className="px-3 py-3 text-center">
+				{isEditing ? (
+					<input
+						type="number"
+						value={klaster}
+						onChange={(e) => setKlaster(Number(e.target.value))}
+						className={inputClass}
+					/>
+				) : (
+					<span className="text-[13px]">
+						{employee.tanggungJawabKlaster || "-"}
+					</span>
+				)}
+			</td>
+			<td className="px-3 py-3 text-center font-semibold text-[#00647c] text-[13px]">
+				{total.toFixed(2)}
+			</td>
+			<td className="px-3 py-3 text-right">
 				{isEditing ? (
 					<button
 						type="button"
@@ -558,16 +916,16 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 						disabled={updateMutation.isPending}
 						className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#006c49] text-white text-[12px] font-medium rounded hover:bg-[#005237]"
 					>
-						<Save className="w-3.5 h-3.5" />
+						<Save className="w-3 h-3" />
 						Simpan
 					</button>
 				) : (
 					<button
 						type="button"
 						onClick={() => setIsEditing(true)}
-						className="inline-flex items-center px-3 py-1.5 border border-black/10 text-[#3e484d] text-[12px] font-medium rounded hover:bg-white"
+						className="text-[12px] text-[#00647c] hover:underline font-medium"
 					>
-						Edit Poin
+						Edit
 					</button>
 				)}
 			</td>

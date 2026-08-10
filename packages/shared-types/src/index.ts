@@ -20,6 +20,9 @@ export const EmployeeSchema = z.object({
 	department: z.string().nullable().optional(),
 	position: z.string().nullable().optional(),
 	branch: z.string().nullable().optional(),
+	golongan: z.string().nullable().optional(),
+	pendidikan: z.string().nullable().optional(),
+	joinDate: z.string().nullable().optional(),
 	shiftIds: z.array(z.number()).default([]),
 	shiftAssignments: z
 		.array(
