@@ -658,6 +658,15 @@ export async function PATCH(request: NextRequest) {
 						jaspel.transition(data.month, data.year, user.userId, status),
 					);
 				}
+				if (path[1] === "unlock") {
+					const data = parseWith(
+						jaspelCalculateSchema.pick({ month: true, year: true }),
+						body,
+					);
+					return audited(user.userId, "UNLOCK", "jaspel", data, () =>
+						jaspel.unlock(data.month, data.year),
+					);
+				}
 				break;
 		}
 		throw new ApiError(404, "Route not found");
@@ -723,6 +732,13 @@ export async function DELETE(request: NextRequest) {
 				return audited(user.userId, "DELETE", "leaves", { id }, () =>
 					leaves.remove(id),
 				);
+			case "jaspel": {
+				requireRole(user, [...admin]);
+				const p = period(request);
+				return audited(user.userId, "DELETE", "jaspel", p, () =>
+					jaspel.remove(p.month, p.year),
+				);
+			}
 		}
 		throw new ApiError(404, "Route not found");
 	});

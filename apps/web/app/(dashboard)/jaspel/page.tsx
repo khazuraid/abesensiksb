@@ -166,13 +166,24 @@ export default function JaspelPage() {
 	};
 
 	const transition = useMutation({
-		mutationFn: async (action: "review" | "finalize" | "lock") =>
+		mutationFn: async (action: "review" | "finalize" | "lock" | "unlock") =>
 			api.patch(`/jaspel/${action}`, { month, year }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({
 				queryKey: ["jaspel-distributions", month, year],
 			});
 			queryClient.invalidateQueries({ queryKey: ["jaspel-history"] });
+		},
+	});
+
+	const deleteMutation = useMutation({
+		mutationFn: async (target: { month: number; year: number }) =>
+			api.delete(`/jaspel?month=${target.month}&year=${target.year}`),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["jaspel-history"] });
+			queryClient.invalidateQueries({
+				queryKey: ["jaspel-distributions", month, year],
+			});
 		},
 	});
 
@@ -496,6 +507,24 @@ export default function JaspelPage() {
 									Kunci
 								</button>
 							)}
+							{distributionsData?.fund &&
+								distributionsData.fund.status !== "DRAFT" && (
+									<button
+										type="button"
+										className="h-[42px] px-4 bg-white border border-[#ba1a1a]/30 text-[#ba1a1a] rounded-lg font-medium text-[14px] hover:bg-[#ba1a1a]/5 transition-colors shadow-sm disabled:opacity-50"
+										onClick={() => {
+											if (
+												window.confirm(
+													`Buka kunci jaspel ${bulanNama(month)} ${year}? Periode bisa diedit dan dihitung ulang.`,
+												)
+											)
+												transition.mutate("unlock");
+										}}
+										disabled={transition.isPending}
+									>
+										Buka Kunci
+									</button>
+								)}
 						</div>
 					</div>
 
@@ -786,8 +815,39 @@ export default function JaspelPage() {
 													{item.status}
 												</span>
 											</td>
-											<td className="px-5 py-4 text-center text-[12px] text-[#00647c]">
-												Lihat detail →
+											<td className="px-5 py-4 text-center text-[12px]">
+												<div className="flex items-center justify-center gap-3">
+													<button
+														type="button"
+														className="text-[#00647c] hover:underline font-medium"
+														onClick={() => {
+															setMonth(item.month);
+															setYear(item.year);
+															setActiveTab("simulation");
+														}}
+													>
+														Lihat detail
+													</button>
+													<button
+														type="button"
+														className="text-[#ba1a1a] hover:underline font-medium"
+														disabled={deleteMutation.isPending}
+														onClick={() => {
+															if (
+																window.confirm(
+																	`Hapus perhitungan jaspel ${bulanNama(item.month)} ${item.year}? Data distribusi ikut terhapus dan tidak bisa dikembalikan.`,
+																)
+															)
+																deleteMutation.mutate({
+																	month: item.month,
+																	year: item.year,
+																});
+														}}
+														onClickCapture={(e) => e.stopPropagation()}
+													>
+														Hapus
+													</button>
+												</div>
 											</td>
 										</tr>
 									))}

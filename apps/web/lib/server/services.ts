@@ -2803,6 +2803,67 @@ export class JaspelService {
 			return result;
 		});
 	}
+
+	async unlock(month: number, year: number) {
+		return this.db.transaction(async (tx) => {
+			await tx.execute(sql`SELECT pg_advisory_xact_lock(${year}, ${month})`);
+			const [fund] = await tx
+				.select()
+				.from(schema.jaspelFunds)
+				.where(
+					and(
+						eq(schema.jaspelFunds.month, month),
+						eq(schema.jaspelFunds.year, year),
+					),
+				)
+				.limit(1);
+			if (!fund) throw new ApiError(404, "Jaspel period not found");
+			if (fund.status === "DRAFT")
+				throw new ApiError(409, "Jaspel period is not locked");
+			const [result] = await tx
+				.update(schema.jaspelFunds)
+				.set({
+					status: "DRAFT",
+					lockedAt: null,
+					updatedAt: new Date(),
+				})
+				.where(
+					and(
+						eq(schema.jaspelFunds.id, fund.id),
+						eq(schema.jaspelFunds.status, fund.status),
+					),
+				)
+				.returning();
+			if (!result)
+				throw new ApiError(409, "Jaspel period changed concurrently");
+			return result;
+		});
+	}
+
+	async remove(month: number, year: number) {
+		return this.db.transaction(async (tx) => {
+			await tx.execute(sql`SELECT pg_advisory_xact_lock(${year}, ${month})`);
+			const deleted = await tx
+				.delete(schema.jaspelFunds)
+				.where(
+					and(
+						eq(schema.jaspelFunds.month, month),
+						eq(schema.jaspelFunds.year, year),
+					),
+				)
+				.returning();
+			if (!deleted.length) throw new ApiError(404, "Jaspel period not found");
+			await tx
+				.delete(schema.jaspelDistributions)
+				.where(
+					and(
+						eq(schema.jaspelDistributions.month, month),
+						eq(schema.jaspelDistributions.year, year),
+					),
+				);
+			return { success: true };
+		});
+	}
 	async getHistory() {
 		return this.db
 			.select({
