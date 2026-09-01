@@ -1535,7 +1535,6 @@ export class ReportsService {
 					.filter(
 						(log) =>
 							log.employeeId === employee.id &&
-							log.type === "OUT" &&
 							log.timestamp.getFullYear() === nextDate.getFullYear() &&
 							log.timestamp.getMonth() === nextDate.getMonth() &&
 							log.timestamp.getDate() === nextDate.getDate(),
@@ -1544,54 +1543,15 @@ export class ReportsService {
 				const overnight = shift
 					? parseTime(shift.endTime) <= parseTime(shift.startTime)
 					: false;
-				// Absen masuk = scan IN pertama sesuai jadwal (tidak sebelum minInTime)
-				const inLower = shift?.minInTime ? parseTime(shift.minInTime) : 0;
-				const inLog = dayLogs.find(
-					(log) =>
-						log.type === "IN" &&
-						log.timestamp.getHours() * 60 + log.timestamp.getMinutes() >=
-							inLower,
+				// Patokan waktu, bukan tipe/status log:
+				// jam masuk = scan paling awal, jam pulang = scan paling akhir
+				const allScans = [...dayLogs, ...(overnight ? nextDayLogs : [])].sort(
+					(a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
 				);
-				// Absen pulang = scan OUT terakhir dalam jendela jadwal
-				// (startTime s/d maxOutTime/endTime, dinormalisasi untuk shift malam)
-				let outLog: (typeof dayLogs)[number] | undefined;
-				if (shift) {
-					const outWindowStart = parseTime(shift.startTime);
-					const outWindowEnd =
-						(shift.maxOutTime
-							? parseTime(shift.maxOutTime)
-							: parseTime(shift.endTime) + 120) +
-						(overnight &&
-						(!shift.maxOutTime ||
-							parseTime(shift.maxOutTime) < parseTime(shift.startTime))
-							? 1440
-							: 0);
-					const outCandidates = [
-						...dayLogs.map((log) => ({
-							log,
-							norm: log.timestamp.getHours() * 60 + log.timestamp.getMinutes(),
-						})),
-						...(overnight
-							? nextDayLogs.map((log) => ({
-									log,
-									norm:
-										log.timestamp.getHours() * 60 +
-										log.timestamp.getMinutes() +
-										1440,
-								}))
-							: []),
-					]
-						.filter(
-							(c) =>
-								c.log.type === "OUT" &&
-								c.norm >= outWindowStart &&
-								c.norm <= outWindowEnd,
-						)
-						.sort((a, b) => a.norm - b.norm);
-					outLog = outCandidates[outCandidates.length - 1]?.log;
-				} else {
-					outLog = [...dayLogs].reverse().find((log) => log.type === "OUT");
-				}
+				const inLog = allScans[0];
+				// Satu scan saja: dihitung sebagai jam masuk, jam pulang kosong
+				const outLog =
+					allScans.length > 1 ? allScans[allScans.length - 1] : undefined;
 				let status = "ABSENT",
 					lateMinutes = 0,
 					earlyOutMinutes = 0;
