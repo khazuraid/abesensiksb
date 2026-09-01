@@ -1363,7 +1363,7 @@ export class ReportsService {
 	constructor(private db: DbExecutor) {}
 	async getAvailablePeriods() {
 		const result = await this.db.execute(
-			sql`SELECT DISTINCT EXTRACT(MONTH FROM timestamp) as month, EXTRACT(YEAR FROM timestamp) as year FROM attendance_logs ORDER BY year DESC, month DESC`,
+			sql`SELECT DISTINCT EXTRACT(MONTH FROM "timestamp") as month, EXTRACT(YEAR FROM "timestamp") as year FROM attendance_logs ORDER BY year DESC, month DESC`,
 		);
 		return result.rows.length
 			? result.rows.map((row) => ({

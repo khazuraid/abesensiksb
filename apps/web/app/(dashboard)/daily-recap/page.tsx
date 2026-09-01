@@ -100,6 +100,11 @@ export default function DailyRecapPage() {
 		"November",
 		"Desember",
 	];
+	const periods =
+		availablePeriods &&
+		availablePeriods.some((p) => p.month === month && p.year === year)
+			? availablePeriods
+			: [...(availablePeriods ?? []), { month, year }];
 
 	const updateMutation = useMutation({
 		mutationFn: async ({
@@ -124,6 +129,17 @@ export default function DailyRecapPage() {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
 			setEditingDay(null);
 		},
+		onError: (e: unknown) => {
+			const err = e as {
+				response?: { data?: { message?: string }; status?: number };
+				message?: string;
+			};
+			alert(
+				err?.response?.data?.message === "Jaspel source period is locked"
+					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum mengedit absensi."
+					: `Gagal menyimpan koreksi: ${err?.response?.data?.message || err?.message}`,
+			);
+		},
 	});
 
 	const createMutation = useMutation({
@@ -141,6 +157,17 @@ export default function DailyRecapPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
 			setEditingDay(null);
+		},
+		onError: (e: unknown) => {
+			const err = e as {
+				response?: { data?: { message?: string } };
+				message?: string;
+			};
+			alert(
+				err?.response?.data?.message === "Jaspel source period is locked"
+					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum mengedit absensi."
+					: `Gagal menambah absensi: ${err?.response?.data?.message || err?.message}`,
+			);
 		},
 	});
 
@@ -576,7 +603,7 @@ export default function DailyRecapPage() {
 								setPage(1);
 							}}
 						>
-							{availablePeriods?.map((period) => (
+							{periods.map((period) => (
 								<option
 									key={`${period.month}-${period.year}`}
 									value={`${period.month}-${period.year}`}
@@ -584,11 +611,6 @@ export default function DailyRecapPage() {
 									{months[period.month - 1]} {period.year}
 								</option>
 							))}
-							{!availablePeriods && (
-								<option value={`${month}-${year}`}>
-									{months[month - 1]} {year}
-								</option>
-							)}
 						</select>
 						<ChevronRight
 							size={16}

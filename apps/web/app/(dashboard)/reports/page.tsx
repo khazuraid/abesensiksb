@@ -439,7 +439,12 @@ export default function ReportsPage() {
 								setYear(Number(y));
 							}}
 						>
-							{availablePeriods?.map((p) => {
+							{(availablePeriods?.some(
+								(p) => p.month === month && p.year === year,
+							)
+								? availablePeriods
+								: [...(availablePeriods ?? []), { month, year }]
+							).map((p) => {
 								const mName = new Date(0, p.month - 1).toLocaleString("id-ID", {
 									month: "long",
 								});
@@ -452,11 +457,6 @@ export default function ReportsPage() {
 									</option>
 								);
 							})}
-							{!availablePeriods && (
-								<option value={`${month}-${year}`}>
-									{monthName} {year}
-								</option>
-							)}
 						</select>
 						<CalendarIcon
 							size={18}
