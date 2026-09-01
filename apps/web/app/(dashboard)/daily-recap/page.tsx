@@ -54,8 +54,8 @@ export default function DailyRecapPage() {
 		useState<EmployeeRecap | null>(null);
 	const [editingDay, setEditingDay] = useState<{
 		date: string;
-		field: "in" | "out";
-		value: string;
+		inValue: string;
+		outValue: string;
 	} | null>(null);
 	const editDialogRef = useRef<HTMLDivElement>(null);
 	const closeEdit = useCallback(() => setEditingDay(null), []);
@@ -106,53 +106,50 @@ export default function DailyRecapPage() {
 			? availablePeriods
 			: [...(availablePeriods ?? []), { month, year }];
 
-	const updateMutation = useMutation({
-		mutationFn: async ({
-			id,
-			timestamp,
-		}: {
-			id: number;
-			timestamp: string;
-		}) => {
-			const reason = window.prompt(
-				"Alasan koreksi absensi (minimal 5 karakter)",
+	const saveMutation = useMutation({
+		mutationFn: async (day: DayData) => {
+			if (!editingDay || !selectedEmployee) return;
+			// Alasan koreksi hanya diminta bila ada log yang dikoreksi (update)
+			const needsReason = Boolean(
+				(editingDay.inValue && day.inLogId) ||
+					(editingDay.outValue && day.outLogId),
 			);
-			if (!reason || reason.trim().length < 5)
-				throw new Error("Alasan koreksi wajib diisi");
-			await api.post("/attendance-corrections", {
-				attendanceLogId: id,
-				timestamp,
-				reason,
-			});
-		},
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
-			setEditingDay(null);
-		},
-		onError: (e: unknown) => {
-			const err = e as {
-				response?: { data?: { message?: string }; status?: number };
-				message?: string;
-			};
-			alert(
-				err?.response?.data?.message === "Jaspel source period is locked"
-					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum mengedit absensi."
-					: `Gagal menyimpan koreksi: ${err?.response?.data?.message || err?.message}`,
-			);
-		},
-	});
-
-	const createMutation = useMutation({
-		mutationFn: async ({
-			employeeId,
-			timestamp,
-			type,
-		}: {
-			employeeId: number;
-			timestamp: string;
-			type: "IN" | "OUT";
-		}) => {
-			await api.post("/attendance-logs", { employeeId, timestamp, type });
+			let reason: string | null = null;
+			if (needsReason) {
+				reason = window.prompt("Alasan koreksi absensi (minimal 5 karakter)");
+				if (!reason || reason.trim().length < 5)
+					throw new Error("Alasan koreksi wajib diisi");
+			}
+			if (editingDay.inValue) {
+				const timestamp = `${day.date}T${editingDay.inValue}:00`;
+				if (day.inLogId)
+					await api.post("/attendance-corrections", {
+						attendanceLogId: day.inLogId,
+						timestamp,
+						reason,
+					});
+				else
+					await api.post("/attendance-logs", {
+						employeeId: selectedEmployee.id,
+						timestamp,
+						type: "IN",
+					});
+			}
+			if (editingDay.outValue) {
+				const timestamp = `${day.date}T${editingDay.outValue}:00`;
+				if (day.outLogId)
+					await api.post("/attendance-corrections", {
+						attendanceLogId: day.outLogId,
+						timestamp,
+						reason,
+					});
+				else
+					await api.post("/attendance-logs", {
+						employeeId: selectedEmployee.id,
+						timestamp,
+						type: "OUT",
+					});
+			}
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
@@ -166,25 +163,10 @@ export default function DailyRecapPage() {
 			alert(
 				err?.response?.data?.message === "Jaspel source period is locked"
 					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum mengedit absensi."
-					: `Gagal menambah absensi: ${err?.response?.data?.message || err?.message}`,
+					: `Gagal menyimpan absensi: ${err?.response?.data?.message || err?.message}`,
 			);
 		},
 	});
-
-	const handleSaveEdit = (day: DayData) => {
-		if (!editingDay || !selectedEmployee) return;
-		const logId = editingDay.field === "in" ? day.inLogId : day.outLogId;
-		const timestamp = `${day.date}T${editingDay.value}:00`;
-		if (logId) {
-			updateMutation.mutate({ id: logId, timestamp });
-		} else {
-			createMutation.mutate({
-				employeeId: selectedEmployee.id,
-				timestamp,
-				type: editingDay.field === "in" ? "IN" : "OUT",
-			});
-		}
-	};
 
 	const filtered = data;
 
@@ -823,11 +805,10 @@ export default function DailyRecapPage() {
 													className="p-1 text-center cursor-pointer border-r border-black/5 last:border-r-0 hover:bg-[#dee8ff]/40"
 													onClick={() => {
 														setSelectedEmployee(emp);
-														// Defaults to editing "in"
 														setEditingDay({
 															date: dayData.date,
-															field: "in",
-															value: dayData.clockIn || "",
+															inValue: dayData.clockIn || "",
+															outValue: dayData.clockOut || "",
 														});
 													}}
 													title={`${dayData.date}\nIn: ${dayData.clockIn || "-"}\nOut: ${dayData.clockOut || "-"}`}
@@ -904,58 +885,36 @@ export default function DailyRecapPage() {
 							</p>
 
 							<div className="mb-4">
-								<div className="block text-[12px] font-semibold text-[#6e797e] mb-1">
-									Pilih Tipe
-								</div>
-								<div className="flex gap-2">
-									<button
-										type="button"
-										className={`flex-1 py-1.5 rounded-md text-[13px] font-medium transition-colors ${editingDay.field === "in" ? "bg-[#00647c] text-white" : "bg-gray-100 text-[#3e484d]"}`}
-										onClick={() => {
-											const dayData = selectedEmployee.days.find(
-												(d) => d.date === editingDay.date,
-											);
-											setEditingDay({
-												...editingDay,
-												field: "in",
-												value: dayData?.clockIn || "",
-											});
-										}}
-									>
-										Jam Masuk
-									</button>
-									<button
-										type="button"
-										className={`flex-1 py-1.5 rounded-md text-[13px] font-medium transition-colors ${editingDay.field === "out" ? "bg-[#00647c] text-white" : "bg-gray-100 text-[#3e484d]"}`}
-										onClick={() => {
-											const dayData = selectedEmployee.days.find(
-												(d) => d.date === editingDay.date,
-											);
-											setEditingDay({
-												...editingDay,
-												field: "out",
-												value: dayData?.clockOut || "",
-											});
-										}}
-									>
-										Jam Keluar
-									</button>
-								</div>
+								<label
+									htmlFor="time-in-input"
+									className="block text-[12px] font-semibold text-[#6e797e] mb-1"
+								>
+									Jam Masuk
+								</label>
+								<input
+									id="time-in-input"
+									type="time"
+									value={editingDay.inValue}
+									onChange={(e) =>
+										setEditingDay({ ...editingDay, inValue: e.target.value })
+									}
+									className="w-full bg-white border border-[#bdc8ce] rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
+								/>
 							</div>
 
 							<div className="mb-6">
 								<label
-									htmlFor="time-input"
+									htmlFor="time-out-input"
 									className="block text-[12px] font-semibold text-[#6e797e] mb-1"
 								>
-									{editingDay.field === "in" ? "Waktu Masuk" : "Waktu Keluar"}
+									Jam Pulang
 								</label>
 								<input
-									id="time-input"
+									id="time-out-input"
 									type="time"
-									value={editingDay.value}
+									value={editingDay.outValue}
 									onChange={(e) =>
-										setEditingDay({ ...editingDay, value: e.target.value })
+										setEditingDay({ ...editingDay, outValue: e.target.value })
 									}
 									className="w-full bg-white border border-[#bdc8ce] rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
 								/>
@@ -967,18 +926,15 @@ export default function DailyRecapPage() {
 									const dayData = selectedEmployee.days.find(
 										(d) => d.date === editingDay.date,
 									);
-									if (dayData) handleSaveEdit(dayData);
+									if (dayData) saveMutation.mutate(dayData);
 								}}
 								disabled={
-									!editingDay.value ||
-									updateMutation.isPending ||
-									createMutation.isPending
+									(!editingDay.inValue && !editingDay.outValue) ||
+									saveMutation.isPending
 								}
 								className="adms-button w-full"
 							>
-								{updateMutation.isPending || createMutation.isPending
-									? "Menyimpan..."
-									: "Simpan Perubahan"}
+								{saveMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
 							</button>
 						</div>
 					</div>

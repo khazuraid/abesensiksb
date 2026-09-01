@@ -1529,10 +1529,8 @@ export class ReportsService {
 							log.timestamp.getDate() === day,
 					)
 					.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-				const inLog = dayLogs.find((log) => log.type === "IN") ?? dayLogs[0];
-				const outLog =
-					[...dayLogs].reverse().find((log) => log.type === "OUT") ??
-					(dayLogs.length > 1 ? dayLogs.at(-1) : undefined);
+				const inLog = dayLogs.find((log) => log.type === "IN");
+				const outLog = [...dayLogs].reverse().find((log) => log.type === "OUT");
 				let status = "ABSENT",
 					lateMinutes = 0,
 					earlyOutMinutes = 0;
