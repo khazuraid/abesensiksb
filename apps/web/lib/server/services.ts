@@ -1450,7 +1450,7 @@ export class ReportsService {
 					between(
 						schema.attendanceLogs.timestamp,
 						new Date(year, month - 1, 1),
-						new Date(year, month, 0, 23, 59, 59),
+						new Date(year, month, 1, 23, 59, 59),
 					),
 					inArray(schema.attendanceLogs.employeeId, employeeIds),
 				),
@@ -1529,8 +1529,69 @@ export class ReportsService {
 							log.timestamp.getDate() === day,
 					)
 					.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-				const inLog = dayLogs.find((log) => log.type === "IN");
-				const outLog = [...dayLogs].reverse().find((log) => log.type === "OUT");
+				// Log hari berikutnya — untuk OUT shift lembur/malam (lintas hari)
+				const nextDate = new Date(year, month - 1, day + 1);
+				const nextDayLogs = logs
+					.filter(
+						(log) =>
+							log.employeeId === employee.id &&
+							log.type === "OUT" &&
+							log.timestamp.getFullYear() === nextDate.getFullYear() &&
+							log.timestamp.getMonth() === nextDate.getMonth() &&
+							log.timestamp.getDate() === nextDate.getDate(),
+					)
+					.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+				const overnight = shift
+					? parseTime(shift.endTime) <= parseTime(shift.startTime)
+					: false;
+				// Absen masuk = scan IN pertama sesuai jadwal (tidak sebelum minInTime)
+				const inLower = shift?.minInTime ? parseTime(shift.minInTime) : 0;
+				const inLog = dayLogs.find(
+					(log) =>
+						log.type === "IN" &&
+						log.timestamp.getHours() * 60 + log.timestamp.getMinutes() >=
+							inLower,
+				);
+				// Absen pulang = scan OUT terakhir dalam jendela jadwal
+				// (startTime s/d maxOutTime/endTime, dinormalisasi untuk shift malam)
+				let outLog: (typeof dayLogs)[number] | undefined;
+				if (shift) {
+					const outWindowStart = parseTime(shift.startTime);
+					const outWindowEnd =
+						(shift.maxOutTime
+							? parseTime(shift.maxOutTime)
+							: parseTime(shift.endTime) + 120) +
+						(overnight &&
+						(!shift.maxOutTime ||
+							parseTime(shift.maxOutTime) < parseTime(shift.startTime))
+							? 1440
+							: 0);
+					const outCandidates = [
+						...dayLogs.map((log) => ({
+							log,
+							norm: log.timestamp.getHours() * 60 + log.timestamp.getMinutes(),
+						})),
+						...(overnight
+							? nextDayLogs.map((log) => ({
+									log,
+									norm:
+										log.timestamp.getHours() * 60 +
+										log.timestamp.getMinutes() +
+										1440,
+								}))
+							: []),
+					]
+						.filter(
+							(c) =>
+								c.log.type === "OUT" &&
+								c.norm >= outWindowStart &&
+								c.norm <= outWindowEnd,
+						)
+						.sort((a, b) => a.norm - b.norm);
+					outLog = outCandidates[outCandidates.length - 1]?.log;
+				} else {
+					outLog = [...dayLogs].reverse().find((log) => log.type === "OUT");
+				}
 				let status = "ABSENT",
 					lateMinutes = 0,
 					earlyOutMinutes = 0;
@@ -1550,16 +1611,22 @@ export class ReportsService {
 						}
 					}
 					if (outLog && shift) {
+						// Normalisasi: OUT shift malam yang jatuh di hari berikutnya
+						// dihitung +1440 menit agar tidak menghasilkan menit negatif
 						const scan =
-							outLog.timestamp.getHours() * 60 + outLog.timestamp.getMinutes();
-						const limit = parseTime(shift.endTime) - shift.earlyOutTolerance;
+							outLog.timestamp.getHours() * 60 +
+							outLog.timestamp.getMinutes() +
+							(outLog.timestamp.getDate() !== day ? 1440 : 0);
+						const end = parseTime(shift.endTime) + (overnight ? 1440 : 0);
+						const limit = end - shift.earlyOutTolerance;
 						if (scan < limit) {
-							earlyOutMinutes = parseTime(shift.endTime) - scan;
+							earlyOutMinutes = end - scan;
 							if (status !== "ABSENT") status = "EARLY_OUT";
 						}
 					}
 					if (["PRESENT", "LATE"].includes(status)) totalPresent++;
 					if (status === "LATE") totalLate++;
+					if (status === "ABSENT") totalAbsent++;
 					if (status === "EARLY_OUT") {
 						totalEarlyOut++;
 						totalPresent++;
