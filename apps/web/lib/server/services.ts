@@ -850,12 +850,39 @@ export class AttendanceLogsService {
 	) {
 		return this.db.transaction(async (tx) => {
 			const [log] = await tx
-				.select()
+				.select({
+					id: schema.attendanceLogs.id,
+					timestamp: schema.attendanceLogs.timestamp,
+					type: schema.attendanceLogs.type,
+					employeeId: schema.attendanceLogs.employeeId,
+					shiftIds: schema.employees.shiftIds,
+				})
 				.from(schema.attendanceLogs)
+				.innerJoin(
+					schema.employees,
+					eq(schema.employees.id, schema.attendanceLogs.employeeId),
+				)
 				.where(eq(schema.attendanceLogs.id, attendanceLogId));
 			if (!log) throw new ApiError(404, "Attendance log not found");
 			await assertJaspelPeriodMutable(tx, log.timestamp);
 			await assertJaspelPeriodMutable(tx, newTimestamp);
+			// Auto-apply: koreksi dari manajer langsung diterapkan, tidak menunggu review
+			const evaluation = this.shiftEngine
+				? await this.shiftEngine.evaluateAttendance({
+						employeeId: log.employeeId,
+						shiftIds: log.shiftIds,
+						timestamp: newTimestamp,
+						type: log.type,
+					})
+				: ("PRESENT" as const);
+			await tx
+				.update(schema.attendanceLogs)
+				.set({
+					timestamp: newTimestamp,
+					status: evaluation,
+					verified: true,
+				})
+				.where(eq(schema.attendanceLogs.id, attendanceLogId));
 			const [result] = await tx
 				.insert(schema.attendanceCorrections)
 				.values({
@@ -864,6 +891,9 @@ export class AttendanceLogsService {
 					oldTimestamp: log.timestamp,
 					newTimestamp,
 					reason,
+					status: "APPROVED",
+					reviewedBy: requestedBy,
+					reviewNote: "Auto-applied",
 				})
 				.returning();
 			return result;
