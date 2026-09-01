@@ -253,9 +253,9 @@ export async function GET(request: NextRequest) {
 				return attendanceLogs.findAll(filter);
 			}
 			case "reports": {
-				const { month, year } = period(request);
 				if (path[1] === "available-periods")
 					return reports.getAvailablePeriods();
+				const { month, year } = period(request);
 				if (path[1] === "summary")
 					return reports.getMonthlySummary(month, year, pageParams(request));
 				if (path[1] === "daily-recap" && path[2] !== "export")
