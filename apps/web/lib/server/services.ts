@@ -1607,7 +1607,15 @@ export class ReportsService {
 					}
 				} else {
 					inLog = dayLogs[0];
-					outLog = dayLogs.length > 1 ? dayLogs[dayLogs.length - 1] : undefined;
+					const lastLog =
+						dayLogs.length > 1 ? dayLogs[dayLogs.length - 1] : undefined;
+					outLog =
+						lastLog &&
+						inLog &&
+						lastLog.timestamp.getTime() - inLog.timestamp.getTime() >=
+							5 * 60_000
+							? lastLog
+							: undefined;
 				}
 
 				let status = "ABSENT",
