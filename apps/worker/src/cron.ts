@@ -50,8 +50,6 @@ export class WorkerCron {
 	}
 
 	private async catchUp() {
-		await this.run(() => this.dailyReport());
-		await this.run(() => this.missingClockOut());
 		await this.run(() => this.deviceCapacity());
 	}
 

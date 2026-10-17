@@ -109,10 +109,13 @@ export default function DailyRecapPage() {
 	const saveMutation = useMutation({
 		mutationFn: async (day: DayData) => {
 			if (!editingDay || !selectedEmployee) return;
-			// Alasan koreksi hanya diminta bila ada log yang dikoreksi (update)
+			const inChanged = editingDay.inValue !== (day.clockIn || "");
+			const outChanged = editingDay.outValue !== (day.clockOut || "");
+			if (!inChanged && !outChanged) return;
+			// Alasan koreksi hanya diminta bila ada log yang diubah nilainya
 			const needsReason = Boolean(
-				(editingDay.inValue && day.inLogId) ||
-					(editingDay.outValue && day.outLogId),
+				(inChanged && editingDay.inValue && day.inLogId) ||
+					(outChanged && editingDay.outValue && day.outLogId),
 			);
 			let reason: string | null = null;
 			if (needsReason) {
@@ -120,7 +123,7 @@ export default function DailyRecapPage() {
 				if (!reason || reason.trim().length < 5)
 					throw new Error("Alasan koreksi wajib diisi");
 			}
-			if (editingDay.inValue) {
+			if (inChanged && editingDay.inValue) {
 				const timestamp = `${day.date}T${editingDay.inValue}:00`;
 				if (day.inLogId)
 					await api.post("/attendance-corrections", {
@@ -135,7 +138,7 @@ export default function DailyRecapPage() {
 						type: "IN",
 					});
 			}
-			if (editingDay.outValue) {
+			if (outChanged && editingDay.outValue) {
 				const timestamp = `${day.date}T${editingDay.outValue}:00`;
 				if (day.outLogId)
 					await api.post("/attendance-corrections", {
@@ -929,8 +932,20 @@ export default function DailyRecapPage() {
 									if (dayData) saveMutation.mutate(dayData);
 								}}
 								disabled={
-									(!editingDay.inValue && !editingDay.outValue) ||
-									saveMutation.isPending
+									saveMutation.isPending ||
+									(() => {
+										const dayData = selectedEmployee.days.find(
+											(d) => d.date === editingDay.date,
+										);
+										const inChanged =
+											editingDay.inValue !== (dayData?.clockIn || "");
+										const outChanged =
+											editingDay.outValue !== (dayData?.clockOut || "");
+										return (
+											(!inChanged && !outChanged) ||
+											(!editingDay.inValue && !editingDay.outValue)
+										);
+									})()
 								}
 								className="adms-button w-full"
 							>

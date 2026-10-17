@@ -87,8 +87,10 @@ function ShiftForm({
 						e.preventDefault();
 						onSubmit({
 							...form,
+							minInTime: form.minInTime || null,
 							maxLateTime: form.maxLateTime || null,
 							minOutTime: form.minOutTime || null,
+							maxOutTime: form.maxOutTime || null,
 							effectiveFrom: form.effectiveFrom || null,
 							effectiveTo: form.effectiveTo || null,
 						});

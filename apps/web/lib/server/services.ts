@@ -475,17 +475,28 @@ export class ShiftsService {
 		if (!result) throw new ApiError(404, `Shift with ID ${id} not found`);
 		return result;
 	}
+	private sanitizeShiftData<T extends Partial<CreateShift>>(data: T): T {
+		return {
+			...data,
+			minInTime: data.minInTime || null,
+			maxLateTime: data.maxLateTime || null,
+			minOutTime: data.minOutTime || null,
+			maxOutTime: data.maxOutTime || null,
+			effectiveFrom: data.effectiveFrom || null,
+			effectiveTo: data.effectiveTo || null,
+		};
+	}
 	async create(data: CreateShift) {
 		const [result] = await this.db
 			.insert(schema.shifts)
-			.values(data)
+			.values(this.sanitizeShiftData(data))
 			.returning();
 		return result;
 	}
 	async update(id: number, data: UpdateShift) {
 		const [result] = await this.db
 			.update(schema.shifts)
-			.set({ ...data, updatedAt: new Date() })
+			.set({ ...this.sanitizeShiftData(data), updatedAt: new Date() })
 			.where(eq(schema.shifts.id, id))
 			.returning();
 		if (!result) throw new ApiError(404, `Shift with ID ${id} not found`);
@@ -1009,13 +1020,26 @@ export class AttendanceLogsService {
 	) {
 		return this.db.transaction(async (tx) => {
 			await assertJaspelPeriodMutable(tx, timestamp);
+			const [emp] = await tx
+				.select({ shiftIds: schema.employees.shiftIds })
+				.from(schema.employees)
+				.where(eq(schema.employees.id, employeeId));
+			const status =
+				this.shiftEngine && emp
+					? await this.shiftEngine.evaluateAttendance({
+							employeeId,
+							shiftIds: emp.shiftIds,
+							timestamp,
+							type,
+						})
+					: ("PRESENT" as const);
 			const [result] = await tx
 				.insert(schema.attendanceLogs)
 				.values({
 					employeeId,
 					timestamp,
 					type,
-					status: "PRESENT",
+					status,
 					verified: false,
 				})
 				.returning();
@@ -1500,7 +1524,7 @@ export class ReportsService {
 							(!assignment.endDate || assignment.endDate >= dateStr),
 					)
 					.map((assignment) => assignment.shiftId);
-				const applicableShiftIds = employeeAssignments.length
+				const applicableShiftIds = datedShiftIds.length
 					? datedShiftIds
 					: employee.shiftIds;
 				const shift =
@@ -1529,68 +1553,108 @@ export class ReportsService {
 							log.timestamp.getDate() === day,
 					)
 					.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-				// Log hari berikutnya — untuk OUT shift lembur/malam (lintas hari)
-				const nextDate = new Date(year, month - 1, day + 1);
-				const nextDayLogs = logs
-					.filter(
-						(log) =>
-							log.employeeId === employee.id &&
-							log.timestamp.getFullYear() === nextDate.getFullYear() &&
-							log.timestamp.getMonth() === nextDate.getMonth() &&
-							log.timestamp.getDate() === nextDate.getDate(),
-					)
-					.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-				const overnight = shift
-					? parseTime(shift.endTime) <= parseTime(shift.startTime)
-					: false;
-				// Patokan waktu, bukan tipe/status log:
-				// jam masuk = scan paling awal, jam pulang = scan paling akhir
-				const allScans = [...dayLogs, ...(overnight ? nextDayLogs : [])].sort(
-					(a, b) => a.timestamp.getTime() - b.timestamp.getTime(),
-				);
-				const inLog = allScans[0];
-				// Satu scan saja: dihitung sebagai jam masuk, jam pulang kosong
-				const outLog =
-					allScans.length > 1 ? allScans[allScans.length - 1] : undefined;
+
+				let inLog: (typeof dayLogs)[number] | undefined;
+				let outLog: (typeof dayLogs)[number] | undefined;
+
+				if (shift) {
+					const startMinutes = parseTime(shift.startTime);
+					const endMinutes = parseTime(shift.endTime);
+					const midpoint = Math.floor((startMinutes + endMinutes) / 2);
+					const inStart = shift.minInTime ? parseTime(shift.minInTime) : 0;
+					const inEnd = shift.maxLateTime
+						? parseTime(shift.maxLateTime)
+						: midpoint;
+					const outStart = shift.minOutTime
+						? parseTime(shift.minOutTime)
+						: midpoint;
+					const outEnd = shift.maxOutTime ? parseTime(shift.maxOutTime) : 1439;
+
+					const inCandidates = dayLogs.filter((log) => {
+						const scan =
+							log.timestamp.getHours() * 60 + log.timestamp.getMinutes();
+						return scan >= inStart && scan <= inEnd;
+					});
+					const outCandidates = dayLogs.filter((log) => {
+						const scan =
+							log.timestamp.getHours() * 60 + log.timestamp.getMinutes();
+						return scan >= outStart && scan <= outEnd;
+					});
+
+					inLog = inCandidates[0];
+					outLog = outCandidates[outCandidates.length - 1];
+
+					if (dayLogs.length === 1) {
+						const singleScan = dayLogs[0]!;
+						const scanTime =
+							singleScan.timestamp.getHours() * 60 +
+							singleScan.timestamp.getMinutes();
+						if (scanTime < midpoint) {
+							inLog = singleScan;
+							outLog = undefined;
+						} else {
+							inLog = undefined;
+							outLog = singleScan;
+						}
+					} else if (inLog && outLog && inLog.id === outLog.id) {
+						const scanTime =
+							inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
+						if (scanTime < midpoint) {
+							outLog = undefined;
+						} else {
+							inLog = undefined;
+						}
+					}
+				} else {
+					inLog = dayLogs[0];
+					outLog = dayLogs.length > 1 ? dayLogs[dayLogs.length - 1] : undefined;
+				}
+
 				let status = "ABSENT",
 					lateMinutes = 0,
-					earlyOutMinutes = 0;
+					earlyOutMinutes = 0,
+					isLate = false,
+					isEarlyOut = false;
+
 				if (!isWorkDay) status = "-";
 				else if (inLog || outLog) {
-					status = "PRESENT";
-					if (!inLog) status = "ABSENT";
-					else if (shift) {
-						const scan =
-							inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
-						const cutoff = parseTime(shift.startTime) + shift.toleranceMinutes;
-						if (shift.maxLateTime && scan > parseTime(shift.maxLateTime))
-							status = "ABSENT";
-						else if (scan > cutoff) {
-							status = "LATE";
-							lateMinutes = scan - cutoff;
+					if (!inLog) {
+						status = "ABSENT";
+					} else {
+						status = "PRESENT";
+						if (shift) {
+							const scan =
+								inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
+							const cutoff =
+								parseTime(shift.startTime) + shift.toleranceMinutes;
+							if (shift.maxLateTime && scan > parseTime(shift.maxLateTime))
+								status = "ABSENT";
+							else if (scan > cutoff) {
+								isLate = true;
+								lateMinutes = scan - cutoff;
+							}
 						}
 					}
 					if (outLog && shift) {
-						// Normalisasi: OUT shift malam yang jatuh di hari berikutnya
-						// dihitung +1440 menit agar tidak menghasilkan menit negatif
 						const scan =
-							outLog.timestamp.getHours() * 60 +
-							outLog.timestamp.getMinutes() +
-							(outLog.timestamp.getDate() !== day ? 1440 : 0);
-						const end = parseTime(shift.endTime) + (overnight ? 1440 : 0);
+							outLog.timestamp.getHours() * 60 + outLog.timestamp.getMinutes();
+						const end = parseTime(shift.endTime);
 						const limit = end - shift.earlyOutTolerance;
-						if (scan < limit) {
+						if (shift.minOutTime && scan < parseTime(shift.minOutTime)) {
+							if (status !== "ABSENT") status = "ABSENT";
+						} else if (scan < limit) {
+							isEarlyOut = true;
 							earlyOutMinutes = end - scan;
-							if (status !== "ABSENT") status = "EARLY_OUT";
 						}
 					}
-					if (["PRESENT", "LATE"].includes(status)) totalPresent++;
-					if (status === "LATE") totalLate++;
-					if (status === "ABSENT") totalAbsent++;
-					if (status === "EARLY_OUT") {
-						totalEarlyOut++;
-						totalPresent++;
+					if (status !== "ABSENT") {
+						if (isLate) status = "LATE";
+						else if (isEarlyOut) status = "EARLY_OUT";
 					}
+					if (["PRESENT", "LATE", "EARLY_OUT"].includes(status)) totalPresent++;
+					if (isLate) totalLate++;
+					if (isEarlyOut) totalEarlyOut++;
+					if (status === "ABSENT") totalAbsent++;
 				} else if (date < new Date(new Date().setHours(0, 0, 0, 0))) {
 					if (
 						leaves.some(
@@ -2172,9 +2236,8 @@ export class ReportsService {
 		});
 
 		for (const employee of recaps) {
-			const sheet = workbook.addWorksheet(
-				employee.name.substring(0, 31).replace(/[*?:/\\[\]]/g, ""),
-			);
+			const safeTitle = `${employee.name.slice(0, 20).replace(/[*?:/\\[\]]/g, "")} (${employee.id})`;
+			const sheet = workbook.addWorksheet(safeTitle);
 			// 6 columns: Tanggal, Hari, Masuk, Pulang, Status, Telat, Pulang Cepat -> 7
 			sheet.columns = [
 				{ width: 14 }, // Tanggal
@@ -2750,14 +2813,24 @@ export class JaspelService {
 			if (totalFund > 0 && totalPoints <= 0)
 				throw new ApiError(409, "No eligible Jaspel points");
 			let allocated = 0;
-			for (const [index, row] of rows.entries()) {
-				row.finalAmount =
-					index === rows.length - 1
-						? totalFund - allocated
-						: totalPoints
-							? Math.floor((row.jumlahTotalPoin / totalPoints) * totalFund)
-							: 0;
+			for (const row of rows) {
+				row.finalAmount = totalPoints
+					? Math.floor((row.jumlahTotalPoin / totalPoints) * totalFund)
+					: 0;
 				allocated += row.finalAmount;
+			}
+			const remainder = totalFund - allocated;
+			const eligible = rows
+				.filter((r) => r.jumlahTotalPoin > 0)
+				.map((r) => ({
+					row: r,
+					rem: totalPoints
+						? ((r.jumlahTotalPoin / totalPoints) * totalFund) % 1
+						: 0,
+				}))
+				.sort((a, b) => b.rem - a.rem);
+			for (let i = 0; i < remainder && i < eligible.length; i++) {
+				eligible[i]!.row.finalAmount += 1;
 			}
 			await tx
 				.delete(schema.jaspelDistributions)
@@ -3233,26 +3306,9 @@ export class ShiftEngineService {
 						),
 					)
 			: [];
-		const hasDatedHistory = input.employeeId
-			? Boolean(
-					(
-						await this.db
-							.select({ id: schema.employeeShiftAssignments.id })
-							.from(schema.employeeShiftAssignments)
-							.where(
-								eq(
-									schema.employeeShiftAssignments.employeeId,
-									input.employeeId,
-								),
-							)
-							.limit(1)
-					).length,
-				)
-			: false;
-		const shiftIds = hasDatedHistory
+		const shiftIds = datedAssignments.length
 			? datedAssignments.map((assignment) => assignment.shiftId)
 			: input.shiftIds;
-		if (hasDatedHistory && !shiftIds?.length) return "PRESENT" as const;
 		const shifts = shiftIds?.length
 			? await this.db
 					.select()
@@ -3281,12 +3337,6 @@ export class ShiftEngineService {
 			)[0];
 		if (!shift) return "PRESENT" as const;
 		const scan = input.timestamp.getHours() * 60 + input.timestamp.getMinutes();
-		const overnight = parseTime(shift.endTime) <= parseTime(shift.startTime);
-		const normalizedScan =
-			overnight && input.type === "OUT" && scan < parseTime(shift.startTime)
-				? scan + 1440
-				: scan;
-		const normalizedEnd = parseTime(shift.endTime) + (overnight ? 1440 : 0);
 		if (input.type === "IN") {
 			if (shift.minInTime && scan < parseTime(shift.minInTime))
 				return "ABSENT" as const;
@@ -3296,23 +3346,12 @@ export class ShiftEngineService {
 				? ("LATE" as const)
 				: ("PRESENT" as const);
 		}
-		const minOut = shift.minOutTime
-			? parseTime(shift.minOutTime) +
-				(overnight && parseTime(shift.minOutTime) < parseTime(shift.startTime)
-					? 1440
-					: 0)
-			: undefined;
-		const maxOut = shift.maxOutTime
-			? parseTime(shift.maxOutTime) +
-				(overnight && parseTime(shift.maxOutTime) < parseTime(shift.startTime)
-					? 1440
-					: 0)
-			: undefined;
-		if (minOut !== undefined && normalizedScan < minOut)
-			return "ABSENT" as const;
-		if (maxOut !== undefined && normalizedScan > maxOut)
-			return "ABSENT" as const;
-		return normalizedScan < normalizedEnd - shift.earlyOutTolerance
+		const minOut = shift.minOutTime ? parseTime(shift.minOutTime) : undefined;
+		const maxOut = shift.maxOutTime ? parseTime(shift.maxOutTime) : undefined;
+		const end = parseTime(shift.endTime);
+		if (minOut !== undefined && scan < minOut) return "ABSENT" as const;
+		if (maxOut !== undefined && scan > maxOut) return "ABSENT" as const;
+		return scan < end - shift.earlyOutTolerance
 			? ("EARLY_OUT" as const)
 			: ("PRESENT" as const);
 	}
