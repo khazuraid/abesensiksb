@@ -22,6 +22,10 @@ if [ "$REDIS_HOST" = "127.0.0.1" ] || [ "$REDIS_HOST" = "localhost" ]; then
 	is_local_redis=1
 fi
 
+if [ -n "${REDIS_URL:-}" ]; then
+	REDIS_HOST="$REDIS_URL"
+fi
+
 if [ "$is_local_db" -eq 1 ]; then
 	mkdir -p "$PGDATA" /run/postgresql
 	chown -R postgres:postgres "$PGDATA" /run/postgresql
@@ -57,7 +61,7 @@ if [ "$is_local_db" -eq 1 ]; then
 		su-exec postgres createdb -h 127.0.0.1 -U "${DB_USER:-adms}" "${DB_NAME:-adms_db}"
 	fi
 else
-	until node -e "const { Client } = require('pg'); const c = new Client({ connectionString: process.env.DATABASE_URL }); c.connect().then(() => { c.end(); process.exit(0); }).catch(() => process.exit(1));" >/dev/null 2>&1; do
+	until node -e "const net = require('net'); const u = new URL(process.env.DATABASE_URL); const s = net.createConnection({ host: u.hostname, port: Number(u.port) || 5432 }, () => { s.end(); process.exit(0); }); s.on('error', () => process.exit(1));" >/dev/null 2>&1; do
 		echo "[zeabur/external-db] Waiting for database to be ready..."
 		sleep 2
 	done
@@ -66,7 +70,7 @@ fi
 if [ "$is_local_redis" -eq 1 ]; then
 	until redis-cli -h 127.0.0.1 ping >/dev/null 2>&1; do sleep 1; done
 else
-	until redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" ping >/dev/null 2>&1; do
+	until node -e "const net = require('net'); const h = process.env.REDIS_HOST; if (h.startsWith('redis://') || h.startsWith('rediss://')) { const u = new URL(h); const s = net.createConnection({ host: u.hostname, port: Number(u.port) || 6379 }, () => { s.end(); process.exit(0); }); s.on('error', () => process.exit(1)); } else { const s = net.createConnection({ host: h, port: Number(process.env.REDIS_PORT) || 6379 }, () => { s.end(); process.exit(0); }); s.on('error', () => process.exit(1)); }" >/dev/null 2>&1; do
 		echo "[zeabur/external-redis] Waiting for redis to be ready..."
 		sleep 2
 	done

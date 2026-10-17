@@ -20,13 +20,11 @@ import {
 import { authorizeSocket, webhookHeaders } from "./security.js";
 import { TelegramBot } from "./telegram.js";
 
-const redisOptions = {
-	host: process.env.REDIS_HOST || "localhost",
-	port: Number(process.env.REDIS_PORT) || 6379,
-	password: process.env.REDIS_PASSWORD || undefined,
-};
 const healthQueue = new Queue("adms-logs", { connection: redisConnection() });
-const healthRedis = new IORedis({ ...redisOptions, maxRetriesPerRequest: 1 });
+const healthRedis = new IORedis({
+	...(redisConnection() as any),
+	maxRetriesPerRequest: 1,
+});
 let workerState: "starting" | "running" | "draining" = "starting";
 const httpServer = createServer(async (request, response) => {
 	if (request.url === "/health" || request.url === "/health/live") {
