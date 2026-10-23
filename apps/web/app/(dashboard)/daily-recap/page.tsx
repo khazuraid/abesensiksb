@@ -123,35 +123,43 @@ export default function DailyRecapPage() {
 				if (!reason || reason.trim().length < 5)
 					throw new Error("Alasan koreksi wajib diisi");
 			}
-			if (inChanged && editingDay.inValue) {
-				const timestamp = `${day.date}T${editingDay.inValue}:00`;
-				if (day.inLogId)
-					await api.post("/attendance-corrections", {
-						attendanceLogId: day.inLogId,
-						timestamp,
-						reason,
-					});
-				else
-					await api.post("/attendance-logs", {
-						employeeId: selectedEmployee.id,
-						timestamp,
-						type: "IN",
-					});
+			if (inChanged) {
+				if (editingDay.inValue) {
+					const timestamp = `${day.date}T${editingDay.inValue}:00`;
+					if (day.inLogId)
+						await api.post("/attendance-corrections", {
+							attendanceLogId: day.inLogId,
+							timestamp,
+							reason,
+						});
+					else
+						await api.post("/attendance-logs", {
+							employeeId: selectedEmployee.id,
+							timestamp,
+							type: "IN",
+						});
+				} else if (day.inLogId) {
+					await api.delete(`/attendance-logs/${day.inLogId}`);
+				}
 			}
-			if (outChanged && editingDay.outValue) {
-				const timestamp = `${day.date}T${editingDay.outValue}:00`;
-				if (day.outLogId)
-					await api.post("/attendance-corrections", {
-						attendanceLogId: day.outLogId,
-						timestamp,
-						reason,
-					});
-				else
-					await api.post("/attendance-logs", {
-						employeeId: selectedEmployee.id,
-						timestamp,
-						type: "OUT",
-					});
+			if (outChanged) {
+				if (editingDay.outValue) {
+					const timestamp = `${day.date}T${editingDay.outValue}:00`;
+					if (day.outLogId)
+						await api.post("/attendance-corrections", {
+							attendanceLogId: day.outLogId,
+							timestamp,
+							reason,
+						});
+					else
+						await api.post("/attendance-logs", {
+							employeeId: selectedEmployee.id,
+							timestamp,
+							type: "OUT",
+						});
+				} else if (day.outLogId) {
+					await api.delete(`/attendance-logs/${day.outLogId}`);
+				}
 			}
 		},
 		onSuccess: () => {
@@ -167,6 +175,34 @@ export default function DailyRecapPage() {
 				err?.response?.data?.message === "Jaspel source period is locked"
 					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum mengedit absensi."
 					: `Gagal menyimpan absensi: ${err?.response?.data?.message || err?.message}`,
+			);
+		},
+	});
+
+	const deleteDayMutation = useMutation({
+		mutationFn: async () => {
+			if (!editingDay || !selectedEmployee) return;
+			const confirmed = window.confirm(
+				`Hapus seluruh catatan absensi ${selectedEmployee.name} pada tanggal ${editingDay.date}?`,
+			);
+			if (!confirmed) return;
+			await api.delete(
+				`/attendance-logs/by-date?employeeId=${selectedEmployee.id}&date=${editingDay.date}`,
+			);
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
+			setEditingDay(null);
+		},
+		onError: (e: unknown) => {
+			const err = e as {
+				response?: { data?: { message?: string } };
+				message?: string;
+			};
+			alert(
+				err?.response?.data?.message === "Jaspel source period is locked"
+					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum menghapus absensi."
+					: `Gagal menghapus absensi: ${err?.response?.data?.message || err?.message}`,
 			);
 		},
 	});
@@ -317,7 +353,7 @@ export default function DailyRecapPage() {
 			emp.employeeCode,
 			...daysArray.map((day) => {
 				const cellData = emp.days.find(
-					(d) => new Date(d.date).getDate() === day,
+					(d) => Number.parseInt(d.date.split("-")[2] ?? "0", 10) === day,
 				);
 				return cellData
 					? statusLabel(cellData.status, cellData.isHoliday, cellData.isWorkDay)
@@ -888,12 +924,25 @@ export default function DailyRecapPage() {
 							</p>
 
 							<div className="mb-4">
-								<label
-									htmlFor="time-in-input"
-									className="block text-[12px] font-semibold text-[#6e797e] mb-1"
-								>
-									Jam Masuk
-								</label>
+								<div className="flex items-center justify-between mb-1">
+									<label
+										htmlFor="time-in-input"
+										className="block text-[12px] font-semibold text-[#6e797e]"
+									>
+										Jam Masuk
+									</label>
+									{editingDay.inValue ? (
+										<button
+											type="button"
+											onClick={() =>
+												setEditingDay({ ...editingDay, inValue: "" })
+											}
+											className="text-[11px] text-[#ba1a1a] hover:underline"
+										>
+											Kosongkan
+										</button>
+									) : null}
+								</div>
 								<input
 									id="time-in-input"
 									type="time"
@@ -906,12 +955,25 @@ export default function DailyRecapPage() {
 							</div>
 
 							<div className="mb-6">
-								<label
-									htmlFor="time-out-input"
-									className="block text-[12px] font-semibold text-[#6e797e] mb-1"
-								>
-									Jam Pulang
-								</label>
+								<div className="flex items-center justify-between mb-1">
+									<label
+										htmlFor="time-out-input"
+										className="block text-[12px] font-semibold text-[#6e797e]"
+									>
+										Jam Pulang
+									</label>
+									{editingDay.outValue ? (
+										<button
+											type="button"
+											onClick={() =>
+												setEditingDay({ ...editingDay, outValue: "" })
+											}
+											className="text-[11px] text-[#ba1a1a] hover:underline"
+										>
+											Kosongkan
+										</button>
+									) : null}
+								</div>
 								<input
 									id="time-out-input"
 									type="time"
@@ -923,34 +985,61 @@ export default function DailyRecapPage() {
 								/>
 							</div>
 
-							<button
-								type="button"
-								onClick={() => {
-									const dayData = selectedEmployee.days.find(
-										(d) => d.date === editingDay.date,
-									);
-									if (dayData) saveMutation.mutate(dayData);
-								}}
-								disabled={
-									saveMutation.isPending ||
-									(() => {
+							<div className="flex flex-col gap-2">
+								<button
+									type="button"
+									onClick={() => {
 										const dayData = selectedEmployee.days.find(
 											(d) => d.date === editingDay.date,
 										);
-										const inChanged =
-											editingDay.inValue !== (dayData?.clockIn || "");
-										const outChanged =
-											editingDay.outValue !== (dayData?.clockOut || "");
-										return (
-											(!inChanged && !outChanged) ||
-											(!editingDay.inValue && !editingDay.outValue)
-										);
-									})()
-								}
-								className="adms-button w-full"
-							>
-								{saveMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
-							</button>
+										if (dayData) saveMutation.mutate(dayData);
+									}}
+									disabled={
+										saveMutation.isPending ||
+										deleteDayMutation.isPending ||
+										(() => {
+											const dayData = selectedEmployee.days.find(
+												(d) => d.date === editingDay.date,
+											);
+											const inChanged =
+												editingDay.inValue !== (dayData?.clockIn || "");
+											const outChanged =
+												editingDay.outValue !== (dayData?.clockOut || "");
+											return !inChanged && !outChanged;
+										})()
+									}
+									className="adms-button w-full"
+								>
+									{saveMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+								</button>
+
+								{(() => {
+									const dayData = selectedEmployee.days.find(
+										(d) => d.date === editingDay.date,
+									);
+									const hasLogs = Boolean(
+										dayData?.inLogId ||
+											dayData?.outLogId ||
+											dayData?.clockIn ||
+											dayData?.clockOut,
+									);
+									if (!hasLogs) return null;
+									return (
+										<button
+											type="button"
+											onClick={() => deleteDayMutation.mutate()}
+											disabled={
+												saveMutation.isPending || deleteDayMutation.isPending
+											}
+											className="w-full py-2 px-4 rounded-lg border border-[#ffdad6] bg-[#ffdad6]/40 text-[#ba1a1a] hover:bg-[#ffdad6] text-[13px] font-semibold transition-colors disabled:opacity-50"
+										>
+											{deleteDayMutation.isPending
+												? "Menghapus..."
+												: "Hapus Catatan Hari Ini"}
+										</button>
+									);
+								})()}
+							</div>
 						</div>
 					</div>
 				</div>

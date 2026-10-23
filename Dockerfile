@@ -22,11 +22,12 @@ RUN pnpm --filter web build
 # === ALL-IN-ONE RUNTIME: POSTGRES + REDIS + WEB + WORKER ===
 FROM postgres:16-alpine AS all-in-one
 
-RUN apk add --no-cache redis su-exec libstdc++ libgcc
+RUN apk add --no-cache redis su-exec libstdc++ libgcc tzdata
 COPY --from=builder /usr/local/bin/node /usr/local/bin/node
 
 WORKDIR /app
 ENV NODE_ENV=production \
+    TZ=Asia/Jakarta \
     HOSTNAME=0.0.0.0 \
     PORT=8080 \
     WORKER_PORT=8888 \

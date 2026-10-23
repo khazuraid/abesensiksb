@@ -1046,6 +1046,42 @@ export class AttendanceLogsService {
 			return result;
 		});
 	}
+	async remove(id: number) {
+		return this.db.transaction(async (tx) => {
+			const [log] = await tx
+				.select({
+					id: schema.attendanceLogs.id,
+					timestamp: schema.attendanceLogs.timestamp,
+					employeeId: schema.attendanceLogs.employeeId,
+				})
+				.from(schema.attendanceLogs)
+				.where(eq(schema.attendanceLogs.id, id));
+			if (!log) throw new ApiError(404, "Attendance log not found");
+			await assertJaspelPeriodMutable(tx, log.timestamp);
+			await tx
+				.delete(schema.attendanceLogs)
+				.where(eq(schema.attendanceLogs.id, id));
+			return { success: true };
+		});
+	}
+	async removeByDate(employeeId: number, dateStr: string) {
+		const start = new Date(`${dateStr}T00:00:00`);
+		const end = new Date(`${dateStr}T23:59:59.999`);
+		return this.db.transaction(async (tx) => {
+			await assertJaspelPeriodMutable(tx, start);
+			const deleted = await tx
+				.delete(schema.attendanceLogs)
+				.where(
+					and(
+						eq(schema.attendanceLogs.employeeId, employeeId),
+						gte(schema.attendanceLogs.timestamp, start),
+						lte(schema.attendanceLogs.timestamp, end),
+					),
+				)
+				.returning({ id: schema.attendanceLogs.id });
+			return { count: deleted.length };
+		});
+	}
 	async getStats() {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
@@ -1059,13 +1095,13 @@ export class AttendanceLogsService {
 			.select({
 				employeeId: schema.attendanceLogs.employeeId,
 				status: schema.attendanceLogs.status,
+				type: schema.attendanceLogs.type,
 			})
 			.from(schema.attendanceLogs)
 			.where(
 				and(
 					gte(schema.attendanceLogs.timestamp, today),
 					lte(schema.attendanceLogs.timestamp, tomorrow),
-					eq(schema.attendanceLogs.type, "IN"),
 				),
 			);
 		const devices = await this.db.select().from(schema.devices);
@@ -1078,27 +1114,39 @@ export class AttendanceLogsService {
 			const end = new Date(start);
 			end.setDate(end.getDate() + 1);
 			const rows = await this.db
-				.select({ status: schema.attendanceLogs.status })
+				.select({
+					employeeId: schema.attendanceLogs.employeeId,
+					status: schema.attendanceLogs.status,
+					type: schema.attendanceLogs.type,
+				})
 				.from(schema.attendanceLogs)
 				.where(
 					and(
 						gte(schema.attendanceLogs.timestamp, start),
 						lte(schema.attendanceLogs.timestamp, end),
-						eq(schema.attendanceLogs.type, "IN"),
 					),
 				);
+			const dayPresentEmployees = new Set(rows.map((r) => r.employeeId)).size;
+			const dayLateEmployees = new Set(
+				rows
+					.filter((r) => r.type === "IN" && r.status === "LATE")
+					.map((r) => r.employeeId),
+			).size;
+			const totalEmp = totalEmployees?.count ?? 0;
 			weeklyTrend.push({
 				name: days[start.getDay()],
-				present: rows.filter((r) => r.status === "PRESENT").length,
-				late: rows.filter((r) => r.status === "LATE").length,
-				absent: rows.filter((r) => r.status === "ABSENT").length,
+				present: dayPresentEmployees,
+				late: dayLateEmployees,
+				absent: Math.max(0, totalEmp - dayPresentEmployees),
 			});
 		}
 		return {
 			totalEmployees: totalEmployees?.count ?? 0,
 			presentToday: new Set(logs.map((l) => l.employeeId)).size,
 			lateToday: new Set(
-				logs.filter((l) => l.status === "LATE").map((l) => l.employeeId),
+				logs
+					.filter((l) => l.type === "IN" && l.status === "LATE")
+					.map((l) => l.employeeId),
 			).size,
 			devicesOnline: devices.filter((d) => d.isOnline).length,
 			devicesTotal: devices.length,
@@ -1474,7 +1522,7 @@ export class ReportsService {
 					between(
 						schema.attendanceLogs.timestamp,
 						new Date(year, month - 1, 1),
-						new Date(year, month, 1, 23, 59, 59),
+						new Date(year, month, 0, 23, 59, 59, 999),
 					),
 					inArray(schema.attendanceLogs.employeeId, employeeIds),
 				),
@@ -1502,6 +1550,9 @@ export class ReportsService {
 					inArray(schema.leaves.employeeId, employeeIds),
 				),
 			);
+		const todayStr = new Intl.DateTimeFormat("en-CA", {
+			timeZone: "Asia/Jakarta",
+		}).format(new Date());
 		return employees.map((employee) => {
 			let totalPresent = 0,
 				totalLate = 0,
@@ -1618,7 +1669,7 @@ export class ReportsService {
 							: undefined;
 				}
 
-				let status = "ABSENT",
+				let status: string,
 					lateMinutes = 0,
 					earlyOutMinutes = 0,
 					isLate = false,
@@ -1626,21 +1677,13 @@ export class ReportsService {
 
 				if (!isWorkDay) status = "-";
 				else if (inLog || outLog) {
-					if (!inLog) {
-						status = "ABSENT";
-					} else {
-						status = "PRESENT";
-						if (shift) {
-							const scan =
-								inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
-							const cutoff =
-								parseTime(shift.startTime) + shift.toleranceMinutes;
-							if (shift.maxLateTime && scan > parseTime(shift.maxLateTime))
-								status = "ABSENT";
-							else if (scan > cutoff) {
-								isLate = true;
-								lateMinutes = scan - cutoff;
-							}
+					if (inLog && shift) {
+						const scan =
+							inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
+						const cutoff = parseTime(shift.startTime) + shift.toleranceMinutes;
+						if (scan > cutoff) {
+							isLate = true;
+							lateMinutes = scan - cutoff;
 						}
 					}
 					if (outLog && shift) {
@@ -1648,22 +1691,19 @@ export class ReportsService {
 							outLog.timestamp.getHours() * 60 + outLog.timestamp.getMinutes();
 						const end = parseTime(shift.endTime);
 						const limit = end - shift.earlyOutTolerance;
-						if (shift.minOutTime && scan < parseTime(shift.minOutTime)) {
-							if (status !== "ABSENT") status = "ABSENT";
-						} else if (scan < limit) {
+						if (scan < limit) {
 							isEarlyOut = true;
 							earlyOutMinutes = end - scan;
 						}
 					}
-					if (status !== "ABSENT") {
-						if (isLate) status = "LATE";
-						else if (isEarlyOut) status = "EARLY_OUT";
-					}
-					if (["PRESENT", "LATE", "EARLY_OUT"].includes(status)) totalPresent++;
+					if (isLate) status = "LATE";
+					else if (isEarlyOut) status = "EARLY_OUT";
+					else status = "PRESENT";
+
+					totalPresent++;
 					if (isLate) totalLate++;
 					if (isEarlyOut) totalEarlyOut++;
-					if (status === "ABSENT") totalAbsent++;
-				} else if (date < new Date(new Date().setHours(0, 0, 0, 0))) {
+				} else if (dateStr < todayStr) {
 					if (
 						leaves.some(
 							(leave) =>
@@ -1674,12 +1714,11 @@ export class ReportsService {
 					) {
 						status = "LEAVE";
 						totalLeave++;
-					} else totalAbsent++;
-				} else
-					status =
-						dateStr === new Date().toLocaleDateString("en-CA")
-							? "IN_PROGRESS"
-							: "-";
+					} else {
+						status = "ABSENT";
+						totalAbsent++;
+					}
+				} else status = dateStr === todayStr ? "IN_PROGRESS" : "-";
 				totalLateMinutesSum += lateMinutes;
 				totalEarlyOutMinutesSum += earlyOutMinutes;
 				days.push({

@@ -732,6 +732,26 @@ export async function DELETE(request: NextRequest) {
 				return audited(user.userId, "DELETE", "leaves", { id }, () =>
 					leaves.remove(id),
 				);
+			case "attendance-logs":
+				requireRole(user, [...managers]);
+				if (path[1] === "by-date") {
+					const employeeId = positiveInt(
+						request.nextUrl.searchParams.get("employeeId"),
+					);
+					const date = request.nextUrl.searchParams.get("date");
+					if (!employeeId || !date)
+						throw new ApiError(400, "employeeId and date are required");
+					return audited(
+						user.userId,
+						"DELETE",
+						"attendance-logs",
+						{ employeeId, date },
+						() => attendanceLogs.removeByDate(employeeId, date),
+					);
+				}
+				return audited(user.userId, "DELETE", "attendance-logs", { id }, () =>
+					attendanceLogs.remove(id),
+				);
 			case "jaspel": {
 				requireRole(user, [...admin]);
 				const p = period(request);

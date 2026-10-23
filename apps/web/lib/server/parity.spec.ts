@@ -55,6 +55,7 @@ const legacyParity = [
 	["DELETE", "shifts"],
 	["DELETE", "holidays"],
 	["DELETE", "leaves"],
+	["DELETE", "attendance-logs"],
 ] as const;
 
 test("Next route handlers retain every legacy REST resource and verb", () => {

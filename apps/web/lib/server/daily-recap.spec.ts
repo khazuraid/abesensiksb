@@ -22,8 +22,8 @@ test("rekap harian mendukung single scan dan memisahkannya berdasarkan midpoint 
 	assert.match(services, /inLog = undefined;\s*outLog = singleScan;/);
 });
 
-test("rekap harian mengakui scan pulang tunggal sebagai jam pulang dengan jam masuk kosong dan status ABSENT", () => {
-	assert.match(services, /if \(!inLog\) \{\s*status = "ABSENT";/);
+test("rekap harian mengakui scan tunggal sebagai hadir dan jam absen tercatat sesuai scan", () => {
+	assert.match(services, /else if \(inLog \|\| outLog\)/);
 	assert.match(
 		services,
 		/clockIn: inLog \? formatTime\(inLog\.timestamp\) : null/,

@@ -150,17 +150,15 @@ export class WorkerCron {
 			.select({
 				employeeId: schema.attendanceLogs.employeeId,
 				status: schema.attendanceLogs.status,
+				type: schema.attendanceLogs.type,
 			})
 			.from(schema.attendanceLogs)
-			.where(
-				and(
-					eq(schema.attendanceLogs.type, "IN"),
-					between(schema.attendanceLogs.timestamp, start, end),
-				),
-			);
+			.where(between(schema.attendanceLogs.timestamp, start, end));
 		const total = Number(employees?.count ?? 0);
 		const present = new Set(logs.map((log) => log.employeeId)).size;
-		const late = logs.filter((log) => log.status === "LATE").length;
+		const late = logs.filter(
+			(log) => log.type === "IN" && log.status === "LATE",
+		).length;
 		await this.telegram.sendNotification(
 			`<b>📋 [AUTO-REPORT] Rekapitulasi Akhir Hari</b>\n━━━━━━━━━━━━━━━━━━━━━\n👥 Total Pegawai Aktif: <b>${total}</b>\n✅ Hadir: <b>${present}</b>\n⚠️ Terlambat: <b>${late}</b>\n❌ Tidak Hadir: <b>${Math.max(0, total - present)}</b>`,
 		);
