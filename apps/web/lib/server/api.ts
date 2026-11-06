@@ -105,8 +105,16 @@ function errorResponse(error: unknown) {
 			{ status: 400 },
 		);
 	}
-	if (typeof error === "object" && error && "code" in error) {
-		const code = String((error as { code?: unknown }).code);
+	const dbError =
+		typeof error === "object" &&
+		error &&
+		"cause" in error &&
+		typeof (error as { cause?: unknown }).cause === "object" &&
+		(error as { cause?: unknown }).cause
+			? (error as { cause: Record<string, unknown> }).cause
+			: error;
+	if (typeof dbError === "object" && dbError && "code" in dbError) {
+		const code = String((dbError as { code?: unknown }).code);
 		if (code === "23505") {
 			return NextResponse.json(
 				{ statusCode: 409, message: "Data already exists" },
