@@ -34,7 +34,7 @@ services:
       - redis_data:/var/lib/redis
       - uploads:/app/apps/web/uploads
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/api/health-db >/dev/null && wget -q -O - http://127.0.0.1:8888/health/ready >/dev/null"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:${PORT:-8080}/api/health-db >/dev/null && wget -q -O - http://127.0.0.1:${WORKER_PORT:-8888}/health/ready >/dev/null"]
       interval: 15s
       timeout: 8s
       retries: 10
