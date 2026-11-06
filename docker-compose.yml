@@ -24,8 +24,8 @@ services:
       NODE_ENV: production
       TZ: Asia/Jakarta
     ports:
-      - "8080:8080"
-      - "8888:8888"
+      - "${HOST_WEB_PORT:-8090}:8080"
+      - "${HOST_WORKER_PORT:-8890}:8888"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - redis_data:/var/lib/redis
