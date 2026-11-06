@@ -61,8 +61,8 @@ if [ "$is_local_db" -eq 1 ]; then
 		su-exec postgres createdb -h 127.0.0.1 -U "${DB_USER:-adms}" "${DB_NAME:-adms_db}"
 	fi
 else
-	until node -e "const net = require('net'); const u = new URL(process.env.DATABASE_URL); const s = net.createConnection({ host: u.hostname, port: Number(u.port) || 5432 }, () => { s.end(); process.exit(0); }); s.on('error', () => process.exit(1));" >/dev/null 2>&1; do
-		echo "[zeabur/external-db] Waiting for database to be ready..."
+	until node -e "const net = require('net'); const u = new URL(process.env.DATABASE_URL); const s = net.createConnection({ host: u.hostname, port: Number(u.port) || 5432 }, () => { s.end(); process.exit(0); }); s.on('error', (e) => { console.error('[external-db] error:', e.message); process.exit(1); });"; do
+		echo "[external-db] Waiting for database to be ready..."
 		sleep 2
 	done
 fi
@@ -70,8 +70,8 @@ fi
 if [ "$is_local_redis" -eq 1 ]; then
 	until redis-cli -h 127.0.0.1 ping >/dev/null 2>&1; do sleep 1; done
 else
-	until node -e "const net = require('net'); const h = process.env.REDIS_HOST; if (h.startsWith('redis://') || h.startsWith('rediss://')) { const u = new URL(h); const s = net.createConnection({ host: u.hostname, port: Number(u.port) || 6379 }, () => { s.end(); process.exit(0); }); s.on('error', () => process.exit(1)); } else { const s = net.createConnection({ host: h, port: Number(process.env.REDIS_PORT) || 6379 }, () => { s.end(); process.exit(0); }); s.on('error', () => process.exit(1)); }" >/dev/null 2>&1; do
-		echo "[zeabur/external-redis] Waiting for redis to be ready..."
+	until node -e "const net = require('net'); const h = process.env.REDIS_HOST; if (h.startsWith('redis://') || h.startsWith('rediss://')) { const u = new URL(h); const s = net.createConnection({ host: u.hostname, port: Number(u.port) || 6379 }, () => { s.end(); process.exit(0); }); s.on('error', (e) => { console.error('[external-redis] error:', e.message); process.exit(1); }); } else { const s = net.createConnection({ host: h, port: Number(process.env.REDIS_PORT) || 6379 }, () => { s.end(); process.exit(0); }); s.on('error', (e) => { console.error('[external-redis] error:', e.message); process.exit(1); }); }"; do
+		echo "[external-redis] Waiting for redis to be ready..."
 		sleep 2
 	done
 fi
