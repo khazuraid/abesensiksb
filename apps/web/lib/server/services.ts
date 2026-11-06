@@ -399,6 +399,19 @@ export class EmployeesService {
 			throw new ApiError(403, "Akun belum terhubung ke data pegawai");
 		return employee.id;
 	}
+	async resolveEmployeeIdentity(userId: number) {
+		const [employee] = await this.db
+			.select({
+				id: schema.employees.id,
+				biometricId: schema.employees.biometricId,
+				employeeCode: schema.employees.employeeCode,
+			})
+			.from(schema.employees)
+			.where(eq(schema.employees.userId, userId));
+		if (!employee)
+			throw new ApiError(403, "Akun belum terhubung ke data pegawai");
+		return employee;
+	}
 	async validateShiftIds(shiftIds: number[]) {
 		if (!shiftIds.length) return;
 		const rows = await this.db

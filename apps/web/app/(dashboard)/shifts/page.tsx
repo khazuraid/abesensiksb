@@ -14,6 +14,7 @@ import {
 	X,
 } from "lucide-react";
 import { useRef, useState } from "react";
+import { toast } from "sonner";
 import PaginationControls, {
 	type PageMeta,
 } from "@/components/pagination-controls";
@@ -401,9 +402,10 @@ export default function ShiftsPage() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["employees"] });
+			const shiftName = assignShift?.name;
 			setAssignShift(null);
 			setAssignError("");
-			alert(`Shift "${assignShift?.name}" diterapkan ke semua pegawai.`);
+			toast.success(`Shift "${shiftName}" diterapkan ke semua pegawai`);
 		},
 		onError: (err: {
 			response?: {

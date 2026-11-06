@@ -75,8 +75,8 @@ export async function POST(
 		if (action === "login") {
 			const data = parseWith(LoginSchema, body);
 			const ip =
-				request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
 				request.headers.get("x-real-ip") ||
+				request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
 				"unknown";
 			const key = `${ip}:${data.email.toLowerCase()}`;
 			await loginRateLimiter.check(key);

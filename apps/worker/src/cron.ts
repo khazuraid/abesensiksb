@@ -16,7 +16,10 @@ export const workerCronSchedules = {
 } as const;
 
 function todayRange(now = new Date()) {
-	const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const wibDateStr = new Intl.DateTimeFormat("en-CA", {
+		timeZone: "Asia/Jakarta",
+	}).format(now);
+	const start = new Date(`${wibDateStr}T00:00:00+07:00`);
 	return { start, end: new Date(start.getTime() + 86_400_000 - 1) };
 }
 

@@ -1,6 +1,7 @@
 import type { ConnectionOptions } from "bullmq";
+import type { RedisOptions } from "ioredis";
 
-export function redisConnection(): ConnectionOptions {
+export function redisConnection(): RedisOptions & ConnectionOptions {
 	const host = process.env.REDIS_HOST || "localhost";
 	if (host.startsWith("redis://") || host.startsWith("rediss://")) {
 		const url = new URL(host);

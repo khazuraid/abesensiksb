@@ -3,6 +3,7 @@ import { extname, resolve, sep } from "node:path";
 import type { NextRequest } from "next/server";
 import { ApiError, handle } from "@/lib/server/api";
 import { readSession } from "@/lib/server/auth";
+import { employees } from "@/lib/server/container";
 
 export const runtime = "nodejs";
 
@@ -18,8 +19,19 @@ export async function GET(
 	context: { params: Promise<{ path: string[] }> },
 ) {
 	return handle(request, async () => {
-		await readSession(request);
+		const session = await readSession(request);
 		const { path } = await context.params;
+		if (session.role === "USER") {
+			const employee = await employees.resolveEmployeeIdentity(session.userId);
+			const targetPin = path[1];
+			if (
+				!targetPin ||
+				(targetPin !== employee.biometricId &&
+					targetPin !== employee.employeeCode)
+			) {
+				throw new ApiError(403, "Akses ditolak");
+			}
+		}
 		const root = resolve(process.cwd(), "uploads");
 		const file = resolve(root, ...path);
 		if (!file.startsWith(root + sep)) throw new ApiError(400, "Invalid path");

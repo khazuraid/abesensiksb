@@ -20,6 +20,7 @@ import {
 	X,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import EmployeeForm from "@/components/employee-form";
 import PaginationControls, {
 	type PageMeta,
@@ -118,7 +119,7 @@ export default function EmployeesPage() {
 			setBulkShiftIds([]);
 			setBulkShiftError("");
 			setBulkShiftAll(false);
-			alert("Berhasil memperbarui shift pegawai terpilih.");
+			toast.success("Berhasil memperbarui shift pegawai terpilih");
 		},
 		onError: (err: {
 			response?: {

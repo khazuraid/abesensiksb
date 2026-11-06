@@ -6,11 +6,13 @@ import {
 	ChevronRight,
 	FileSpreadsheet,
 	FileText,
+	Loader2,
 	Search,
 	Users,
 	X,
 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 import PaginationControls, {
 	type PageMeta,
 } from "@/components/pagination-controls";
@@ -57,6 +59,7 @@ export default function DailyRecapPage() {
 		inValue: string;
 		outValue: string;
 	} | null>(null);
+	const [isExporting, setIsExporting] = useState<"excel" | "pdf" | null>(null);
 	const editDialogRef = useRef<HTMLDivElement>(null);
 	const closeEdit = useCallback(() => setEditingDay(null), []);
 	useModalAccessibility(editDialogRef, closeEdit, Boolean(editingDay));
@@ -165,16 +168,17 @@ export default function DailyRecapPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
 			setEditingDay(null);
+			toast.success("Catatan absensi berhasil diperbarui");
 		},
 		onError: (e: unknown) => {
 			const err = e as {
 				response?: { data?: { message?: string } };
 				message?: string;
 			};
-			alert(
+			toast.error(
 				err?.response?.data?.message === "Jaspel source period is locked"
 					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum mengedit absensi."
-					: `Gagal menyimpan absensi: ${err?.response?.data?.message || err?.message}`,
+					: `Gagal menyimpan absensi: ${err?.response?.data?.message || err?.message || "Kesalahan server"}`,
 			);
 		},
 	});
@@ -193,16 +197,17 @@ export default function DailyRecapPage() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
 			setEditingDay(null);
+			toast.success("Catatan absensi hari ini berhasil dihapus");
 		},
 		onError: (e: unknown) => {
 			const err = e as {
 				response?: { data?: { message?: string } };
 				message?: string;
 			};
-			alert(
+			toast.error(
 				err?.response?.data?.message === "Jaspel source period is locked"
 					? "Periode jaspel bulan ini sudah dikunci. Buka kunci dulu di halaman Jaspel sebelum menghapus absensi."
-					: `Gagal menghapus absensi: ${err?.response?.data?.message || err?.message}`,
+					: `Gagal menghapus absensi: ${err?.response?.data?.message || err?.message || "Kesalahan server"}`,
 			);
 		},
 	});
@@ -252,6 +257,7 @@ export default function DailyRecapPage() {
 	};
 
 	const handleExport = async () => {
+		setIsExporting("excel");
 		try {
 			const res = await api.get(
 				`/reports/daily-recap/export?month=${month}&year=${year}`,
@@ -265,319 +271,341 @@ export default function DailyRecapPage() {
 			a.click();
 			a.remove();
 			window.URL.revokeObjectURL(url);
+			toast.success("Berkas Excel berhasil diunduh");
 		} catch (e: unknown) {
 			const err = e as { response?: { status?: number }; message?: string };
-			alert(`Gagal export: ${err?.response?.status || err?.message}`);
+			toast.error(
+				`Gagal mengunduh Excel: ${err?.response?.status || err?.message || "Kesalahan jaringan"}`,
+			);
+		} finally {
+			setIsExporting(null);
 		}
 	};
 	const handleExportPdf = async () => {
-		if (!data || data.length === 0) return;
-
-		// Dynamically import jsPDF and autoTable to avoid Next.js SSR Turbopack errors
-		const { jsPDF } = await import("jspdf");
-		await import("jspdf-autotable");
-		const {
-			PDF_COLORS,
-			drawHeader,
-			drawStatCards,
-			drawSectionTitle,
-			drawFormulaNote,
-			drawFooter,
-			TABLE_STYLES,
-			computePenalty,
-		} = await import("@/lib/pdf-design");
-
-		const doc = new jsPDF("l", "pt", "a4");
-		const pageWidth = doc.internal.pageSize.getWidth();
-		const pageHeight = doc.internal.pageSize.getHeight();
-
-		// --- Header ---
-		drawHeader(
-			doc,
-			`REKAP HARIAN PEGAWAI`,
-			`Periode ${months[month - 1]} ${year} — Matriks Kehadiran Harian`,
-			pageWidth,
-		);
-
-		// --- Stat cards ---
-		drawStatCards(
-			doc,
-			[
-				{
-					label: "Pegawai Tampil",
-					value: `${data.length}`,
-					color: PDF_COLORS.primary,
-				},
-				{
-					label: "Total Hadir",
-					value: `${pageSummary.present}`,
-					color: PDF_COLORS.green,
-				},
-				{
-					label: "Total Telat",
-					value: `${pageSummary.late}`,
-					color: PDF_COLORS.amber,
-				},
-				{
-					label: "Total Alpa",
-					value: `${pageSummary.absent}`,
-					color: PDF_COLORS.red,
-				},
-			],
-			72,
-			pageWidth,
-		);
-
-		// --- Section: Matriks Kehadiran ---
-		drawSectionTitle(doc, "Matriks Kehadiran Harian", 152);
-
-		const daysInMonth = new Date(year, month, 0).getDate();
-		const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
-
-		const head = [
-			[
-				"No",
-				"Nama",
-				"Kode",
-				...daysArray.map((d) => d.toString()),
-				"H",
-				"T",
-				"C",
-				"A",
-			],
-		];
-
-		const body = data.map((emp, idx) => [
-			(idx + 1).toString(),
-			emp.name,
-			emp.employeeCode,
-			...daysArray.map((day) => {
-				const cellData = emp.days.find(
-					(d) => Number.parseInt(d.date.split("-")[2] ?? "0", 10) === day,
-				);
-				return cellData
-					? statusLabel(cellData.status, cellData.isHoliday, cellData.isWorkDay)
-					: "-";
-			}),
-			emp.totalPresent.toString(),
-			emp.totalLate.toString(),
-			emp.totalLeave.toString(),
-			emp.totalAbsent.toString(),
-		]);
-
-		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
-		doc.autoTable({
-			...TABLE_STYLES.primary,
-			head,
-			body,
-			startY: 160,
-			styles: {
-				fontSize: 7,
-				cellPadding: 2,
-				halign: "center",
-				lineColor: PDF_COLORS.border,
-			},
-			headStyles: {
-				...TABLE_STYLES.primary.headStyles,
-				fontSize: 7,
-				halign: "center",
-			},
-			columnStyles: {
-				0: { halign: "left", cellWidth: 20, fontStyle: "bold" },
-				1: { halign: "left", cellWidth: 70, fontStyle: "bold" },
-				2: { halign: "left", cellWidth: 40 },
-				...Object.fromEntries([
-					...daysArray.map((_, i) => [i + 3, { cellWidth: 16 }]),
-				] as [number, object][]),
-				[daysArray.length + 3]: {
-					halign: "center",
-					cellWidth: 25,
-					fontStyle: "bold",
-					fillColor: PDF_COLORS.lightBg,
-				},
-				[daysArray.length + 4]: {
-					halign: "center",
-					cellWidth: 25,
-					fontStyle: "bold",
-				},
-				[daysArray.length + 5]: {
-					halign: "center",
-					cellWidth: 25,
-					fontStyle: "bold",
-				},
-				[daysArray.length + 6]: {
-					halign: "center",
-					cellWidth: 25,
-					fontStyle: "bold",
-				},
-			},
-		});
-
-		// --- Legend ---
-		// @ts-expect-error lastAutoTable injected by autotable
-		let afterY = doc.lastAutoTable?.finalY ?? 160;
-		afterY += 24;
-
-		if (afterY > pageHeight - 200) {
-			doc.addPage();
-			afterY = 72;
+		if (!data || data.length === 0) {
+			toast.error("Tidak ada data untuk diekspor");
+			return;
 		}
+		setIsExporting("pdf");
+		try {
+			// Dynamically import jsPDF and autoTable to avoid Next.js SSR Turbopack errors
+			const { jsPDF } = await import("jspdf");
+			await import("jspdf-autotable");
+			const {
+				PDF_COLORS,
+				drawHeader,
+				drawStatCards,
+				drawSectionTitle,
+				drawFormulaNote,
+				drawFooter,
+				TABLE_STYLES,
+				computePenalty,
+			} = await import("@/lib/pdf-design");
 
-		doc.setFontSize(8);
-		doc.setFont("helvetica", "bold");
-		doc.setTextColor(...PDF_COLORS.gray);
-		doc.text("Keterangan:", 40, afterY);
-		doc.setFont("helvetica", "normal");
-		doc.text(
-			"H = Hadir   T = Telat   PC = Pulang Cepat   A = Alpa   C = Cuti/Izin   L = Libur   O = Off   … = Sedang Berjalan",
-			95,
-			afterY,
-		);
-		doc.setTextColor(...PDF_COLORS.dark);
+			const doc = new jsPDF("l", "pt", "a4");
+			const pageWidth = doc.internal.pageSize.getWidth();
+			const pageHeight = doc.internal.pageSize.getHeight();
 
-		// --- Section: Rincian Perhitungan Potongan ---
-		afterY += 22;
-		if (afterY > pageHeight - 220) {
-			doc.addPage();
-			afterY = 72;
-		}
+			// --- Header ---
+			drawHeader(
+				doc,
+				`REKAP HARIAN PEGAWAI`,
+				`Periode ${months[month - 1]} ${year} — Matriks Kehadiran Harian`,
+				pageWidth,
+			);
 
-		drawSectionTitle(doc, "Rincian Perhitungan Potongan (Hari)", afterY);
-
-		drawFormulaNote(
-			doc,
-			[
-				"Akumulasi Jam = (Total Telat + Total Pulang Cepat) ÷ 420 menit — dibulatkan ke bawah",
-				"Lupa Absen = Jumlah absen tidak lengkap ÷ 2 — dibulatkan ke bawah",
-				"Alpa = Total hari tidak hadir tanpa keterangan",
-				"Cuti/Izin = Total hari cuti/izin yang disetujui",
-			],
-			afterY + 14,
-		);
-
-		// Penalty summary section
-		const penaltyRows = data.map((emp) => {
-			const p = computePenalty(emp);
-			return [
-				emp.name,
-				`${p.totalLateMins} + ${p.totalEarlyMins} = ${p.totalMins} mnt`,
-				`${p.totalMins} ÷ 420 = ${p.penaltyMins}`,
-				`${p.missed} ÷ 2 = ${p.penaltyPunch}`,
-				`${p.totalAbsent}`,
-				`${p.totalLeave}`,
-				`${p.total}`,
-			];
-		});
-
-		const grandTotalMins = data.reduce(
-			(s, e) =>
-				s + (e.totalLateMinutesSum || 0) + (e.totalEarlyOutMinutesSum || 0),
-			0,
-		);
-		const grandTotalPunch = data.reduce(
-			(s, e) => s + computePenalty(e).penaltyPunch,
-			0,
-		);
-		const grandTotalAbsent = data.reduce((s, e) => s + e.totalAbsent, 0);
-		const grandTotalLeave = data.reduce((s, e) => s + e.totalLeave, 0);
-		const grandTotalPenalty = data.reduce(
-			(s, e) => s + computePenalty(e).total,
-			0,
-		);
-
-		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
-		doc.autoTable({
-			...TABLE_STYLES.primary,
-			head: [
+			// --- Stat cards ---
+			drawStatCards(
+				doc,
 				[
+					{
+						label: "Pegawai Tampil",
+						value: `${data.length}`,
+						color: PDF_COLORS.primary,
+					},
+					{
+						label: "Total Hadir",
+						value: `${pageSummary.present}`,
+						color: PDF_COLORS.green,
+					},
+					{
+						label: "Total Telat",
+						value: `${pageSummary.late}`,
+						color: PDF_COLORS.amber,
+					},
+					{
+						label: "Total Alpa",
+						value: `${pageSummary.absent}`,
+						color: PDF_COLORS.red,
+					},
+				],
+				72,
+				pageWidth,
+			);
+
+			// --- Section: Matriks Kehadiran ---
+			drawSectionTitle(doc, "Matriks Kehadiran Harian", 152);
+
+			const daysInMonth = new Date(year, month, 0).getDate();
+			const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+			const head = [
+				[
+					"No",
 					"Nama",
-					"Menit Terlambat\n+ Pulang Cepat",
-					"Akumulasi\n(÷ 420)",
-					"Lupa Absen\n(÷ 2)",
-					"Alpa",
-					"Cuti/Izin",
-					"Total\nPotongan",
+					"Kode",
+					...daysArray.map((d) => d.toString()),
+					"H",
+					"T",
+					"C",
+					"A",
 				],
-			],
-			body: penaltyRows,
-			startY: afterY + 68,
-			styles: {
-				fontSize: 7,
-				cellPadding: 3,
-				lineColor: PDF_COLORS.border,
-				valign: "middle",
-			},
-			headStyles: {
-				...TABLE_STYLES.primary.headStyles,
-				fontSize: 7,
-			},
-			columnStyles: {
-				0: { cellWidth: 120, fontStyle: "bold" },
-				1: { halign: "center", cellWidth: 100 },
-				2: { halign: "center", cellWidth: 80 },
-				3: { halign: "center", cellWidth: 70 },
-				4: { halign: "center", cellWidth: 50 },
-				5: { halign: "center", cellWidth: 55 },
-				6: {
+			];
+
+			const body = data.map((emp, idx) => [
+				(idx + 1).toString(),
+				emp.name,
+				emp.employeeCode,
+				...daysArray.map((day) => {
+					const cellData = emp.days.find(
+						(d) => Number.parseInt(d.date.split("-")[2] ?? "0", 10) === day,
+					);
+					return cellData
+						? statusLabel(
+								cellData.status,
+								cellData.isHoliday,
+								cellData.isWorkDay,
+							)
+						: "-";
+				}),
+				emp.totalPresent.toString(),
+				emp.totalLate.toString(),
+				emp.totalLeave.toString(),
+				emp.totalAbsent.toString(),
+			]);
+
+			// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+			doc.autoTable({
+				...TABLE_STYLES.primary,
+				head,
+				body,
+				startY: 160,
+				styles: {
+					fontSize: 7,
+					cellPadding: 2,
 					halign: "center",
-					cellWidth: 60,
-					fontStyle: "bold",
-					fillColor: PDF_COLORS.lightBg,
+					lineColor: PDF_COLORS.border,
 				},
-			},
-			didParseCell: (data: {
-				section: string;
-				column: number;
-				cell: { styles: { textColor: number[]; fontStyle: string } };
-			}) => {
-				if (data.section === "body" && data.column === 6) {
-					data.cell.styles.textColor = [...PDF_COLORS.red];
-					data.cell.styles.fontStyle = "bold";
-				}
-			},
-		});
+				headStyles: {
+					...TABLE_STYLES.primary.headStyles,
+					fontSize: 7,
+					halign: "center",
+				},
+				columnStyles: {
+					0: { halign: "left", cellWidth: 20, fontStyle: "bold" },
+					1: { halign: "left", cellWidth: 70, fontStyle: "bold" },
+					2: { halign: "left", cellWidth: 40 },
+					...Object.fromEntries([
+						...daysArray.map((_, i) => [i + 3, { cellWidth: 16 }]),
+					] as [number, object][]),
+					[daysArray.length + 3]: {
+						halign: "center",
+						cellWidth: 25,
+						fontStyle: "bold",
+						fillColor: PDF_COLORS.lightBg,
+					},
+					[daysArray.length + 4]: {
+						halign: "center",
+						cellWidth: 25,
+						fontStyle: "bold",
+					},
+					[daysArray.length + 5]: {
+						halign: "center",
+						cellWidth: 25,
+						fontStyle: "bold",
+					},
+					[daysArray.length + 6]: {
+						halign: "center",
+						cellWidth: 25,
+						fontStyle: "bold",
+					},
+				},
+			});
 
-		// --- Grand total row ---
-		// @ts-expect-error lastAutoTable injected by autotable
-		afterY = doc.lastAutoTable?.finalY ?? afterY + 68;
-		// @ts-expect-error jspdf-autotable augments jsPDF at runtime
-		doc.autoTable({
-			...TABLE_STYLES.primary,
-			head: [],
-			body: [
+			// --- Legend ---
+			// @ts-expect-error lastAutoTable injected by autotable
+			let afterY = doc.lastAutoTable?.finalY ?? 160;
+			afterY += 24;
+
+			if (afterY > pageHeight - 200) {
+				doc.addPage();
+				afterY = 72;
+			}
+
+			doc.setFontSize(8);
+			doc.setFont("helvetica", "bold");
+			doc.setTextColor(...PDF_COLORS.gray);
+			doc.text("Keterangan:", 40, afterY);
+			doc.setFont("helvetica", "normal");
+			doc.text(
+				"H = Hadir   T = Telat   PC = Pulang Cepat   A = Alpa   C = Cuti/Izin   L = Libur   O = Off   … = Sedang Berjalan",
+				95,
+				afterY,
+			);
+			doc.setTextColor(...PDF_COLORS.dark);
+
+			// --- Section: Rincian Perhitungan Potongan ---
+			afterY += 22;
+			if (afterY > pageHeight - 220) {
+				doc.addPage();
+				afterY = 72;
+			}
+
+			drawSectionTitle(doc, "Rincian Perhitungan Potongan (Hari)", afterY);
+
+			drawFormulaNote(
+				doc,
 				[
-					"TOTAL KESELURUHAN",
-					"",
-					`${grandTotalMins} mnt`,
-					`${grandTotalPunch}`,
-					`${grandTotalAbsent}`,
-					`${grandTotalLeave}`,
-					`${grandTotalPenalty}`,
+					"Akumulasi Jam = (Total Telat + Total Pulang Cepat) ÷ 420 menit — dibulatkan ke bawah",
+					"Lupa Absen = Jumlah absen tidak lengkap ÷ 2 — dibulatkan ke bawah",
+					"Alpa = Total hari tidak hadir tanpa keterangan",
+					"Cuti/Izin = Total hari cuti/izin yang disetujui",
 				],
-			],
-			startY: afterY + 2,
-			styles: {
-				fontSize: 8,
-				cellPadding: 4,
-				fillColor: PDF_COLORS.primary,
-				textColor: PDF_COLORS.white,
-				fontStyle: "bold",
-				lineColor: PDF_COLORS.primary,
-			},
-			columnStyles: {
-				0: { cellWidth: 120 },
-				1: { cellWidth: 100 },
-				2: { halign: "center", cellWidth: 80 },
-				3: { halign: "center", cellWidth: 70 },
-				4: { halign: "center", cellWidth: 50 },
-				5: { halign: "center", cellWidth: 55 },
-				6: { halign: "center", cellWidth: 60 },
-			},
-			theme: "grid",
-		});
+				afterY + 14,
+			);
 
-		drawFooter(doc, pageWidth, pageHeight);
-		doc.save(`Rekap-Harian-${months[month - 1]}-${year}.pdf`);
+			// Penalty summary section
+			const penaltyRows = data.map((emp) => {
+				const p = computePenalty(emp);
+				return [
+					emp.name,
+					`${p.totalLateMins} + ${p.totalEarlyMins} = ${p.totalMins} mnt`,
+					`${p.totalMins} ÷ 420 = ${p.penaltyMins}`,
+					`${p.missed} ÷ 2 = ${p.penaltyPunch}`,
+					`${p.totalAbsent}`,
+					`${p.totalLeave}`,
+					`${p.total}`,
+				];
+			});
+
+			const grandTotalMins = data.reduce(
+				(s, e) =>
+					s + (e.totalLateMinutesSum || 0) + (e.totalEarlyOutMinutesSum || 0),
+				0,
+			);
+			const grandTotalPunch = data.reduce(
+				(s, e) => s + computePenalty(e).penaltyPunch,
+				0,
+			);
+			const grandTotalAbsent = data.reduce((s, e) => s + e.totalAbsent, 0);
+			const grandTotalLeave = data.reduce((s, e) => s + e.totalLeave, 0);
+			const grandTotalPenalty = data.reduce(
+				(s, e) => s + computePenalty(e).total,
+				0,
+			);
+
+			// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+			doc.autoTable({
+				...TABLE_STYLES.primary,
+				head: [
+					[
+						"Nama",
+						"Menit Terlambat\n+ Pulang Cepat",
+						"Akumulasi\n(÷ 420)",
+						"Lupa Absen\n(÷ 2)",
+						"Alpa",
+						"Cuti/Izin",
+						"Total\nPotongan",
+					],
+				],
+				body: penaltyRows,
+				startY: afterY + 68,
+				styles: {
+					fontSize: 7,
+					cellPadding: 3,
+					lineColor: PDF_COLORS.border,
+					valign: "middle",
+				},
+				headStyles: {
+					...TABLE_STYLES.primary.headStyles,
+					fontSize: 7,
+				},
+				columnStyles: {
+					0: { cellWidth: 120, fontStyle: "bold" },
+					1: { halign: "center", cellWidth: 100 },
+					2: { halign: "center", cellWidth: 80 },
+					3: { halign: "center", cellWidth: 70 },
+					4: { halign: "center", cellWidth: 50 },
+					5: { halign: "center", cellWidth: 55 },
+					6: {
+						halign: "center",
+						cellWidth: 60,
+						fontStyle: "bold",
+						fillColor: PDF_COLORS.lightBg,
+					},
+				},
+				didParseCell: (data: {
+					section: string;
+					column: number;
+					cell: { styles: { textColor: number[]; fontStyle: string } };
+				}) => {
+					if (data.section === "body" && data.column === 6) {
+						data.cell.styles.textColor = [...PDF_COLORS.red];
+						data.cell.styles.fontStyle = "bold";
+					}
+				},
+			});
+
+			// --- Grand total row ---
+			// @ts-expect-error lastAutoTable injected by autotable
+			afterY = doc.lastAutoTable?.finalY ?? afterY + 68;
+			// @ts-expect-error jspdf-autotable augments jsPDF at runtime
+			doc.autoTable({
+				...TABLE_STYLES.primary,
+				head: [],
+				body: [
+					[
+						"TOTAL KESELURUHAN",
+						"",
+						`${grandTotalMins} mnt`,
+						`${grandTotalPunch}`,
+						`${grandTotalAbsent}`,
+						`${grandTotalLeave}`,
+						`${grandTotalPenalty}`,
+					],
+				],
+				startY: afterY + 2,
+				styles: {
+					fontSize: 8,
+					cellPadding: 4,
+					fillColor: PDF_COLORS.primary,
+					textColor: PDF_COLORS.white,
+					fontStyle: "bold",
+					lineColor: PDF_COLORS.primary,
+				},
+				columnStyles: {
+					0: { cellWidth: 120 },
+					1: { cellWidth: 100 },
+					2: { halign: "center", cellWidth: 80 },
+					3: { halign: "center", cellWidth: 70 },
+					4: { halign: "center", cellWidth: 50 },
+					5: { halign: "center", cellWidth: 55 },
+					6: { halign: "center", cellWidth: 60 },
+				},
+				theme: "grid",
+			});
+
+			drawFooter(doc, pageWidth, pageHeight);
+			doc.save(`Rekap-Harian-${months[month - 1]}-${year}.pdf`);
+			toast.success("Dokumen PDF berhasil diunduh");
+		} catch (e: unknown) {
+			const err = e as { message?: string };
+			toast.error(
+				`Gagal membuat PDF: ${err?.message || "Kesalahan perenderan"}`,
+			);
+		} finally {
+			setIsExporting(null);
+		}
 	};
 	const daysInMonth = new Date(year, month, 0).getDate();
 	const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
@@ -641,16 +669,30 @@ export default function DailyRecapPage() {
 					<button
 						type="button"
 						onClick={handleExport}
-						className="adms-button-outline"
+						disabled={isExporting !== null}
+						className="adms-button-outline disabled:opacity-50"
+						aria-busy={isExporting === "excel"}
 					>
-						<FileSpreadsheet size={16} /> Excel
+						{isExporting === "excel" ? (
+							<Loader2 size={16} className="animate-spin text-[#087066]" />
+						) : (
+							<FileSpreadsheet size={16} />
+						)}
+						<span>{isExporting === "excel" ? "Mengunduh..." : "Excel"}</span>
 					</button>
 					<button
 						type="button"
 						onClick={handleExportPdf}
-						className="adms-button"
+						disabled={isExporting !== null}
+						className="adms-button disabled:opacity-50"
+						aria-busy={isExporting === "pdf"}
 					>
-						<FileText size={16} /> PDF
+						{isExporting === "pdf" ? (
+							<Loader2 size={16} className="animate-spin text-white" />
+						) : (
+							<FileText size={16} />
+						)}
+						<span>{isExporting === "pdf" ? "Membuat PDF..." : "PDF"}</span>
 					</button>
 				</div>
 			</header>
@@ -950,7 +992,10 @@ export default function DailyRecapPage() {
 									onChange={(e) =>
 										setEditingDay({ ...editingDay, inValue: e.target.value })
 									}
-									className="w-full bg-white border border-[#bdc8ce] rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
+									disabled={
+										saveMutation.isPending || deleteDayMutation.isPending
+									}
+									className="w-full bg-white border border-[#d5ded9] rounded-[4px] px-3 py-2 text-[14px] text-[#14211d] focus:outline-none focus:ring-2 focus:ring-[#087066]/20 focus:border-[#087066] disabled:bg-[#eaf0ed]"
 								/>
 							</div>
 
@@ -958,7 +1003,7 @@ export default function DailyRecapPage() {
 								<div className="flex items-center justify-between mb-1">
 									<label
 										htmlFor="time-out-input"
-										className="block text-[12px] font-semibold text-[#6e797e]"
+										className="block text-[12px] font-semibold text-[#53635d]"
 									>
 										Jam Pulang
 									</label>
@@ -968,7 +1013,10 @@ export default function DailyRecapPage() {
 											onClick={() =>
 												setEditingDay({ ...editingDay, outValue: "" })
 											}
-											className="text-[11px] text-[#ba1a1a] hover:underline"
+											disabled={
+												saveMutation.isPending || deleteDayMutation.isPending
+											}
+											className="text-[11px] text-[#a9433d] hover:underline disabled:opacity-50"
 										>
 											Kosongkan
 										</button>
@@ -981,7 +1029,10 @@ export default function DailyRecapPage() {
 									onChange={(e) =>
 										setEditingDay({ ...editingDay, outValue: e.target.value })
 									}
-									className="w-full bg-white border border-[#bdc8ce] rounded-lg px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
+									disabled={
+										saveMutation.isPending || deleteDayMutation.isPending
+									}
+									className="w-full bg-white border border-[#d5ded9] rounded-[4px] px-3 py-2 text-[14px] text-[#14211d] focus:outline-none focus:ring-2 focus:ring-[#087066]/20 focus:border-[#087066] disabled:bg-[#eaf0ed]"
 								/>
 							</div>
 
@@ -1010,7 +1061,14 @@ export default function DailyRecapPage() {
 									}
 									className="adms-button w-full"
 								>
-									{saveMutation.isPending ? "Menyimpan..." : "Simpan Perubahan"}
+									{saveMutation.isPending ? (
+										<>
+											<Loader2 size={16} className="animate-spin text-white" />
+											<span>Menyimpan...</span>
+										</>
+									) : (
+										"Simpan Perubahan"
+									)}
 								</button>
 
 								{(() => {
@@ -1031,11 +1089,19 @@ export default function DailyRecapPage() {
 											disabled={
 												saveMutation.isPending || deleteDayMutation.isPending
 											}
-											className="w-full py-2 px-4 rounded-lg border border-[#ffdad6] bg-[#ffdad6]/40 text-[#ba1a1a] hover:bg-[#ffdad6] text-[13px] font-semibold transition-colors disabled:opacity-50"
+											className="w-full py-2 px-4 rounded-[4px] border border-[#f8eae8] bg-[#f8eae8] text-[#a9433d] hover:bg-[#fadcd9] text-[13px] font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
 										>
-											{deleteDayMutation.isPending
-												? "Menghapus..."
-												: "Hapus Catatan Hari Ini"}
+											{deleteDayMutation.isPending ? (
+												<>
+													<Loader2
+														size={16}
+														className="animate-spin text-[#a9433d]"
+													/>
+													<span>Menghapus...</span>
+												</>
+											) : (
+												"Hapus Catatan Hari Ini"
+											)}
 										</button>
 									);
 								})()}

@@ -17,12 +17,16 @@ import {
 	processAttendanceJob,
 	type WebhookPayload,
 } from "./processor.js";
-import { authorizeSocket, webhookHeaders } from "./security.js";
+import {
+	authorizeSocket,
+	isSafeWebhookUrl,
+	webhookHeaders,
+} from "./security.js";
 import { TelegramBot } from "./telegram.js";
 
 const healthQueue = new Queue("adms-logs", { connection: redisConnection() });
 const healthRedis = new IORedis({
-	...(redisConnection() as any),
+	...redisConnection(),
 	maxRetriesPerRequest: 1,
 });
 let workerState: "starting" | "running" | "draining" = "starting";
@@ -85,6 +89,9 @@ async function forwardWebhook(
 	payload: WebhookPayload,
 	idempotencyKey: string,
 ) {
+	if (!isSafeWebhookUrl(url)) {
+		throw new Error(`Blocked unsafe webhook URL: ${url}`);
+	}
 	const body = JSON.stringify(payload);
 	const timestamp = Math.floor(Date.now() / 1000).toString();
 	const response = await fetch(url, {

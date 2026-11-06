@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Calendar, CloudSync, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 import PaginationControls from "@/components/pagination-controls";
 import api from "@/lib/api";
 
@@ -37,14 +38,14 @@ export default function HolidaysPage() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["holidays"] });
-			alert("Berhasil sinkronisasi hari libur.");
+			toast.success("Berhasil sinkronisasi hari libur");
 		},
 		onError: (err: unknown) => {
 			const error = err as {
 				response?: { data?: { message?: string } };
 				message?: string;
 			};
-			alert(
+			toast.error(
 				error.response?.data?.message || error.message || "Gagal sinkronisasi",
 			);
 		},
@@ -63,15 +64,18 @@ export default function HolidaysPage() {
 			queryClient.invalidateQueries({ queryKey: ["holidays"] });
 			setShowForm(false);
 			setForm({ date: "", name: "", description: "" });
+			toast.success("Hari libur berhasil ditambahkan");
 		},
 		onError: (err: unknown) => {
 			const error = err as {
 				response?: { data?: { message?: string } };
 				message?: string;
 			};
-			alert(
+			toast.error(
 				"Gagal simpan: " +
-					(error?.response?.data?.message || error?.message || "Unknown error"),
+					(error?.response?.data?.message ||
+						error?.message ||
+						"Kesalahan server"),
 			);
 		},
 	});
@@ -80,7 +84,13 @@ export default function HolidaysPage() {
 		mutationFn: async (id: number) => {
 			await api.delete(`/holidays/${id}`);
 		},
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["holidays"] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["holidays"] });
+			toast.success("Hari libur berhasil dihapus");
+		},
+		onError: () => {
+			toast.error("Gagal menghapus hari libur");
+		},
 	});
 
 	const currentYear = new Date().getFullYear();
