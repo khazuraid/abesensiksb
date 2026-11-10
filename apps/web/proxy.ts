@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
 	const token = request.cookies.get("token")?.value;
 	const { pathname } = request.nextUrl;
 	const requestHeaders = new Headers(request.headers);
@@ -35,16 +35,8 @@ export function proxy(request: NextRequest) {
 	return next();
 }
 
-// Tentukan path mana yang akan diproses middleware
+export const proxy = middleware;
+
 export const config = {
-	matcher: [
-		/*
-		 * Match all request paths except for the ones starting with:
-		 * - api, iclock, uploads (server routes)
-		 * - _next/static (static files)
-		 * - _next/image (image optimization files)
-		 * - favicon.ico (favicon file)
-		 */
-		"/((?!iclock|uploads|_next/static|_next/image|favicon.ico).*)",
-	],
+	matcher: ["/((?!iclock|uploads|_next/static|_next/image|favicon.ico).*)"],
 };

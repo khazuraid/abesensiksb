@@ -2890,7 +2890,10 @@ export class JaspelService {
 				}))
 				.sort((a, b) => b.rem - a.rem);
 			for (let i = 0; i < remainder && i < eligible.length; i++) {
-				eligible[i]?.row.finalAmount += 1;
+				const item = eligible[i];
+				if (item) {
+					item.row.finalAmount += 1;
+				}
 			}
 			await tx
 				.delete(schema.jaspelDistributions)
