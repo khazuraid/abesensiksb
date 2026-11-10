@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileSpreadsheet, FileText, Search } from "lucide-react";
+import { Edit2, FileSpreadsheet, FileText, Search } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 import PaginationControls, {
@@ -50,19 +50,32 @@ interface EmployeeRecap {
 	totalEarlyOutMinutesSum: number;
 }
 
+interface FlatDayRow {
+	employeeId: number;
+	employeeName: string;
+	employeeCode: string;
+	shiftName: string;
+	day: DayData;
+}
+
 export default function DailyRecapPage() {
 	const queryClient = useQueryClient();
-	const [month, setMonth] = React.useState(new Date().getMonth() + 1);
-	const [year, setYear] = React.useState(new Date().getFullYear());
+	const today = new Date();
+	const [month, setMonth] = React.useState(today.getMonth() + 1);
+	const [year, setYear] = React.useState(today.getFullYear());
+	const [selectedDay, setSelectedDay] = React.useState<string>("all");
+	const [statusFilter, setStatusFilter] = React.useState<string>("all");
 	const [search, setSearch] = React.useState("");
 	const [page, setPage] = React.useState(1);
-	const [selectedEmployee, setSelectedEmployee] =
-		React.useState<EmployeeRecap | null>(null);
-	const [editingDay, setEditingDay] = React.useState<{
-		date: string;
+
+	const [editingTarget, setEditingTarget] = React.useState<{
+		employeeId: number;
+		employeeName: string;
+		day: DayData;
 		inValue: string;
 		outValue: string;
 	} | null>(null);
+
 	const [isExporting, setIsExporting] = React.useState<"excel" | "pdf" | null>(
 		null,
 	);
@@ -74,7 +87,7 @@ export default function DailyRecapPage() {
 		queryKey: ["daily-recap", month, year, page, search],
 		queryFn: async () => {
 			const res = await api.get(
-				`/reports/daily-recap?month=${month}&year=${year}&page=${page}&limit=10&search=${encodeURIComponent(search)}`,
+				`/reports/daily-recap?month=${month}&year=${year}&page=${page}&limit=20&search=${encodeURIComponent(search)}`,
 			);
 			return res.data;
 		},
@@ -82,7 +95,32 @@ export default function DailyRecapPage() {
 
 	const data = response?.data || [];
 	const meta = response?.meta;
-	const _daysInMonth = data[0]?.days || [];
+	const daysList = data[0]?.days?.map((d) => d.date) || [];
+
+	const flatRows: FlatDayRow[] = React.useMemo(() => {
+		const rows: FlatDayRow[] = [];
+		for (const emp of data) {
+			for (const day of emp.days) {
+				if (selectedDay !== "all" && day.date !== selectedDay) continue;
+
+				if (statusFilter !== "all") {
+					if (statusFilter === "LATE" && day.status !== "LATE") continue;
+					if (statusFilter === "ABSENT" && day.status !== "ABSENT") continue;
+					if (statusFilter === "PRESENT" && day.status !== "PRESENT") continue;
+					if (statusFilter === "LEAVE" && day.status !== "LEAVE") continue;
+				}
+
+				rows.push({
+					employeeId: emp.id,
+					employeeName: emp.name,
+					employeeCode: emp.employeeCode,
+					shiftName: emp.shiftName,
+					day,
+				});
+			}
+		}
+		return rows;
+	}, [data, selectedDay, statusFilter]);
 
 	const handleExport = async (type: "excel" | "pdf") => {
 		try {
@@ -109,29 +147,28 @@ export default function DailyRecapPage() {
 
 	const saveDayMutation = useMutation({
 		mutationFn: async () => {
-			if (!editingDay || !selectedEmployee) return;
-			const day = selectedEmployee.days.find((d) => d.date === editingDay.date);
-			if (!day) return;
+			if (!editingTarget) return;
+			const { day, inValue, outValue, employeeId } = editingTarget;
 
-			const inChanged = (day.clockIn || "") !== editingDay.inValue;
-			const outChanged = (day.clockOut || "") !== editingDay.outValue;
+			const inChanged = (day.clockIn || "") !== inValue;
+			const outChanged = (day.clockOut || "") !== outValue;
 			if (!inChanged && !outChanged) return;
 
 			const needsReason = Boolean(
-				(inChanged && editingDay.inValue && day.inLogId) ||
-					(outChanged && editingDay.outValue && day.outLogId),
+				(inChanged && inValue && day.inLogId) ||
+					(outChanged && outValue && day.outLogId),
 			);
 			let reason: string | null = null;
 			if (needsReason) {
-				reason = window.prompt("Alasan koreksi absensi (minimal 5 karakter)");
+				reason = window.prompt("Alasan koreksi absensi (minimal 5 karakter):");
 				if (!reason || reason.trim().length < 5) {
-					throw new Error("Alasan koreksi wajib diisi");
+					throw new Error("Alasan koreksi wajib diisi minimal 5 karakter");
 				}
 			}
 
 			if (inChanged) {
-				if (editingDay.inValue) {
-					const timestamp = `${day.date}T${editingDay.inValue}:00`;
+				if (inValue) {
+					const timestamp = `${day.date}T${inValue}:00`;
 					if (day.inLogId) {
 						await api.post("/attendance-corrections", {
 							attendanceLogId: day.inLogId,
@@ -140,7 +177,7 @@ export default function DailyRecapPage() {
 						});
 					} else {
 						await api.post("/attendance-logs", {
-							employeeId: selectedEmployee.id,
+							employeeId,
 							timestamp,
 							type: "IN",
 						});
@@ -151,8 +188,8 @@ export default function DailyRecapPage() {
 			}
 
 			if (outChanged) {
-				if (editingDay.outValue) {
-					const timestamp = `${day.date}T${editingDay.outValue}:00`;
+				if (outValue) {
+					const timestamp = `${day.date}T${outValue}:00`;
 					if (day.outLogId) {
 						await api.post("/attendance-corrections", {
 							attendanceLogId: day.outLogId,
@@ -161,7 +198,7 @@ export default function DailyRecapPage() {
 						});
 					} else {
 						await api.post("/attendance-logs", {
-							employeeId: selectedEmployee.id,
+							employeeId,
 							timestamp,
 							type: "OUT",
 						});
@@ -173,7 +210,7 @@ export default function DailyRecapPage() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["daily-recap", month, year] });
-			setEditingDay(null);
+			setEditingTarget(null);
 			toast.success("Catatan presensi berhasil diperbarui");
 		},
 		onError: (err: any) => {
@@ -240,8 +277,8 @@ export default function DailyRecapPage() {
 		<div className="page-shell space-y-6">
 			{/* Level 1: Page Header */}
 			<PageHeader
-				title="Rekap Presensi Harian"
-				description="Matriks kehadiran bulanan per pegawai, kalkulasi keterlambatan, dan koreksi data."
+				title="Tabel Rekap Harian"
+				description="Pantau presensi harian per tanggal: deteksi telat, alpa, izin, dan edit langsung jam masuk/pulang."
 				action={
 					<div className="flex items-center gap-2">
 						<Button
@@ -312,12 +349,47 @@ export default function DailyRecapPage() {
 							))}
 						</select>
 					</div>
+
+					<div className="flex items-center gap-2">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Tanggal:
+						</label>
+						<select
+							value={selectedDay}
+							onChange={(e) => setSelectedDay(e.target.value)}
+							className="h-8 border border-border bg-card px-2 text-xs font-mono text-foreground focus:border-primary focus:outline-none"
+						>
+							<option value="all">Semua Hari</option>
+							{daysList.map((d) => (
+								<option key={d} value={d}>
+									{d}
+								</option>
+							))}
+						</select>
+					</div>
+
+					<div className="flex items-center gap-2">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Status:
+						</label>
+						<select
+							value={statusFilter}
+							onChange={(e) => setStatusFilter(e.target.value)}
+							className="h-8 border border-border bg-card px-2 text-xs font-mono text-foreground focus:border-primary focus:outline-none"
+						>
+							<option value="all">Semua Status</option>
+							<option value="LATE">Terlambat</option>
+							<option value="ABSENT">Tidak Absen / Alpa</option>
+							<option value="PRESENT">Hadir Tepat Waktu</option>
+							<option value="LEAVE">Cuti / Izin</option>
+						</select>
+					</div>
 				</div>
 
 				<div className="relative w-full sm:w-64">
 					<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
 					<Input
-						placeholder="Cari nama atau NIP pegawai..."
+						placeholder="Cari pegawai / NIP..."
 						value={search}
 						onChange={(e) => {
 							setSearch(e.target.value);
@@ -333,71 +405,99 @@ export default function DailyRecapPage() {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead className="sticky left-0 z-10 bg-muted">
-								Pegawai
-							</TableHead>
+							<TableHead className="w-28">Tanggal</TableHead>
+							<TableHead>Pegawai</TableHead>
 							<TableHead>Shift</TableHead>
-							<TableHead className="text-center">Hadir</TableHead>
-							<TableHead className="text-center">Telat</TableHead>
-							<TableHead className="text-center">Alpa</TableHead>
-							<TableHead className="text-center">Cuti</TableHead>
-							<TableHead className="text-center">Total Telat</TableHead>
+							<TableHead className="text-center">Jam Masuk</TableHead>
+							<TableHead className="text-center">Jam Pulang</TableHead>
+							<TableHead className="text-center">Keterlambatan</TableHead>
+							<TableHead className="text-center">Status</TableHead>
 							<TableHead className="text-right">Aksi</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{isLoading ? (
-							[1, 2, 3].map((k) => (
+							[1, 2, 3, 4, 5].map((k) => (
 								<TableRow key={k} className="animate-pulse">
 									<TableCell colSpan={8} className="h-12 bg-card" />
 								</TableRow>
 							))
-						) : data.length === 0 ? (
+						) : flatRows.length === 0 ? (
 							<TableRow>
 								<TableCell
 									colSpan={8}
 									className="py-12 text-center text-xs text-muted-foreground"
 								>
-									Tidak ada rekap presensi pada periode ini.
+									Tidak ada rekaman presensi yang cocok dengan filter.
 								</TableCell>
 							</TableRow>
 						) : (
-							data.map((emp) => (
-								<TableRow key={emp.id} className="hover:bg-muted/30">
-									<TableCell className="sticky left-0 z-10 bg-card font-medium text-foreground">
+							flatRows.map((row) => (
+								<TableRow
+									key={`${row.employeeId}-${row.day.date}`}
+									className="hover:bg-muted/30"
+								>
+									<TableCell className="font-mono text-xs text-foreground font-semibold">
+										{row.day.date}
+									</TableCell>
+									<TableCell className="font-medium text-foreground">
 										<div className="flex flex-col">
-											<span>{emp.name}</span>
+											<span>{row.employeeName}</span>
 											<span className="text-[11px] font-mono text-muted-foreground">
-												{emp.employeeCode}
+												{row.employeeCode}
 											</span>
 										</div>
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground font-mono">
-										{emp.shiftName || "Default"}
+										{row.shiftName || "Default"}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-emerald-600">
-										{emp.totalPresent}
+									<TableCell className="text-center font-mono text-xs text-foreground font-bold">
+										{row.day.clockIn ? (
+											<span>{row.day.clockIn}</span>
+										) : (
+											<span className="text-muted-foreground/60">—</span>
+										)}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-amber-600">
-										{emp.totalLate}
+									<TableCell className="text-center font-mono text-xs text-foreground font-bold">
+										{row.day.clockOut ? (
+											<span>{row.day.clockOut}</span>
+										) : (
+											<span className="text-muted-foreground/60">—</span>
+										)}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-red-600">
-										{emp.totalAbsent}
+									<TableCell className="text-center font-mono text-xs">
+										{row.day.lateMinutes > 0 ? (
+											<span className="text-amber-600 font-bold">
+												{row.day.lateMinutes}m
+											</span>
+										) : (
+											<span className="text-muted-foreground/60">—</span>
+										)}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-sky-600">
-										{emp.totalLeave}
-									</TableCell>
-									<TableCell className="text-center font-mono text-xs text-muted-foreground">
-										{emp.totalLateMinutesSum}m
+									<TableCell className="text-center">
+										{statusBadge(
+											row.day.status,
+											row.day.isHoliday,
+											row.day.isWorkDay,
+										)}
 									</TableCell>
 									<TableCell className="text-right">
 										<Button
-											variant="outline"
+											variant="ghost"
 											size="sm"
-											className="text-xs"
-											onClick={() => setSelectedEmployee(emp)}
+											className="text-xs text-primary gap-1 px-2 h-7"
+											onClick={() =>
+												setEditingTarget({
+													employeeId: row.employeeId,
+													employeeName: row.employeeName,
+													day: row.day,
+													inValue: row.day.clockIn || "",
+													outValue: row.day.clockOut || "",
+												})
+											}
 										>
-											Detail Harian
+											<Edit2 className="h-3.5 w-3.5" />
+											Koreksi
 										</Button>
 									</TableCell>
 								</TableRow>
@@ -406,98 +506,25 @@ export default function DailyRecapPage() {
 					</TableBody>
 				</Table>
 
-				<div className="p-3 border-t border-border bg-card">
-					<PaginationControls
-						meta={meta}
-						onPageChange={setPage}
-						disabled={isLoading}
-					/>
-				</div>
+				{meta && (
+					<PaginationControls meta={meta} onPageChange={(p) => setPage(p)} />
+				)}
 			</div>
 
-			{/* Detail Harian Modal (Data Dasar Pattern) */}
-			{selectedEmployee && (
+			{/* Edit Punch Modal */}
+			{editingTarget && (
 				<Modal
-					open={Boolean(selectedEmployee)}
-					onOpenChange={() => setSelectedEmployee(null)}
-					title={`Rincian Harian: ${selectedEmployee.name}`}
-					description={`NIP: ${selectedEmployee.employeeCode} · Periode: ${month}/${year}`}
-					maxWidth="5xl"
-				>
-					<div className="border border-border">
-						<Table>
-							<TableHeader>
-								<TableRow>
-									<TableHead>Tanggal</TableHead>
-									<TableHead>Jam Masuk</TableHead>
-									<TableHead>Jam Pulang</TableHead>
-									<TableHead>Keterlambatan</TableHead>
-									<TableHead>Pulang Cepat</TableHead>
-									<TableHead>Status</TableHead>
-									<TableHead className="text-right">Koreksi</TableHead>
-								</TableRow>
-							</TableHeader>
-							<TableBody>
-								{selectedEmployee.days.map((day) => (
-									<TableRow key={day.date}>
-										<TableCell className="font-mono text-xs">
-											{day.date}
-										</TableCell>
-										<TableCell className="font-mono text-xs text-foreground font-semibold">
-											{day.clockIn || "—"}
-										</TableCell>
-										<TableCell className="font-mono text-xs text-foreground font-semibold">
-											{day.clockOut || "—"}
-										</TableCell>
-										<TableCell className="font-mono text-xs text-muted-foreground">
-											{day.lateMinutes > 0 ? `${day.lateMinutes}m` : "—"}
-										</TableCell>
-										<TableCell className="font-mono text-xs text-muted-foreground">
-											{day.earlyOutMinutes > 0
-												? `${day.earlyOutMinutes}m`
-												: "—"}
-										</TableCell>
-										<TableCell>
-											{statusBadge(day.status, day.isHoliday, day.isWorkDay)}
-										</TableCell>
-										<TableCell className="text-right">
-											<Button
-												variant="ghost"
-												size="sm"
-												className="text-xs text-primary hover:underline"
-												onClick={() =>
-													setEditingDay({
-														date: day.date,
-														inValue: day.clockIn || "",
-														outValue: day.clockOut || "",
-													})
-												}
-											>
-												Edit
-											</Button>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-					</div>
-				</Modal>
-			)}
-
-			{/* Day Punch Correction Modal */}
-			{editingDay && selectedEmployee && (
-				<Modal
-					open={Boolean(editingDay)}
-					onOpenChange={() => setEditingDay(null)}
+					open={Boolean(editingTarget)}
+					onOpenChange={() => setEditingTarget(null)}
 					title="Koreksi Waktu Presensi"
-					description={`Pegawai: ${selectedEmployee.name} · Tanggal: ${editingDay.date}`}
+					description={`Pegawai: ${editingTarget.employeeName} · Tanggal: ${editingTarget.day.date}`}
 					maxWidth="md"
 					footer={
 						<div className="flex items-center gap-2">
 							<Button
 								variant="outline"
 								size="sm"
-								onClick={() => setEditingDay(null)}
+								onClick={() => setEditingTarget(null)}
 								disabled={saveDayMutation.isPending}
 							>
 								Batal
@@ -508,21 +535,24 @@ export default function DailyRecapPage() {
 								onClick={() => saveDayMutation.mutate()}
 								disabled={saveDayMutation.isPending}
 							>
-								{saveDayMutation.isPending ? "Menyimpan..." : "Simpan Koreksi"}
+								{saveDayMutation.isPending ? "Menyimpan..." : "Simpan Waktu"}
 							</Button>
 						</div>
 					}
 				>
-					<div className="space-y-4">
+					<div className="space-y-4 py-2">
 						<div className="space-y-1.5">
 							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
 								Jam Masuk (Format HH:MM)
 							</label>
 							<Input
 								type="time"
-								value={editingDay.inValue}
+								value={editingTarget.inValue}
 								onChange={(e) =>
-									setEditingDay({ ...editingDay, inValue: e.target.value })
+									setEditingTarget({
+										...editingTarget,
+										inValue: e.target.value,
+									})
 								}
 								className="font-mono text-xs"
 							/>
@@ -534,13 +564,20 @@ export default function DailyRecapPage() {
 							</label>
 							<Input
 								type="time"
-								value={editingDay.outValue}
+								value={editingTarget.outValue}
 								onChange={(e) =>
-									setEditingDay({ ...editingDay, outValue: e.target.value })
+									setEditingTarget({
+										...editingTarget,
+										outValue: e.target.value,
+									})
 								}
 								className="font-mono text-xs"
 							/>
 						</div>
+						<p className="text-[11px] text-muted-foreground italic">
+							* Kosongkan input jika ingin menghapus log kehadiran pada jam
+							tersebut.
+						</p>
 					</div>
 				</Modal>
 			)}

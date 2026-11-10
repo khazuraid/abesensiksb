@@ -84,7 +84,7 @@ export default function ReportsPage() {
 		queryKey: ["reports", month, year, page, search],
 		queryFn: async () => {
 			const res = await api.get(
-				`/reports?month=${month}&year=${year}&page=${page}&limit=10&search=${encodeURIComponent(search)}`,
+				`/reports/summary?month=${month}&year=${year}&page=${page}&limit=10&search=${encodeURIComponent(search)}`,
 			);
 			return res.data;
 		},
