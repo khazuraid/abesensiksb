@@ -2,39 +2,50 @@
 
 import type { CreateShift, Shift, UpdateShift } from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import {
 	AlertTriangle,
-	Clock,
+	CalendarDays,
 	Edit2,
 	Plus,
 	Timer,
 	Trash2,
-	UserCheck,
-	X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import * as React from "react";
 import { toast } from "sonner";
 import PaginationControls, {
 	type PageMeta,
 } from "@/components/pagination-controls";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
-import { useModalAccessibility } from "@/lib/use-modal-accessibility";
+import { cn } from "@/lib/utils";
 
-function ShiftForm({
+function ShiftFormModal({
+	open,
 	onClose,
 	onSubmit,
 	initialData,
 	isLoading,
 }: {
+	open: boolean;
 	onClose: () => void;
 	onSubmit: (data: CreateShift) => void;
 	initialData?: Shift;
 	isLoading: boolean;
 }) {
-	const dialogRef = useRef<HTMLDivElement>(null);
-	useModalAccessibility(dialogRef, onClose);
-	const [form, setForm] = useState<CreateShift>({
+	const [form, setForm] = React.useState<CreateShift>({
 		name: initialData?.name || "",
 		startTime: initialData?.startTime || "08:00",
 		endTime: initialData?.endTime || "17:00",
@@ -60,614 +71,405 @@ function ShiftForm({
 	};
 
 	return (
-		<div
-			ref={dialogRef}
-			className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/80 p-0 sm:items-center sm:p-4"
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="shift-form-title"
-		>
-			<div className="bg-white w-full max-w-md shadow-2xl rounded-t-xl sm:rounded-md border border-black/10 max-h-[calc(100dvh-env(safe-area-inset-top))] sm:max-h-[90dvh] flex flex-col">
-				<div className="p-4 sm:p-6 border-b border-black/5 flex items-center justify-between shrink-0">
-					<h3
-						id="shift-form-title"
-						className="text-[20px] font-display font-semibold text-[#111c2d]"
-					>
-						{initialData ? "Edit Shift" : "Tambah Shift"}
-					</h3>
-					<button
-						type="button"
+		<Modal
+			open={open}
+			onOpenChange={(v) => !v && onClose()}
+			title={initialData ? "Ubah Jadwal Shift" : "Tambah Jadwal Shift Baru"}
+			description="Atur rentang jam kerja, batas toleransi keterlambatan, dan hari kerja aktif."
+			maxWidth="4xl"
+			footer={
+				<div className="flex items-center gap-2">
+					<Button
+						variant="outline"
+						size="sm"
 						onClick={onClose}
-						className="p-2 hover:bg-[#f9f9ff] text-[#6e797e] hover:text-[#111c2d] rounded-lg transition-colors"
+						disabled={isLoading}
 					>
-						<X size={20} />
-					</button>
+						Batal
+					</Button>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => onSubmit(form)}
+						disabled={isLoading || !form.name}
+					>
+						{isLoading
+							? "Menyimpan..."
+							: initialData
+								? "Simpan Perubahan"
+								: "Buat Shift"}
+					</Button>
 				</div>
-				<form
-					onSubmit={(e) => {
-						e.preventDefault();
-						onSubmit({
-							...form,
-							minInTime: form.minInTime || null,
-							maxLateTime: form.maxLateTime || null,
-							minOutTime: form.minOutTime || null,
-							maxOutTime: form.maxOutTime || null,
-							effectiveFrom: form.effectiveFrom || null,
-							effectiveTo: form.effectiveTo || null,
-						});
-					}}
-					className="flex-1 space-y-4 overflow-y-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] custom-scrollbar sm:p-6"
-				>
-					<div>
-						<label
-							htmlFor="sname"
-							className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-						>
-							Nama Shift
+			}
+		>
+			<div className="space-y-6">
+				{/* 2-Column Grid */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+					<div className="space-y-1.5 md:col-span-2">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Nama Shift *
 						</label>
-						<input
-							id="sname"
-							required
+						<Input
+							placeholder="Contoh: Shift Pagi Pelayanan Medis"
 							value={form.name}
 							onChange={(e) => setForm({ ...form, name: e.target.value })}
-							placeholder="Shift Pagi"
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
 						/>
 					</div>
-					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-						<div>
-							<label
-								htmlFor="start"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Jam Masuk
-							</label>
-							<input
-								id="start"
-								type="time"
-								required
-								value={form.startTime}
-								onChange={(e) =>
-									setForm({ ...form, startTime: e.target.value })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="end"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Jam Pulang
-							</label>
-							<input
-								id="end"
-								type="time"
-								required
-								value={form.endTime}
-								onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
+
+					<div className="space-y-1.5">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Jam Masuk *
+						</label>
+						<Input
+							type="time"
+							value={form.startTime}
+							onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+							className="font-mono text-xs"
+						/>
 					</div>
-					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-						<div>
-							<label
-								htmlFor="tol"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Toleransi Telat (m)
-							</label>
-							<input
-								id="tol"
-								type="number"
-								min={0}
-								value={form.toleranceMinutes}
-								onChange={(e) =>
-									setForm({ ...form, toleranceMinutes: Number(e.target.value) })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="early"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Toleransi Pulang Awal (m)
-							</label>
-							<input
-								id="early"
-								type="number"
-								min={0}
-								value={form.earlyOutTolerance}
-								onChange={(e) =>
-									setForm({
-										...form,
-										earlyOutTolerance: Number(e.target.value),
-									})
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
+
+					<div className="space-y-1.5">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Jam Pulang *
+						</label>
+						<Input
+							type="time"
+							value={form.endTime}
+							onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+							className="font-mono text-xs"
+						/>
 					</div>
-					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-						<div>
-							<label
-								htmlFor="minin"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Min. Jam Masuk
-							</label>
-							<input
-								id="minin"
-								type="time"
-								value={form.minInTime || ""}
-								onChange={(e) =>
-									setForm({ ...form, minInTime: e.target.value || null })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="maxlate"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Maks. Jam Masuk
-							</label>
-							<input
-								id="maxlate"
-								type="time"
-								value={form.maxLateTime || ""}
-								onChange={(e) =>
-									setForm({ ...form, maxLateTime: e.target.value || null })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
+
+					<div className="space-y-1.5">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Toleransi Telat (Menit)
+						</label>
+						<Input
+							type="number"
+							min={0}
+							value={form.toleranceMinutes}
+							onChange={(e) =>
+								setForm({ ...form, toleranceMinutes: Number(e.target.value) })
+							}
+							className="font-mono text-xs"
+						/>
 					</div>
-					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-						<div>
-							<label
-								htmlFor="minout"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Min. Jam Pulang
-							</label>
-							<input
-								id="minout"
-								type="time"
-								value={form.minOutTime || ""}
-								onChange={(e) =>
-									setForm({ ...form, minOutTime: e.target.value || null })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="maxout"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Maks. Jam Pulang
-							</label>
-							<input
-								id="maxout"
-								type="time"
-								value={form.maxOutTime || ""}
-								onChange={(e) =>
-									setForm({ ...form, maxOutTime: e.target.value || null })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
+
+					<div className="space-y-1.5">
+						<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Toleransi Pulang Awal (Menit)
+						</label>
+						<Input
+							type="number"
+							min={0}
+							value={form.earlyOutTolerance}
+							onChange={(e) =>
+								setForm({ ...form, earlyOutTolerance: Number(e.target.value) })
+							}
+							className="font-mono text-xs"
+						/>
 					</div>
-					<div className="grid grid-cols-1 gap-4 min-[360px]:grid-cols-2">
-						<div>
-							<label
-								htmlFor="effectiveFrom"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Berlaku mulai
-							</label>
-							<input
-								id="effectiveFrom"
-								type="date"
-								value={form.effectiveFrom || ""}
-								max={form.effectiveTo || undefined}
-								onChange={(e) =>
-									setForm({ ...form, effectiveFrom: e.target.value || null })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
-						<div>
-							<label
-								htmlFor="effectiveTo"
-								className="block text-[13px] font-semibold text-[#3e484d] mb-1"
-							>
-								Berlaku sampai
-							</label>
-							<input
-								id="effectiveTo"
-								type="date"
-								value={form.effectiveTo || ""}
-								min={form.effectiveFrom || undefined}
-								onChange={(e) =>
-									setForm({ ...form, effectiveTo: e.target.value || null })
-								}
-								className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[14px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-							/>
-						</div>
+				</div>
+
+				{/* Effective Date Range */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+					<div className="space-y-1.5">
+						<label
+							htmlFor="effectiveFrom"
+							className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono"
+						>
+							Berlaku Mulai
+						</label>
+						<Input
+							id="effectiveFrom"
+							type="date"
+							value={form.effectiveFrom || ""}
+							max={form.effectiveTo || undefined}
+							onChange={(e) =>
+								setForm({ ...form, effectiveFrom: e.target.value })
+							}
+							className="font-mono text-xs"
+						/>
 					</div>
-					<div>
-						<div className="block text-[13px] font-semibold text-[#3e484d] mb-2">
-							Hari Kerja
-						</div>
-						<div className="flex gap-2 flex-wrap">
-							{dayNames.map((name, idx) => (
+
+					<div className="space-y-1.5">
+						<label
+							htmlFor="effectiveTo"
+							className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono"
+						>
+							Berlaku Sampai
+						</label>
+						<Input
+							id="effectiveTo"
+							type="date"
+							value={form.effectiveTo || ""}
+							min={form.effectiveFrom || undefined}
+							onChange={(e) =>
+								setForm({ ...form, effectiveTo: e.target.value })
+							}
+							className="font-mono text-xs"
+						/>
+					</div>
+				</div>
+
+				{/* Workdays Selector */}
+				<div className="border-t border-border pt-4 space-y-2">
+					<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+						Hari Kerja Berlaku
+					</label>
+					<div className="flex flex-wrap gap-2">
+						{dayNames.map((name, index) => {
+							const isSelected = form.workDays.includes(index);
+							return (
 								<button
 									key={name}
 									type="button"
-									onClick={() => toggleDay(idx)}
-									className={`w-10 h-10 rounded-lg text-xs font-bold transition-all ${form.workDays.includes(idx) ? "bg-[#00647c] text-white shadow-sm" : "bg-white border border-[#bdc8ce] text-[#6e797e] hover:bg-[#f9f9ff]"}`}
+									onClick={() => toggleDay(index)}
+									className={cn(
+										"h-9 px-4 text-xs font-mono font-bold border transition-colors",
+										isSelected
+											? "border-primary bg-primary text-primary-foreground"
+											: "border-border bg-card text-muted-foreground hover:bg-muted",
+									)}
 								>
 									{name}
 								</button>
-							))}
-						</div>
+							);
+						})}
 					</div>
-					<label
-						htmlFor="active"
-						className="flex items-center gap-3 cursor-pointer py-2"
-					>
-						<input
-							id="active"
-							type="checkbox"
-							checked={form.isActive}
-							onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-							className="w-4 h-4 rounded accent-[#00647c]"
-						/>
-						<span className="text-[14px] font-medium text-[#111c2d]">
-							Aktif
-						</span>
-					</label>
-
-					<div className="pt-4 border-t border-black/5">
-						<button
-							type="submit"
-							disabled={isLoading}
-							className="w-full py-3 bg-[#00647c] text-white rounded-lg font-semibold text-[14px] shadow-sm hover:bg-[#007f9d] active:scale-95 transition-all disabled:opacity-50"
-						>
-							{isLoading ? "Menyimpan..." : "Simpan Shift"}
-						</button>
-					</div>
-				</form>
+				</div>
 			</div>
-		</div>
+		</Modal>
 	);
 }
 
 export default function ShiftsPage() {
 	const queryClient = useQueryClient();
-	const [isFormOpen, setIsFormOpen] = useState(false);
-	const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
-	const [page, setPage] = useState(1);
-	const [assignShift, setAssignShift] = useState<Shift | null>(null);
-	const [assignError, setAssignError] = useState("");
-	const assignDialogRef = useRef<HTMLDivElement>(null);
-	const closeAssign = () => setAssignShift(null);
-	useModalAccessibility(assignDialogRef, closeAssign, !!assignShift);
+	const [page, setPage] = React.useState(1);
+	const [isModalOpen, setIsModalOpen] = React.useState(false);
+	const [selectedShift, setSelectedShift] = React.useState<Shift | null>(null);
 
-	const {
-		data: response,
-		isLoading,
-		isFetching,
-	} = useQuery<{ data: Shift[]; meta: PageMeta }>({
+	const { data: response, isLoading } = useQuery<{
+		data: Shift[];
+		meta: PageMeta;
+	}>({
 		queryKey: ["shifts", page],
 		queryFn: async () => (await api.get(`/shifts?page=${page}&limit=10`)).data,
 	});
-	const shifts = response?.data;
+
+	const shifts = response?.data || [];
 
 	const createMutation = useMutation({
-		mutationFn: async (data: CreateShift) => await api.post("/shifts", data),
+		mutationFn: (data: CreateShift) => api.post("/shifts", data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["shifts"] });
-			setIsFormOpen(false);
+			setIsModalOpen(false);
+			toast.success("Shift berhasil ditambahkan");
+		},
+		onError: (err: any) => {
+			toast.error(err.response?.data?.message || "Gagal membuat shift");
 		},
 	});
 
 	const updateMutation = useMutation({
-		mutationFn: async ({ id, data }: { id: number; data: UpdateShift }) =>
-			await api.patch(`/shifts/${id}`, data),
+		mutationFn: ({ id, data }: { id: number; data: UpdateShift }) =>
+			api.put(`/shifts/${id}`, data),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["shifts"] });
-			setIsFormOpen(false);
+			setIsModalOpen(false);
 			setSelectedShift(null);
+			toast.success("Shift berhasil diperbarui");
+		},
+		onError: (err: any) => {
+			toast.error(err.response?.data?.message || "Gagal memperbarui shift");
 		},
 	});
 
 	const deleteMutation = useMutation({
-		mutationFn: async (id: number) => await api.delete(`/shifts/${id}`),
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shifts"] }),
-	});
-
-	const assignAllMutation = useMutation({
-		mutationFn: async () => {
-			await api.patch("/employees/bulk/shift", {
-				allEmployees: true,
-				shiftIds: [assignShift!.id],
-			});
-		},
+		mutationFn: (id: number) => api.delete(`/shifts/${id}`),
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["employees"] });
-			const shiftName = assignShift?.name;
-			setAssignShift(null);
-			setAssignError("");
-			toast.success(`Shift "${shiftName}" diterapkan ke semua pegawai`);
+			queryClient.invalidateQueries({ queryKey: ["shifts"] });
+			toast.success("Shift berhasil dihapus");
 		},
-		onError: (err: {
-			response?: {
-				data?: { message?: string; details?: { conflicts?: unknown[] } };
-			};
-			message?: string;
-		}) => {
-			const conflicts = err.response?.data?.details?.conflicts;
-			setAssignError(
-				conflicts?.length
-					? `${err.response?.data?.message}: ${conflicts.length} pegawai bentrok`
-					: err.response?.data?.message ||
-							err.message ||
-							"Gagal menerapkan shift",
-			);
+		onError: (err: any) => {
+			toast.error(err.response?.data?.message || "Gagal menghapus shift");
 		},
 	});
 
-	const handleSubmit = (data: CreateShift) => {
-		if (selectedShift) {
-			updateMutation.mutate({ id: selectedShift.id, data });
-		} else {
-			createMutation.mutate(data);
-		}
-	};
+	const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 15 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="space-y-6 max-w-[1440px] mx-auto min-h-[calc(100vh-6rem)]"
-		>
-			{/* Page Header & Actions */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-				<div>
-					<h2 className="font-display text-3xl font-semibold text-[#111c2d]">
-						Manajemen Shift
-					</h2>
-					<p className="font-sans text-sm text-[#6e797e] mt-1">
-						Atur jam kerja, toleransi keterlambatan, dan jadwal operasional.
-					</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => {
-						setSelectedShift(null);
-						setIsFormOpen(true);
-					}}
-					className="flex w-full items-center justify-center gap-2 px-6 py-3 bg-[#00647c] text-white rounded-lg hover:bg-[#007f9d] transition-all font-semibold text-[14px] shadow-sm active:scale-95 sm:w-auto"
-				>
-					<Plus size={18} /> Tambah Shift
-				</button>
-			</div>
-
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				{isLoading ? (
-					[1, 2, 3].map((k) => (
-						<div
-							key={k}
-							className="h-48 bg-white border border-black/5 rounded-xl animate-pulse"
-						></div>
-					))
-				) : shifts?.length === 0 ? (
-					<div className="col-span-full py-16 text-center text-[#6e797e] font-sans">
-						Belum ada shift kerja yang ditambahkan.
-					</div>
-				) : (
-					shifts?.map((shift) => (
-						<div
-							key={shift.id}
-							className="bg-white/70 backdrop-blur-md rounded-xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 relative group border border-[#e2e8f0]"
-						>
-							{/* Header */}
-							<div className="flex items-start justify-between mb-6">
-								<div className="flex items-center gap-4">
-									<div className="w-12 h-12 rounded-full bg-[#6cf8bb]/30 flex items-center justify-center text-[#006c49]">
-										<Clock size={24} />
-									</div>
-									<div>
-										<h3 className="font-display text-[20px] font-semibold text-[#111c2d] capitalize">
-											{shift.name}
-										</h3>
-										{shift.isActive ? (
-											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#6cf8bb]/50 text-[#00714d] mt-1">
-												AKTIF
-											</span>
-										) : (
-											<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-600 mt-1">
-												TIDAK AKTIF
-											</span>
-										)}
-									</div>
-								</div>
-								<div className="flex gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
-									<button
-										type="button"
-										title="Assign ke semua pegawai"
-										onClick={() => {
-											setAssignShift(shift);
-											setAssignError("");
-										}}
-										className="w-8 h-8 rounded-full hover:bg-[#f9f9ff] flex items-center justify-center text-[#6e797e] hover:text-[#00647c] transition-colors"
-									>
-										<UserCheck size={16} />
-									</button>
-									<button
-										type="button"
-										onClick={() => {
-											setSelectedShift(shift);
-											setIsFormOpen(true);
-										}}
-										className="w-8 h-8 rounded-full hover:bg-[#f9f9ff] flex items-center justify-center text-[#6e797e] hover:text-[#00647c] transition-colors"
-									>
-										<Edit2 size={16} />
-									</button>
-									<button
-										type="button"
-										onClick={() => {
-											if (confirm("Yakin ingin menghapus shift ini?")) {
-												deleteMutation.mutate(shift.id);
-											}
-										}}
-										className="w-8 h-8 rounded-full hover:bg-[#ba1a1a]/10 flex items-center justify-center text-[#ba1a1a] transition-colors"
-									>
-										<Trash2 size={16} />
-									</button>
-								</div>
-							</div>
-
-							{/* Time Blocks */}
-							<div className="grid grid-cols-2 gap-4 mb-6">
-								<div className="bg-[#f0f3ff] rounded-lg p-4 border border-[#bdc8ce]/30">
-									<p className="font-sans text-[11px] font-semibold text-[#6e797e] mb-1 uppercase tracking-wider">
-										MASUK
-									</p>
-									<p className="font-display text-[24px] font-semibold text-[#006c49] leading-none">
-										{shift.startTime.slice(0, 5)}
-									</p>
-								</div>
-								<div className="bg-[#f0f3ff] rounded-lg p-4 border border-[#bdc8ce]/30">
-									<p className="font-sans text-[11px] font-semibold text-[#6e797e] mb-1 uppercase tracking-wider">
-										PULANG
-									</p>
-									<p className="font-display text-[24px] font-semibold text-[#111c2d] leading-none">
-										{shift.endTime.slice(0, 5)}
-									</p>
-								</div>
-							</div>
-
-							{/* Details */}
-							<div className="border-t border-[#bdc8ce]/30 pt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
-								<div className="flex items-center gap-1.5 text-[#3e484d]">
-									<Timer size={16} />
-									Toleransi Telat:{" "}
-									<span className="font-semibold text-[#006c49]">
-										{shift.toleranceMinutes}m
-									</span>
-								</div>
-								<div className="flex items-center gap-1.5 text-[#3e484d]">
-									<Timer size={16} />
-									Pulang Awal:{" "}
-									<span className="font-semibold text-[#006c49]">
-										{shift.earlyOutTolerance}m
-									</span>
-								</div>
-								{shift.maxLateTime && (
-									<div className="flex items-center gap-1.5 text-[#3e484d] w-full mt-1">
-										<AlertTriangle size={16} className="text-[#ba1a1a]" />
-										Maks Masuk:{" "}
-										<span className="font-semibold text-[#ba1a1a]">
-											{shift.maxLateTime.slice(0, 5)}
-										</span>
-									</div>
-								)}
-							</div>
-						</div>
-					))
-				)}
-			</div>
-			<PaginationControls
-				meta={response?.meta}
-				onPageChange={setPage}
-				disabled={isFetching}
+		<div className="page-shell space-y-6">
+			{/* Level 1: Page Header */}
+			<PageHeader
+				title="Manajemen Shift Kerja"
+				description="Konfigurasi pola kerja terjadwal, jam masuk/pulang, dan toleransi keterlambatan."
+				action={
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => {
+							setSelectedShift(null);
+							setIsModalOpen(true);
+						}}
+						className="gap-1.5"
+					>
+						<Plus className="h-4 w-4" />
+						Tambah Shift
+					</Button>
+				}
 			/>
 
-			{isFormOpen && (
-				<ShiftForm
+			{/* KPI Stat Cards */}
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<StatCard
+					title="Total Shift"
+					value={shifts.length}
+					icon={<Timer className="h-4 w-4" />}
+					description="Pola jadwal kerja aktif"
+				/>
+				<StatCard
+					title="Shift 5 Hari"
+					value={shifts.filter((s) => s.workDays?.length === 5).length}
+					icon={<CalendarDays className="h-4 w-4 text-primary" />}
+					description="Jadwal Senin - Jumat"
+				/>
+				<StatCard
+					title="Rata-rata Toleransi"
+					value="15m"
+					icon={<AlertTriangle className="h-4 w-4 text-amber-600" />}
+					description="Toleransi default sistem"
+				/>
+			</div>
+
+			{/* Table Container */}
+			<div className="border border-border bg-card">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Nama Shift</TableHead>
+							<TableHead>Jam Kerja</TableHead>
+							<TableHead>Toleransi Masuk</TableHead>
+							<TableHead>Toleransi Pulang</TableHead>
+							<TableHead>Hari Kerja</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className="text-right">Aksi</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							[1, 2, 3].map((k) => (
+								<TableRow key={k} className="animate-pulse">
+									<TableCell colSpan={7} className="h-12 bg-card" />
+								</TableRow>
+							))
+						) : shifts.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={7}
+									className="py-10 text-center text-xs text-muted-foreground"
+								>
+									Belum ada shift kerja yang dibuat.
+								</TableCell>
+							</TableRow>
+						) : (
+							shifts.map((shift) => (
+								<TableRow key={shift.id}>
+									<TableCell className="font-bold text-foreground">
+										{shift.name}
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{shift.startTime} - {shift.endTime}
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{shift.toleranceMinutes} menit
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{shift.earlyOutTolerance} menit
+									</TableCell>
+									<TableCell>
+										<div className="flex flex-wrap gap-1">
+											{shift.workDays?.map((d) => (
+												<span
+													key={d}
+													className="border border-border bg-muted px-1.5 py-0.5 text-[10px] font-mono"
+												>
+													{dayNames[d]}
+												</span>
+											))}
+										</div>
+									</TableCell>
+									<TableCell>
+										<Badge
+											variant={shift.isActive ? "success" : "default"}
+											className="text-[10px]"
+										>
+											{shift.isActive ? "AKTIF" : "NONAKTIF"}
+										</Badge>
+									</TableCell>
+									<TableCell className="text-right">
+										<div className="flex items-center justify-end gap-1">
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 text-muted-foreground hover:text-foreground"
+												onClick={() => {
+													setSelectedShift(shift);
+													setIsModalOpen(true);
+												}}
+												title="Ubah"
+											>
+												<Edit2 className="h-3.5 w-3.5" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 text-muted-foreground hover:text-destructive"
+												onClick={() => {
+													if (confirm(`Hapus shift ${shift.name}?`)) {
+														deleteMutation.mutate(shift.id);
+													}
+												}}
+												title="Hapus"
+											>
+												<Trash2 className="h-3.5 w-3.5" />
+											</Button>
+										</div>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+
+				<div className="p-3 border-t border-border bg-card">
+					<PaginationControls
+						meta={response?.meta}
+						onPageChange={setPage}
+						disabled={isLoading}
+					/>
+				</div>
+			</div>
+
+			{/* Shift Form Modal */}
+			{isModalOpen && (
+				<ShiftFormModal
+					open={isModalOpen}
+					initialData={selectedShift || undefined}
+					onSubmit={(data) => {
+						if (selectedShift) {
+							updateMutation.mutate({ id: selectedShift.id, data });
+						} else {
+							createMutation.mutate(data);
+						}
+					}}
 					onClose={() => {
-						setIsFormOpen(false);
+						setIsModalOpen(false);
 						setSelectedShift(null);
 					}}
-					onSubmit={handleSubmit}
-					initialData={selectedShift || undefined}
 					isLoading={createMutation.isPending || updateMutation.isPending}
 				/>
 			)}
-
-			{assignShift && (
-				<div
-					ref={assignDialogRef}
-					className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/40 p-0 sm:items-center sm:p-4"
-					role="dialog"
-					aria-modal="true"
-					aria-labelledby="assign-shift-title"
-				>
-					<div className="w-full max-w-md rounded-t-xl bg-white shadow-xl sm:rounded-md">
-						<div className="flex items-center justify-between border-b border-black/5 px-6 py-4">
-							<h3
-								id="assign-shift-title"
-								className="text-[16px] font-semibold text-[#111c2d]"
-							>
-								Assign ke semua pegawai
-							</h3>
-							<button
-								type="button"
-								onClick={closeAssign}
-								className="p-2 text-[#6e797e] hover:text-[#111c2d]"
-							>
-								<X size={18} />
-							</button>
-						</div>
-						<div className="space-y-4 p-6">
-							<p className="text-[14px] text-[#3e484d]">
-								Terapkan shift{" "}
-								<strong className="capitalize">{assignShift.name}</strong> (
-								{assignShift.startTime.slice(0, 5)}–
-								{assignShift.endTime.slice(0, 5)}) ke{" "}
-								<strong>semua pegawai</strong>. Periode berlaku mengikuti
-								pengaturan shift.
-							</p>
-							{assignError && (
-								<p
-									role="alert"
-									className="border border-[#ba1a1a]/30 bg-[#ba1a1a]/5 p-3 text-[13px] text-[#8f1616]"
-								>
-									{assignError}
-								</p>
-							)}
-							<div className="flex gap-3 pt-2">
-								<button
-									type="button"
-									onClick={closeAssign}
-									className="flex-1 px-6 py-2.5 rounded-xl font-semibold border border-[#bdc8ce] bg-white text-[#3e484d] hover:bg-[#f9f9ff] text-[14px]"
-								>
-									Batal
-								</button>
-								<button
-									type="button"
-									onClick={() => assignAllMutation.mutate()}
-									disabled={assignAllMutation.isPending}
-									className="flex-1 bg-[#00647c] text-white px-6 py-2.5 rounded-xl font-bold hover:bg-[#007f9d] active:scale-[0.98] text-[14px] disabled:opacity-50"
-								>
-									{assignAllMutation.isPending
-										? "Menyimpan..."
-										: "Terapkan ke Semua"}
-								</button>
-							</div>
-						</div>
-					</div>
-				</div>
-			)}
-		</motion.div>
+		</div>
 	);
 }

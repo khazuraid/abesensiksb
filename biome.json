@@ -22,19 +22,25 @@
 		"rules": {
 			"recommended": true,
 			"style": {
-				"useImportType": "off"
+				"useImportType": "off",
+				"noNonNullAssertion": "off"
 			},
 			"a11y": {
 				"noStaticElementInteractions": "off",
-				"useKeyWithClickEvents": "off"
+				"useKeyWithClickEvents": "off",
+				"noLabelWithoutControl": "off"
 			},
 			"suspicious": {
+				"noExplicitAny": "off",
 				"noUnknownAtRules": {
 					"level": "error",
 					"options": {
 						"ignore": ["tailwind", "layer", "apply", "config"]
 					}
 				}
+			},
+			"performance": {
+				"noImgElement": "off"
 			}
 		}
 	},

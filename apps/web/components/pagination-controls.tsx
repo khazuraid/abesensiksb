@@ -24,17 +24,17 @@ export default function PaginationControls({
 	return (
 		<nav
 			aria-label="Navigasi halaman"
-			className="flex flex-col gap-3 border-t border-black/5 bg-[#f9f9ff] p-4 sm:flex-row sm:items-center sm:justify-between"
+			className="flex flex-col gap-3 border-t border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
 		>
-			<p aria-live="polite" className="text-[12px] font-medium text-[#6e797e]">
-				Halaman {meta.page} dari {meta.totalPages} · {meta.total} data
+			<p aria-live="polite" className="text-xs font-mono text-muted-foreground">
+				Halaman {meta.page} dari {meta.totalPages} · {meta.total} data total
 			</p>
-			<div className="flex flex-wrap items-center gap-2">
+			<div className="flex flex-wrap items-center gap-1.5">
 				<button
 					type="button"
 					onClick={() => onPageChange(meta.page - 1)}
 					disabled={disabled || meta.page <= 1}
-					className="rounded-lg border border-black/10 bg-white px-3 py-1.5 text-[12px] font-semibold text-[#111c2d] transition-colors hover:bg-[#dee8ff]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00647c] disabled:cursor-not-allowed disabled:opacity-50"
+					className="h-8 border border-border bg-card px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					Sebelumnya
 				</button>
@@ -46,7 +46,11 @@ export default function PaginationControls({
 						aria-label={`Halaman ${page}`}
 						onClick={() => onPageChange(page)}
 						disabled={disabled}
-						className={`h-8 w-8 rounded-lg text-[12px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00647c] disabled:cursor-not-allowed disabled:opacity-50 ${page === meta.page ? "bg-[#00647c] text-white" : "border border-black/10 bg-white text-[#3e484d] hover:bg-[#dee8ff]/50"}`}
+						className={`h-8 min-w-[32px] px-2 text-xs font-mono font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40 ${
+							page === meta.page
+								? "border border-primary bg-primary text-primary-foreground font-bold"
+								: "border border-border bg-card text-foreground hover:bg-muted"
+						}`}
 					>
 						{page}
 					</button>
@@ -55,7 +59,7 @@ export default function PaginationControls({
 					type="button"
 					onClick={() => onPageChange(meta.page + 1)}
 					disabled={disabled || meta.page >= meta.totalPages}
-					className="rounded-lg border border-black/10 bg-white px-3 py-1.5 text-[12px] font-semibold text-[#111c2d] transition-colors hover:bg-[#dee8ff]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00647c] disabled:cursor-not-allowed disabled:opacity-50"
+					className="h-8 border border-border bg-card px-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-40"
 				>
 					Selanjutnya
 				</button>

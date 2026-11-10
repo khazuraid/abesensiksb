@@ -1,5 +1,6 @@
-import { Sidebar } from "./sidebar";
-import { Topbar } from "./topbar";
+import { DesktopHeader } from "@/components/layout/desktop-header";
+import { Sidebar } from "@/components/layout/sidebar";
+import { SidebarOffset } from "@/components/layout/sidebar-offset";
 
 export default function DashboardLayout({
 	children,
@@ -12,16 +13,16 @@ export default function DashboardLayout({
 				Lewati ke konten
 			</a>
 			<Sidebar />
-			<div className="flex min-h-dvh min-w-0 w-full flex-1 flex-col md:ml-[252px] md:pt-16">
-				<Topbar />
+			<SidebarOffset>
+				<DesktopHeader />
 				<main
 					id="main-content"
 					tabIndex={-1}
-					className="app-main min-w-0 flex-1 w-full p-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:p-5 md:p-7 md:pb-12"
+					className="app-main min-w-0 flex-1 w-full p-4 pb-[calc(2rem+env(safe-area-inset-bottom))] sm:p-5 md:p-6 md:pb-12"
 				>
 					{children}
 				</main>
-			</div>
+			</SidebarOffset>
 		</div>
 	);
 }

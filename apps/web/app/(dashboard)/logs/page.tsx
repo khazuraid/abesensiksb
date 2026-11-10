@@ -2,47 +2,46 @@
 
 import type { AttendanceLog } from "@adms/shared-types";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import {
-	CalendarDays,
-	CheckCircle2,
-	Clock,
-	Download,
-	Filter,
-	Monitor,
-	Search,
-	User,
-	XCircle,
-} from "lucide-react";
-import Image from "next/image";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Download, LogIn, LogOut, Search } from "lucide-react";
+import * as React from "react";
+import { toast } from "sonner";
 import PaginationControls from "@/components/pagination-controls";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
-import { useModalAccessibility } from "@/lib/use-modal-accessibility";
+import { cn } from "@/lib/utils";
 
 export default function AttendanceLogsPage() {
-	const [search, setSearch] = useState("");
-	const [filterStatus, setFilterStatus] = useState("");
+	const [search, setSearch] = React.useState("");
+	const [filterStatus, setFilterStatus] = React.useState("");
+
 	const getTodayStr = () => {
 		const d = new Date();
 		return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 	};
-	const [filterStartDate, setFilterStartDate] = useState(getTodayStr());
-	const [filterEndDate, setFilterEndDate] = useState(getTodayStr());
-	const [photoModal, setPhotoModal] = useState<string | null>(null);
-	const photoDialogRef = useRef<HTMLDivElement>(null);
-	const closePhoto = useCallback(() => setPhotoModal(null), []);
-	useModalAccessibility(photoDialogRef, closePhoto, Boolean(photoModal));
-	const [page, setPage] = useState(1);
-	const [debouncedSearch, setDebouncedSearch] = useState("");
 
-	// Debounce search so it doesn't fire immediately on every keystroke
-	useEffect(() => {
-		const timer = setTimeout(() => setDebouncedSearch(search), 500);
+	const [filterStartDate, setFilterStartDate] = React.useState(getTodayStr());
+	const [filterEndDate, setFilterEndDate] = React.useState(getTodayStr());
+	const [photoModal, setPhotoModal] = React.useState<string | null>(null);
+	const [expandedRowId, setExpandedRowId] = React.useState<number | null>(null);
+	const [page, setPage] = React.useState(1);
+	const [debouncedSearch, setDebouncedSearch] = React.useState("");
+
+	React.useEffect(() => {
+		const timer = setTimeout(() => setDebouncedSearch(search), 400);
 		return () => clearTimeout(timer);
 	}, [search]);
-
-	const apiBase = "";
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: [
@@ -55,362 +54,313 @@ export default function AttendanceLogsPage() {
 		],
 		queryFn: async () => {
 			const params = new URLSearchParams();
-			if (filterStatus) params.set("status", filterStatus);
-			if (filterStartDate) {
-				params.set("from", `${filterStartDate}T00:00:00`);
-			}
-			if (filterEndDate) {
-				params.set("to", `${filterEndDate}T23:59:59`);
-			}
-			if (debouncedSearch) {
-				params.set("search", debouncedSearch);
-			}
-			params.set("page", String(page));
-			params.set("limit", "10");
-			return (await api.get(`/attendance-logs?${params}`)).data;
+			if (debouncedSearch) params.append("search", debouncedSearch);
+			if (filterStatus) params.append("status", filterStatus);
+			if (filterStartDate) params.append("startDate", filterStartDate);
+			if (filterEndDate) params.append("endDate", filterEndDate);
+			params.append("page", page.toString());
+			params.append("limit", "15");
+
+			const res = await api.get(`/attendance-logs?${params.toString()}`);
+			return res.data;
 		},
-		refetchInterval: 10000,
 	});
 
 	const logs: AttendanceLog[] = response?.data || [];
 	const meta = response?.meta;
 
-	const formatDate = (date: string | Date) =>
-		new Intl.DateTimeFormat("id-ID", {
-			dateStyle: "medium",
-			timeStyle: "short",
-		}).format(new Date(date));
-
 	const handleExport = async () => {
-		const params = new URLSearchParams();
-		if (filterStartDate) {
-			params.set("from", `${filterStartDate}T00:00:00`);
-		}
-		if (filterEndDate) {
-			params.set("to", `${filterEndDate}T23:59:59`);
-		}
 		try {
-			const res = await api.get(`/attendance-logs/export?${params}`, {
-				responseType: "blob",
-			});
+			const res = await api.get(
+				`/attendance-logs/export?startDate=${filterStartDate}&endDate=${filterEndDate}`,
+				{ responseType: "blob" },
+			);
 			const url = window.URL.createObjectURL(new Blob([res.data]));
-			const a = document.createElement("a");
-			a.href = url;
-			a.download = `Log-Absensi-${filterStartDate || "all"}-to-${filterEndDate || "all"}.xlsx`;
-			a.click();
+			const link = document.createElement("a");
+			link.href = url;
+			link.setAttribute(
+				"download",
+				`Log_Presensi_${filterStartDate}_sd_${filterEndDate}.xlsx`,
+			);
+			document.body.appendChild(link);
+			link.click();
+			link.remove();
+			toast.success("Berhasil mengunduh laporan Excel");
 		} catch {
-			/* ignore */
+			toast.error("Gagal mengunduh laporan");
 		}
 	};
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 15 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="space-y-6 max-w-[1440px] mx-auto"
-		>
-			{/* Page Header & Actions */}
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-				<div>
-					<h2 className="font-display text-3xl font-semibold text-[#111c2d]">
-						Riwayat Absensi
-					</h2>
-					<p className="font-sans text-sm text-[#6e797e] mt-1">
-						Monitoring log kehadiran real-time dari seluruh perangkat.
-					</p>
-				</div>
-				<div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:gap-3">
-					<button
-						type="button"
+		<div className="page-shell space-y-6">
+			{/* Level 1: Page Header */}
+			<PageHeader
+				title="Log Presensi Mesin"
+				description="Audit rekaman absensi real-time dari seluruh mesin sidik jari dan RFID ADMS."
+				action={
+					<Button
+						variant="outline"
+						size="sm"
 						onClick={handleExport}
-						className="flex items-center gap-2 px-4 py-2 bg-white border border-black/5 rounded-lg text-[#111c2d] hover:bg-[#f9f9ff] transition-all font-semibold text-[13px] shadow-sm active:scale-95"
+						className="gap-1.5"
 					>
-						<Download size={18} /> Export Excel
-					</button>
-				</div>
-			</div>
+						<Download className="h-4 w-4" />
+						Export Excel
+					</Button>
+				}
+			/>
 
-			{/* Stats Bento Grid */}
-			<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-				<div className="bg-white p-5 rounded-xl border border-black/5 shadow-sm relative overflow-hidden group">
-					<div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-100 transition-opacity">
-						<User size={32} className="text-[#00647c]" />
-					</div>
-					<p className="font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider mb-2">
-						Total Kehadiran
-					</p>
-					<div className="flex items-end gap-3">
-						<h3 className="font-display text-[32px] font-bold text-[#111c2d] leading-none">
-							{meta?.total || 0}
-						</h3>
-					</div>
-					<p className="font-mono text-[11px] text-[#6e797e] mt-2">Hari ini</p>
-				</div>
-			</div>
-
-			{/* Filters & Controls */}
-			<div className="bg-white rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-end lg:items-center justify-between shadow-sm border border-black/5">
-				<div className="flex flex-wrap gap-4 w-full lg:w-auto">
+			{/* Filter & Toolbar Section (Level 2) */}
+			<div className="border border-border bg-card p-4 space-y-3">
+				<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 					{/* Search */}
-					<div className="flex flex-col gap-1 w-full sm:w-auto">
-						<label
-							htmlFor="search-emp"
-							className="font-sans text-[12px] font-semibold text-[#6e797e]"
-						>
-							Pencarian Pegawai
+					<div className="space-y-1">
+						<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Cari Pegawai
 						</label>
 						<div className="relative">
-							<Search
-								className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
-								size={18}
-							/>
-							<input
-								className="w-full sm:w-64 bg-white border border-[#bdc8ce] rounded-lg py-2 pl-10 pr-4 text-[13px] font-sans text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c]/50 transition-all shadow-sm placeholder:text-[#6e797e]"
-								placeholder="Cari nama atau NIP..."
-								type="text"
+							<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+							<Input
+								placeholder="Nama atau NIP..."
 								value={search}
 								onChange={(e) => setSearch(e.target.value)}
+								className="pl-8 text-xs h-8"
 							/>
 						</div>
 					</div>
 
-					{/* Date Range */}
-					<div className="flex flex-col gap-1 w-full sm:w-auto">
-						<label
-							htmlFor="date-range"
-							className="font-sans text-[12px] font-semibold text-[#6e797e]"
-						>
-							Rentang Tanggal
+					{/* Date Range Start */}
+					<div className="space-y-1">
+						<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Dari Tanggal
 						</label>
-						<div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-[1fr_auto_1fr] min-[390px]:items-center sm:flex">
-							<div className="relative min-w-0">
-								<CalendarDays
-									className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
-									size={18}
-								/>
-								<input
-									id="date-range"
-									type="date"
-									value={filterStartDate}
-									onChange={(e) => setFilterStartDate(e.target.value)}
-									className="w-full sm:w-36 bg-white border border-[#bdc8ce] rounded-lg py-2 pl-10 pr-2 text-[13px] font-sans text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c]/50 transition-all shadow-sm"
-								/>
-							</div>
-							<span className="hidden text-[#6e797e] text-[13px] font-medium min-[390px]:block">
-								-
-							</span>
-							<div className="relative min-w-0">
-								<CalendarDays
-									className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
-									size={18}
-								/>
-								<input
-									type="date"
-									value={filterEndDate}
-									onChange={(e) => setFilterEndDate(e.target.value)}
-									className="w-full sm:w-36 bg-white border border-[#bdc8ce] rounded-lg py-2 pl-10 pr-2 text-[13px] font-sans text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c]/50 transition-all shadow-sm"
-								/>
-							</div>
-						</div>
+						<Input
+							type="date"
+							value={filterStartDate}
+							onChange={(e) => setFilterStartDate(e.target.value)}
+							className="text-xs h-8 font-mono"
+						/>
 					</div>
 
-					{/* Status Filter */}
-					<div className="flex flex-col gap-1 w-full sm:w-auto">
-						<label
-							htmlFor="status-filter"
-							className="font-sans text-[12px] font-semibold text-[#6e797e]"
-						>
-							Status
+					{/* Date Range End */}
+					<div className="space-y-1">
+						<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Sampai Tanggal
 						</label>
-						<div className="relative">
-							<Filter
-								className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6e797e]"
-								size={18}
-							/>
-							<select
-								value={filterStatus}
-								onChange={(e) => setFilterStatus(e.target.value)}
-								className="w-full sm:w-40 bg-white border border-[#bdc8ce] rounded-lg py-2 pl-10 pr-8 text-[13px] font-sans text-[#111c2d] focus:outline-none focus:border-[#00647c] focus:ring-1 focus:ring-[#00647c]/50 transition-all shadow-sm appearance-none cursor-pointer"
-							>
-								<option value="">Semua Status</option>
-								<option value="PRESENT">Hadir</option>
-								<option value="LATE">Terlambat</option>
-								<option value="ABSENT">Mangkir</option>
-							</select>
-						</div>
+						<Input
+							type="date"
+							value={filterEndDate}
+							onChange={(e) => setFilterEndDate(e.target.value)}
+							className="text-xs h-8 font-mono"
+						/>
+					</div>
+
+					{/* Status Selector */}
+					<div className="space-y-1">
+						<label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+							Status Kehadiran
+						</label>
+						<select
+							value={filterStatus}
+							onChange={(e) => setFilterStatus(e.target.value)}
+							className="flex h-8 w-full border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:outline-none"
+						>
+							<option value="">Semua Status</option>
+							<option value="ON_TIME">Tepat Waktu</option>
+							<option value="LATE">Terlambat</option>
+							<option value="EARLY_DEPARTURE">Pulang Cepat</option>
+						</select>
 					</div>
 				</div>
 			</div>
 
-			{/* Main Data Table */}
-			<div className="bg-white rounded-xl shadow-sm border border-black/5 overflow-hidden">
-				<div className="mobile-scroll-hint">
-					Geser tabel untuk melihat detail absensi
-				</div>
-				<div className="overflow-x-auto">
-					<table className="w-full text-left border-collapse min-w-[800px]">
-						<thead>
-							<tr className="bg-[#f9f9ff] border-b border-black/5">
-								<th className="px-6 py-4 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Pegawai
-								</th>
-								<th className="px-6 py-4 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Waktu
-								</th>
-								<th className="px-6 py-4 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Tipe
-								</th>
-								<th className="px-6 py-4 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Status
-								</th>
-								<th className="px-6 py-4 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Perangkat
-								</th>
-								<th className="px-6 py-4 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-									Foto
-								</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-black/5">
-							{isLoading ? (
-								[1, 2, 3, 4, 5].map((k) => (
-									<tr key={k} className="animate-pulse">
-										<td colSpan={6} className="px-6 py-6 h-14 bg-white" />
-									</tr>
-								))
-							) : logs?.length === 0 ? (
-								<tr>
-									<td
-										colSpan={6}
-										className="px-6 py-20 text-center text-[#6e797e] font-sans text-sm"
-									>
-										Tidak ada data absensi yang ditemukan.
-									</td>
-								</tr>
-							) : (
-								logs?.map((log: AttendanceLog) => (
-									<tr
-										key={log.id}
-										className="hover:bg-[#f9f9ff] transition-colors"
-									>
-										<td className="px-6 py-3">
-											<div className="flex items-center gap-3">
-												<div className="w-9 h-9 rounded-full bg-[#dee8ff] border border-black/5 flex items-center justify-center text-[#00647c] font-bold text-xs shrink-0">
-													{log.employee?.name?.[0] || "?"}
-												</div>
-												<div>
-													<div className="font-sans text-[14px] font-medium text-[#111c2d]">
-														{log.employee?.name}
-													</div>
-													<div className="font-mono text-[11px] text-[#6e797e]">
-														{log.employee?.employeeCode}
-													</div>
-												</div>
-											</div>
-										</td>
-										<td className="px-6 py-3">
-											<div className="flex items-center gap-2 font-mono text-[13px] text-[#111c2d]">
-												<Clock size={14} className="text-[#6e797e]" />
-												{formatDate(log.timestamp)}
-											</div>
-										</td>
-										<td className="px-6 py-3">
-											<span
-												className={`px-2.5 py-1 rounded-md text-[11px] font-mono tracking-wider border flex items-center gap-1.5 uppercase font-medium w-max ${log.type === "IN" ? "bg-[#006c49]/10 text-[#006c49] border-[#006c49]/20" : "bg-[#00647c]/10 text-[#00647c] border-[#00647c]/20"}`}
-											>
-												{log.type === "IN" ? "MASUK" : "KELUAR"}
-											</span>
-										</td>
-										<td className="px-6 py-3">
-											<div className="flex items-center gap-2">
-												<span className="relative flex h-2 w-2">
-													<span
-														className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${log.status === "PRESENT" ? "bg-[#006c49]" : log.status === "LATE" ? "bg-[#a86516]" : "bg-[#ba1a1a]"}`}
-													></span>
-													<span
-														className={`relative inline-flex rounded-full h-2 w-2 ${log.status === "PRESENT" ? "bg-[#006c49]" : log.status === "LATE" ? "bg-[#a86516]" : "bg-[#ba1a1a]"}`}
-													></span>
-												</span>
-												<span className="font-sans text-[14px] text-[#111c2d]">
-													{log.status === "PRESENT"
-														? "Hadir"
-														: log.status === "LATE"
-															? "Terlambat"
-															: "Mangkir"}
-												</span>
-											</div>
-										</td>
-										<td className="px-6 py-3">
-											<div className="flex items-center gap-2 text-[#3e484d] font-sans text-[13px]">
-												<Monitor size={14} className="text-[#6e797e]" />
-												{log.device?.name || "-"}
-											</div>
-										</td>
-										<td className="px-6 py-3 text-center">
-											{log.photoUrl ? (
-												<button
-													type="button"
-													onClick={() =>
-														setPhotoModal(`${apiBase}${log.photoUrl}`)
-													}
-													className="text-[12px] font-semibold text-[#00647c] hover:text-[#007f9d] transition-colors bg-[#00647c]/5 hover:bg-[#00647c]/10 px-3 py-1.5 rounded-lg border border-[#00647c]/10"
-												>
-													<CheckCircle2 size={14} className="inline mr-1" />
-													Lihat
-												</button>
-											) : (
-												<span className="text-[12px] text-[#bdc8ce] flex items-center justify-center gap-1">
-													<XCircle size={14} />-
-												</span>
+			{/* Table Container */}
+			<div className="border border-border bg-card">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Waktu Log</TableHead>
+							<TableHead>NIP</TableHead>
+							<TableHead>Nama Pegawai</TableHead>
+							<TableHead>Tipe</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead>Perangkat</TableHead>
+							<TableHead className="text-right">Verifikasi</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							[1, 2, 3, 4, 5].map((k) => (
+								<TableRow key={k} className="animate-pulse">
+									<TableCell colSpan={7} className="h-12 bg-card" />
+								</TableRow>
+							))
+						) : logs.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={7}
+									className="py-12 text-center text-xs text-muted-foreground"
+								>
+									Tidak ada riwayat log yang sesuai kriteria.
+								</TableCell>
+							</TableRow>
+						) : (
+							logs.map((log) => {
+								const date = new Date(log.timestamp);
+								const isIn = log.type === "IN";
+								const isLate = log.status === "LATE";
+								const isExpanded = expandedRowId === log.id;
+
+								return (
+									<React.Fragment key={log.id}>
+										<TableRow
+											onClick={() =>
+												setExpandedRowId((prev) =>
+													prev === log.id ? null : log.id,
+												)
+											}
+											className={cn(
+												"cursor-pointer select-none",
+												isExpanded && "bg-muted/40",
 											)}
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
+										>
+											<TableCell className="font-mono text-xs">
+												{date.toLocaleDateString("id-ID", {
+													day: "2-digit",
+													month: "short",
+													year: "numeric",
+												})}{" "}
+												<span className="font-bold text-foreground">
+													{date.toLocaleTimeString("id-ID", {
+														hour: "2-digit",
+														minute: "2-digit",
+														second: "2-digit",
+													})}
+												</span>
+											</TableCell>
+											<TableCell className="font-mono text-xs text-muted-foreground">
+												{log.employee?.employeeCode ?? "—"}
+											</TableCell>
+											<TableCell className="font-semibold text-foreground">
+												{log.employee?.name ?? "Tidak Diketahui"}
+											</TableCell>
+											<TableCell>
+												<Badge
+													variant={isIn ? "success" : "secondary"}
+													className="gap-1 text-[10px]"
+												>
+													{isIn ? (
+														<LogIn className="h-3 w-3" />
+													) : (
+														<LogOut className="h-3 w-3" />
+													)}
+													{isIn ? "MASUK" : "KELUAR"}
+												</Badge>
+											</TableCell>
+											<TableCell>
+												<Badge
+													variant={isLate ? "warning" : "success"}
+													className="text-[10px]"
+												>
+													{isLate ? "TERLAMBAT" : "TEPAT"}
+												</Badge>
+											</TableCell>
+											<TableCell className="font-mono text-xs text-muted-foreground">
+												{log.device?.name ?? "Mesin ADMS"}
+											</TableCell>
+											<TableCell className="text-right font-mono text-xs text-muted-foreground">
+												{log.verified ? "Terverifikasi" : "Manual"}
+											</TableCell>
+										</TableRow>
 
-				<PaginationControls
-					meta={meta}
-					onPageChange={setPage}
-					disabled={isLoading}
-				/>
+										{/* Inline Detail Expansion */}
+										{isExpanded && (
+											<TableRow className="bg-muted/30 border-b border-border/80">
+												<TableCell colSpan={7} className="p-4">
+													<div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border border-border bg-card p-4">
+														<div className="space-y-1">
+															<span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">
+																Metadata Mesin ADMS
+															</span>
+															<p className="text-xs font-mono text-foreground">
+																SN Perangkat: {log.device?.serialNumber ?? "—"}
+															</p>
+															<p className="text-xs font-mono text-foreground">
+																Raw Timestamp: {String(log.timestamp)}
+															</p>
+														</div>
+
+														<div className="space-y-1">
+															<span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">
+																Detail Pegawai
+															</span>
+															<p className="text-xs text-foreground">
+																Departemen: {log.employee?.department || "—"}
+															</p>
+															<p className="text-xs text-foreground">
+																Jabatan: {log.employee?.position || "—"}
+															</p>
+														</div>
+
+														{log.photoUrl && (
+															<div className="space-y-1">
+																<span className="text-[10px] uppercase font-mono tracking-wider text-muted-foreground">
+																	Foto Snapshot Mesin
+																</span>
+																<button
+																	type="button"
+																	onClick={(e) => {
+																		e.stopPropagation();
+																		setPhotoModal(log.photoUrl ?? null);
+																	}}
+																	className="block border border-border hover:border-primary"
+																>
+																	<img
+																		src={log.photoUrl}
+																		alt="Snapshot"
+																		className="h-16 w-16 object-cover"
+																	/>
+																</button>
+															</div>
+														)}
+													</div>
+												</TableCell>
+											</TableRow>
+										)}
+									</React.Fragment>
+								);
+							})
+						)}
+					</TableBody>
+				</Table>
+
+				{/* Pagination */}
+				<div className="p-3 border-t border-border bg-card">
+					<PaginationControls
+						meta={meta}
+						onPageChange={setPage}
+						disabled={isLoading}
+					/>
+				</div>
 			</div>
 
+			{/* Photo Modal */}
 			{photoModal && (
-				<div
-					ref={photoDialogRef}
-					className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111c2d]/80 p-0 sm:items-center sm:p-4"
-					onClick={() => setPhotoModal(null)}
-					role="dialog"
-					aria-modal="true"
-					aria-label="Foto absensi"
+				<Modal
+					open={Boolean(photoModal)}
+					onOpenChange={() => setPhotoModal(null)}
+					title="Foto Snapshot Presensi"
+					maxWidth="md"
 				>
-					<div
-						className="w-full max-w-lg rounded-t-xl bg-white p-2 shadow-2xl relative border border-black/10 sm:rounded-md"
-						onClick={(e) => e.stopPropagation()}
-					>
-						<div className="relative aspect-square w-full sm:w-[400px]">
-							<Image
-								src={photoModal}
-								alt="Foto Absensi"
-								fill
-								className="rounded-lg object-contain"
-								sizes="(max-width: 768px) 100vw, 400px"
-							/>
-						</div>
-						<button
-							type="button"
-							onClick={() => setPhotoModal(null)}
-							className="mt-2 w-full py-2.5 text-center text-[13px] font-semibold text-[#3e484d] hover:bg-[#f9f9ff] hover:text-[#111c2d] rounded-lg transition-colors"
-						>
-							Tutup
-						</button>
+					<div className="flex justify-center p-2">
+						<img
+							src={photoModal}
+							alt="Foto Presensi"
+							className="max-h-96 w-auto border border-border object-contain"
+						/>
 					</div>
-				</div>
+				</Modal>
 			)}
-		</motion.div>
+		</div>
 	);
 }

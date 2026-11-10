@@ -8,12 +8,9 @@ import type {
 } from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	Activity,
 	ArrowDownToLine,
 	ArrowUpFromLine,
-	ChevronRight,
 	Clock,
-	Cpu,
 	Download,
 	MapPin,
 	Plus,
@@ -21,17 +18,30 @@ import {
 	RefreshCw,
 	Search,
 	Server,
-	Trash2,
 	Wifi,
 	WifiOff,
-	X,
 } from "lucide-react";
-import { useState } from "react";
+import * as React from "react";
 import { toast } from "sonner";
 import PaginationControls, {
 	type PageMeta,
 } from "@/components/pagination-controls";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type DeviceCommand = {
 	id: number;
@@ -69,22 +79,14 @@ const formatHistoryTime = (value: string | Date) =>
 		timeStyle: "short",
 	}).format(new Date(value));
 
-const formatLastSeen = (value: string | Date | null | undefined) => {
-	if (!value) return "Belum pernah terhubung";
-	return `Terakhir aktif ${new Intl.DateTimeFormat("id-ID", {
-		dateStyle: "medium",
-		timeStyle: "short",
-	}).format(new Date(value))}`;
-};
-
 const isDeviceOnline = (device: Device, referenceTime: number) =>
 	Boolean(
 		device.lastSeen &&
 			new Date(device.lastSeen).getTime() >
-				(referenceTime || Date.now()) - 2 * 60 * 1000,
+				(referenceTime || Date.now()) - 180000,
 	);
 
-const historyStatusLabel: Record<DeviceCommand["status"], string> = {
+const commandStatusLabel: Record<DeviceCommand["status"], string> = {
 	PENDING: "Menunggu",
 	SENT: "Terkirim",
 	COMPLETED: "Selesai",
@@ -93,15 +95,17 @@ const historyStatusLabel: Record<DeviceCommand["status"], string> = {
 
 export default function DevicesPage() {
 	const queryClient = useQueryClient();
-	const [search, setSearch] = useState("");
-	const [page, setPage] = useState(1);
-	const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+	const [search, setSearch] = React.useState("");
+	const [page, setPage] = React.useState(1);
+	const [selectedDevice, setSelectedDevice] = React.useState<Device | null>(
+		null,
+	);
 	const selectedDeviceId = selectedDevice?.id;
 	const today = new Date().toLocaleDateString("en-CA");
-	const [pullStartDate, setPullStartDate] = useState(today);
-	const [pullEndDate, setPullEndDate] = useState(today);
-	const [showForm, setShowForm] = useState(false);
-	const [form, setForm] = useState<CreateDevice>({
+	const [pullStartDate, setPullStartDate] = React.useState(today);
+	const [pullEndDate, setPullEndDate] = React.useState(today);
+	const [showForm, setShowForm] = React.useState(false);
+	const [form, setForm] = React.useState<CreateDevice>({
 		serialNumber: "",
 		name: "",
 		location: "",
@@ -113,7 +117,6 @@ export default function DevicesPage() {
 		dataUpdatedAt,
 		isLoading,
 		isFetching,
-		isError,
 	} = useQuery<{ data: Device[]; meta: PageMeta }>({
 		queryKey: ["devices", page, search],
 		queryFn: async () => {
@@ -124,10 +127,13 @@ export default function DevicesPage() {
 		},
 		refetchInterval: 10000,
 	});
+
 	const devices = response?.data ?? [];
+	const meta = response?.meta;
 	const onlineDevices = devices.filter((device) =>
 		isDeviceOnline(device, dataUpdatedAt),
 	).length;
+
 	const { data: claimResponse } = useQuery<{
 		data: DeviceClaim[];
 		meta: PageMeta;
@@ -138,6 +144,7 @@ export default function DevicesPage() {
 		refetchInterval: 10000,
 	});
 	const claims = claimResponse?.data ?? [];
+
 	const registerClaim = useMutation({
 		mutationFn: async (claimId: number) =>
 			(await api.post(`/devices/claims/${claimId}/register`)).data,
@@ -228,7 +235,7 @@ export default function DevicesPage() {
 			queryClient.invalidateQueries({ queryKey: ["devices"] });
 			setShowForm(false);
 			setForm({ serialNumber: "", name: "", location: "", ipAddress: "" });
-			toast.success("Perangkat ditambahkan");
+			toast.success("Perangkat berhasil ditambahkan");
 		},
 	});
 
@@ -237,438 +244,235 @@ export default function DevicesPage() {
 		: false;
 
 	return (
-		<div className="mx-auto flex w-full max-w-[1360px] flex-col gap-5 md:gap-6">
-			<header className="flex flex-col gap-5 border-b border-[#d5ded9] pb-5 md:flex-row md:items-end md:justify-between md:pb-6">
-				<div className="max-w-2xl">
-					<div className="mb-2 flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-[#087066]">
-						<span className="h-px w-6 bg-[#087066]" />
-						Operasional terminal
-					</div>
-					<h2 className="text-[28px] leading-tight md:text-[34px]">
-						Kendali perangkat absensi
-					</h2>
-					<p className="mt-2 max-w-xl text-sm leading-6">
-						Pantau koneksi, tarik rekaman, dan kelola setiap terminal dari satu
-						ruang kerja.
-					</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => setShowForm((open) => !open)}
-					aria-expanded={showForm}
-					className="adms-button w-full md:w-auto"
-				>
-					{showForm ? <X size={17} /> : <Plus size={17} />}
-					{showForm ? "Tutup formulir" : "Tambah perangkat"}
-				</button>
-			</header>
+		<div className="page-shell space-y-6">
+			{/* Level 1: Page Header */}
+			<PageHeader
+				title="Manajemen Mesin Presensi (ADMS)"
+				description="Pantau konektivitas terminal sidik jari/RFID ZKTeco, tarik data pegawai/log, dan kontrol perintah jarak jauh."
+				action={
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setShowForm(true)}
+						className="gap-1.5"
+					>
+						<Plus className="h-4 w-4" />
+						Registrasi Mesin
+					</Button>
+				}
+			/>
 
-			<section
-				aria-label="Ringkasan perangkat"
-				className="grid overflow-hidden border border-[#d5ded9] bg-white sm:grid-cols-3"
-			>
-				<div className="flex items-center gap-4 p-4 sm:border-r sm:border-[#d5ded9] md:p-5">
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#dceae5] text-[#087066]">
-						<Server size={19} />
-					</div>
-					<div>
-						<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-							Total terminal
-						</p>
-						<strong className="mt-0.5 block text-2xl tabular-nums text-[#14211d]">
-							{response?.meta.total ?? 0}
-						</strong>
-					</div>
-				</div>
-				<div className="flex items-center gap-4 border-y border-[#d5ded9] p-4 sm:border-y-0 sm:border-r md:p-5">
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#e8f3ec] text-[#23734b]">
-						<Wifi size={19} />
-					</div>
-					<div>
-						<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-							Aktif di halaman
-						</p>
-						<strong className="mt-0.5 block text-2xl tabular-nums text-[#14211d]">
-							{onlineDevices}
-						</strong>
-					</div>
-				</div>
-				<div className="flex items-center gap-4 p-4 md:p-5">
-					<div className="flex h-10 w-10 shrink-0 items-center justify-center bg-[#eaf0ed] text-[#53635d]">
-						<RefreshCw
-							size={18}
-							className={isFetching ? "animate-spin" : undefined}
-						/>
-					</div>
-					<div>
-						<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
-							Pembaruan
-						</p>
-						<strong className="mt-1 block text-sm text-[#14211d]">
-							{isFetching ? "Menyinkronkan data" : "Otomatis tiap 10 detik"}
-						</strong>
-					</div>
-				</div>
-			</section>
+			{/* KPI Stat Cards */}
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<StatCard
+					title="Total Perangkat"
+					value={meta?.total ?? devices.length}
+					icon={<Server className="h-4 w-4" />}
+					description="Terminal terdaftar di sistem"
+				/>
+				<StatCard
+					title="Status Online"
+					value={onlineDevices}
+					icon={<Wifi className="h-4 w-4 text-emerald-600" />}
+					description="Heartbeat aktif < 3 menit"
+				/>
+				<StatCard
+					title="Status Offline"
+					value={Math.max(0, devices.length - onlineDevices)}
+					icon={<WifiOff className="h-4 w-4 text-red-600" />}
+					description={
+						isFetching ? "Menyinkronkan data..." : "Otomatis tiap 10 detik"
+					}
+				/>
+			</div>
 
+			{/* SN-less Claims Alert Banner */}
 			{claims.length > 0 && (
-				<section className="border border-[#d8bc7a] bg-[#fffaf0]">
-					<header className="border-b border-[#ead9ac] px-4 py-3 md:px-5">
-						<h3 className="text-sm font-semibold">Permintaan mesin tanpa SN</h3>
-						<p className="mt-1 text-xs">
+				<section className="border border-amber-300 bg-amber-50">
+					<header className="border-b border-amber-200 px-4 py-3">
+						<h3 className="text-xs font-bold uppercase tracking-wider font-mono text-amber-900">
+							Permintaan mesin tanpa SN ({claims.length})
+						</h3>
+						<p className="mt-0.5 text-xs text-amber-800">
 							Daftarkan mesin ini; sistem langsung meminta daftar pegawai.
 						</p>
 					</header>
-					<ul className="divide-y divide-[#ead9ac]">
+					<ul className="divide-y divide-amber-200">
 						{claims.map((claim) => (
 							<li
 								key={claim.id}
-								className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between md:px-5"
+								className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
 							>
 								<div className="min-w-0">
-									<p className="font-mono text-xs font-semibold">
+									<p className="font-mono text-xs font-bold text-foreground">
 										{claim.sourceIp}
 									</p>
-									<p className="mt-1 text-xs">
+									<p className="mt-0.5 text-xs text-muted-foreground font-mono">
 										/{claim.endpoint} · terakhir{" "}
 										{formatHistoryTime(claim.lastSeen)}
 									</p>
-									{claim.userAgent && (
-										<p className="mt-1 truncate font-mono text-[10px] text-[#53635d]">
-											{claim.userAgent}
-										</p>
-									)}
 								</div>
-								<button
-									type="button"
+								<Button
+									variant="outline"
+									size="sm"
 									disabled={registerClaim.isPending}
 									onClick={() => registerClaim.mutate(claim.id)}
-									className="adms-button-outline min-h-10 text-xs"
+									className="text-xs"
 								>
 									Daftarkan & tarik pegawai
-								</button>
+								</Button>
 							</li>
 						))}
 					</ul>
 				</section>
 			)}
 
-			{showForm && (
-				<section className="border border-[#aebdb6] bg-white">
-					<div className="flex items-start justify-between gap-4 border-b border-[#d5ded9] bg-[#eaf0ed] px-4 py-3 md:px-5">
-						<div>
-							<h3 className="text-sm font-semibold">Daftarkan terminal baru</h3>
-							<p className="mt-1 text-xs">
-								SN adalah identitas koneksi ADMS. Samakan persis dengan SN di
-								mesin.
-							</p>
-						</div>
-						<button
-							type="button"
-							onClick={() => setShowForm(false)}
-							aria-label="Tutup formulir tambah perangkat"
-							className="flex h-9 w-9 items-center justify-center border border-[#aebdb6] bg-white text-[#53635d] hover:bg-[#f3f6f4]"
-						>
-							<X size={16} />
-						</button>
-					</div>
-					<form
-						onSubmit={(event) => {
-							event.preventDefault();
-							createDevice.mutate(form);
-						}}
-						className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4 md:p-5"
-					>
-						<label className="text-xs font-semibold text-[#53635d]">
-							Serial number
-							<input
-								placeholder="Opsional — kosongkan jika tidak ada"
-								value={form.serialNumber}
-								onChange={(event) =>
-									setForm({ ...form, serialNumber: event.target.value })
-								}
-								className="mt-1.5 w-full px-3"
-							/>
-						</label>
-						<label className="text-xs font-semibold text-[#53635d]">
-							Nama perangkat
-							<input
-								required
-								placeholder="Contoh: Terminal lobi"
-								value={form.name}
-								onChange={(event) =>
-									setForm({ ...form, name: event.target.value })
-								}
-								className="mt-1.5 w-full px-3"
-							/>
-						</label>
-						<label className="text-xs font-semibold text-[#53635d]">
-							Lokasi
-							<input
-								placeholder="Contoh: Gedung utama"
-								value={form.location ?? ""}
-								onChange={(event) =>
-									setForm({ ...form, location: event.target.value })
-								}
-								className="mt-1.5 w-full px-3"
-							/>
-						</label>
-						<label className="text-xs font-semibold text-[#53635d]">
-							Alamat IP
-							<input
-								placeholder="Contoh: 192.168.1.10"
-								value={form.ipAddress ?? ""}
-								onChange={(event) =>
-									setForm({ ...form, ipAddress: event.target.value })
-								}
-								className="mt-1.5 w-full px-3 font-mono"
-							/>
-						</label>
-						<div className="flex flex-col-reverse gap-2 sm:col-span-2 sm:flex-row sm:justify-end lg:col-span-4">
-							<button
-								type="button"
-								onClick={() => setShowForm(false)}
-								className="adms-button-outline"
-							>
-								Batal
-							</button>
-							<button
-								type="submit"
-								disabled={createDevice.isPending}
-								aria-busy={createDevice.isPending}
-								className="adms-button"
-							>
-								{createDevice.isPending ? "Menyimpan..." : "Simpan perangkat"}
-							</button>
-						</div>
-					</form>
-				</section>
-			)}
-
-			<div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(360px,0.85fr)] xl:items-start">
-				<section className="min-w-0 border border-[#d5ded9] bg-white">
-					<header className="flex flex-col gap-3 border-b border-[#d5ded9] p-4 sm:flex-row sm:items-center sm:justify-between md:p-5">
-						<div>
-							<h3 className="flex items-center gap-2 text-[15px] font-semibold">
-								<Server size={17} className="text-[#087066]" />
-								Daftar terminal
-							</h3>
-							<p className="mt-1 text-xs">
-								Pilih satu terminal untuk membuka kontrol.
-							</p>
-						</div>
-						<div className="relative w-full sm:w-72">
-							<Search
-								className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#53635d]"
-								size={16}
-							/>
-							<input
-								className="w-full py-2 pl-9 pr-3 text-sm"
-								placeholder="Cari nama atau serial..."
-								type="search"
+			{/* Main Content Grid: Table + Selected Device Control Panel */}
+			<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+				{/* Left 7 Cols: Devices Table */}
+				<div className="lg:col-span-7 border border-border bg-card flex flex-col">
+					<div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-4 py-3">
+						<div className="relative w-full sm:w-64">
+							<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+							<Input
+								placeholder="Cari nama, SN, atau lokasi..."
 								value={search}
-								onChange={(event) => {
-									setSearch(event.target.value);
+								onChange={(e) => {
+									setSearch(e.target.value);
 									setPage(1);
 								}}
+								className="pl-8 text-xs h-8"
 							/>
 						</div>
-					</header>
-
-					<div className="min-h-[280px]">
-						{isLoading ? (
-							<div
-								className="divide-y divide-[#d5ded9]"
-								role="status"
-								aria-label="Memuat daftar perangkat"
-							>
-								{[1, 2, 3, 4].map((item) => (
-									<div
-										key={item}
-										className="flex animate-pulse gap-4 p-4 md:p-5"
-									>
-										<div className="h-11 w-11 bg-[#eaf0ed]" />
-										<div className="flex-1 space-y-2">
-											<div className="h-3 w-1/3 bg-[#eaf0ed]" />
-											<div className="h-3 w-2/3 bg-[#eaf0ed]" />
-										</div>
-									</div>
-								))}
-							</div>
-						) : isError ? (
-							<div
-								role="alert"
-								className="flex min-h-[280px] flex-col items-center justify-center p-8 text-center"
-							>
-								<WifiOff size={28} className="mb-3 text-[#a9433d]" />
-								<h4 className="text-sm font-semibold">
-									Daftar terminal tidak dapat dimuat
-								</h4>
-								<p className="mt-1 max-w-sm text-xs">
-									Periksa koneksi, lalu muat ulang halaman.
-								</p>
-							</div>
-						) : devices.length === 0 ? (
-							<div className="flex min-h-[280px] flex-col items-center justify-center p-8 text-center">
-								<div className="mb-4 flex h-12 w-12 items-center justify-center bg-[#eaf0ed] text-[#53635d]">
-									<Server size={22} />
-								</div>
-								<h4 className="text-sm font-semibold">
-									{search ? "Terminal tidak ditemukan" : "Belum ada terminal"}
-								</h4>
-								<p className="mt-1 max-w-sm text-xs">
-									{search
-										? "Coba kata kunci lain atau hapus pencarian."
-										: "Tambahkan perangkat pertama untuk mulai menerima data absensi."}
-								</p>
-								{!search && (
-									<button
-										type="button"
-										onClick={() => setShowForm(true)}
-										className="adms-button mt-4"
-									>
-										<Plus size={16} /> Tambah perangkat
-									</button>
-								)}
-							</div>
-						) : (
-							<ul className="divide-y divide-[#d5ded9]">
-								{devices.map((device) => {
-									const online = isDeviceOnline(device, dataUpdatedAt);
-									const selected = selectedDevice?.id === device.id;
-									return (
-										<li key={device.id}>
-											<button
-												type="button"
-												onClick={() => setSelectedDevice(device)}
-												aria-pressed={selected}
-												className={`group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-l-[3px] px-3 py-4 text-left transition-colors sm:gap-4 sm:px-4 md:px-5 ${selected ? "border-l-[#087066] bg-[#eef5f2]" : "border-l-transparent hover:bg-[#f2f7f4]"}`}
-											>
-												<div
-													className={`flex h-11 w-11 items-center justify-center ${online ? "bg-[#e8f3ec] text-[#23734b]" : "bg-[#f8eae8] text-[#a9433d]"}`}
-												>
-													{online ? <Wifi size={19} /> : <WifiOff size={19} />}
-												</div>
-												<div className="min-w-0">
-													<div className="flex flex-wrap items-center gap-2">
-														<strong className="truncate text-sm text-[#14211d]">
-															{device.name || "Perangkat tanpa nama"}
-														</strong>
-														<span
-															className={
-																online ? "adms-pill-success" : "adms-pill-alert"
-															}
-														>
-															{online ? "Online" : "Offline"}
-														</span>
-													</div>
-													<p className="mt-1 truncate font-mono text-[11px] text-[#53635d]">
-														{device.serialNumber}
-														<span className="mx-2 text-[#aebdb6]">/</span>
-														{device.ipAddress || "IP belum tercatat"}
-													</p>
-													<div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#53635d]">
-														<span className="flex items-center gap-1">
-															<MapPin size={12} />{" "}
-															{device.location || "Lokasi belum diatur"}
-														</span>
-														<span>{formatLastSeen(device.lastSeen)}</span>
-													</div>
-												</div>
-												<ChevronRight
-													size={18}
-													className={`transition-transform ${selected ? "translate-x-0 text-[#087066]" : "-translate-x-1 text-[#aebdb6] group-hover:translate-x-0"}`}
-												/>
-											</button>
-										</li>
-									);
-								})}
-							</ul>
-						)}
+						<span className="text-xs font-mono text-muted-foreground">
+							Pilih baris untuk kontrol perangkat
+						</span>
 					</div>
-					<PaginationControls
-						meta={response?.meta}
-						onPageChange={setPage}
-						disabled={isFetching}
-					/>
-				</section>
 
-				<aside id="device-control" className="min-w-0 xl:sticky xl:top-6">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Nama & Lokasi</TableHead>
+								<TableHead>Serial Number</TableHead>
+								<TableHead>Status</TableHead>
+								<TableHead>Terakhir Aktif</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{isLoading ? (
+								[1, 2, 3].map((k) => (
+									<TableRow key={k} className="animate-pulse">
+										<TableCell colSpan={4} className="h-12 bg-card" />
+									</TableRow>
+								))
+							) : devices.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={4}
+										className="py-12 text-center text-xs text-muted-foreground"
+									>
+										Belum ada perangkat terdaftar.
+									</TableCell>
+								</TableRow>
+							) : (
+								devices.map((device) => {
+									const online = isDeviceOnline(device, dataUpdatedAt);
+									const isSelected = selectedDevice?.id === device.id;
+									return (
+										<TableRow
+											key={device.id}
+											onClick={() => setSelectedDevice(device)}
+											className={cn(
+												"cursor-pointer",
+												isSelected && "bg-primary-subtle/70",
+											)}
+										>
+											<TableCell>
+												<div className="flex flex-col">
+													<span className="font-bold text-foreground text-xs">
+														{device.name}
+													</span>
+													<span className="text-[11px] text-muted-foreground flex items-center gap-1">
+														<MapPin className="h-3 w-3" />
+														{device.location || "Lokasi belum diatur"}
+													</span>
+												</div>
+											</TableCell>
+											<TableCell className="font-mono text-xs text-foreground">
+												{device.serialNumber}
+											</TableCell>
+											<TableCell>
+												<Badge
+													variant={online ? "success" : "destructive"}
+													className="text-[10px]"
+												>
+													{online ? "ONLINE" : "OFFLINE"}
+												</Badge>
+											</TableCell>
+											<TableCell className="font-mono text-xs text-muted-foreground">
+												{device.lastSeen
+													? formatHistoryTime(device.lastSeen)
+													: "Belum terhubung"}
+											</TableCell>
+										</TableRow>
+									);
+								})
+							)}
+						</TableBody>
+					</Table>
+
+					<PaginationControls
+						meta={meta}
+						onPageChange={setPage}
+						disabled={isLoading}
+					/>
+				</div>
+
+				{/* Right 5 Cols: Device Inspector & Command Console */}
+				<div className="lg:col-span-5 border border-border bg-card flex flex-col">
 					{!selectedDevice ? (
-						<div className="flex min-h-[420px] flex-col items-center justify-center border border-dashed border-[#aebdb6] bg-[#eef3f0] p-8 text-center">
-							<div className="mb-4 flex h-14 w-14 items-center justify-center border border-[#d5ded9] bg-white text-[#087066]">
-								<Cpu size={24} />
-							</div>
-							<p className="font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-[#087066]">
-								Pusat kendali
-							</p>
-							<h3 className="mt-2 text-lg font-semibold">
-								Pilih satu terminal
+						<div className="flex flex-col items-center justify-center p-10 text-center h-full min-h-[360px]">
+							<Server className="h-8 w-8 text-muted-foreground/40 mb-3" />
+							<h3 className="text-sm font-bold text-foreground">
+								Pilih Perangkat Terminal
 							</h3>
-							<p className="mt-2 max-w-[280px] text-xs leading-5">
-								Status, perintah jarak jauh, dan riwayat aktivitas akan tampil
-								di sini.
+							<p className="text-xs text-muted-foreground mt-1 max-w-xs">
+								Klik salah satu baris terminal pada tabel untuk mengirim
+								perintah X609 dan melihat riwayat komunikasi.
 							</p>
 						</div>
 					) : (
-						<div className="border border-[#d5ded9] bg-white">
-							<header className="border-b border-[#d5ded9] bg-[#14211d] p-5 text-white">
-								<div className="flex items-start justify-between gap-3">
-									<div className="min-w-0">
-										<div className="mb-2 flex items-center gap-2">
-											<span
-												className={`h-2 w-2 ${selectedOnline ? "bg-[#70c69b]" : "bg-[#e49a94]"}`}
-											/>
-											<span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-white/65">
-												{selectedOnline
-													? "Terminal online"
-													: "Terminal offline"}
-											</span>
-										</div>
-										<h3 className="truncate text-lg font-semibold !text-white">
-											{selectedDevice.name || "Perangkat tanpa nama"}
+						<div className="divide-y divide-border">
+							{/* Selected Device Header */}
+							<div className="p-4 bg-muted/30 flex items-start justify-between gap-3">
+								<div>
+									<div className="flex items-center gap-2">
+										<h3 className="text-sm font-bold text-foreground">
+											{selectedDevice.name}
 										</h3>
-										<p className="mt-1 font-mono text-[11px] !text-white/65">
-											{selectedDevice.serialNumber}
-										</p>
+										<Badge
+											variant={selectedOnline ? "success" : "destructive"}
+											className="text-[10px]"
+										>
+											{selectedOnline ? "ONLINE" : "OFFLINE"}
+										</Badge>
 									</div>
-									<div className="flex h-10 w-10 shrink-0 items-center justify-center border border-white/15 bg-white/5">
-										<Cpu size={19} />
-									</div>
+									<p className="text-xs font-mono text-muted-foreground mt-1">
+										SN: {selectedDevice.serialNumber} · IP:{" "}
+										{selectedDevice.ipAddress || "Dinamis"}
+									</p>
 								</div>
-								<div className="mt-4 grid grid-cols-2 gap-px bg-white/15 border border-white/15">
-									<div className="bg-[#14211d] p-3">
-										<p className="font-mono text-[9px] uppercase tracking-[0.12em] !text-white/50">
-											Alamat IP
-										</p>
-										<p className="mt-1 truncate font-mono text-xs !text-white">
-											{selectedDevice.ipAddress || "—"}
-										</p>
-									</div>
-									<div className="bg-[#14211d] p-3">
-										<p className="font-mono text-[9px] uppercase tracking-[0.12em] !text-white/50">
-											Lokasi
-										</p>
-										<p className="mt-1 truncate text-xs !text-white">
-											{selectedDevice.location || "Belum diatur"}
-										</p>
-									</div>
-								</div>
-							</header>
+							</div>
 
-							<section className="border-b border-[#d5ded9] p-4 md:p-5">
-								<div className="mb-4 flex items-center justify-between gap-3">
-									<div>
-										<h4 className="text-sm font-semibold">Perintah cepat</h4>
-										<p className="mt-0.5 text-[11px]">
-											Aksi dikirim ke terminal terpilih.
-										</p>
-									</div>
-									<Activity size={17} className="text-[#087066]" />
-								</div>
-								<div className="grid grid-cols-2 gap-2">
-									<button
-										type="button"
+							{/* Quick Commands */}
+							<div className="p-4 space-y-3">
+								<h4 className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
+									Perintah Cepat
+								</h4>
+								<div className="grid grid-cols-3 gap-2">
+									<Button
+										variant="outline"
+										size="sm"
 										disabled={sendCommand.isPending}
 										onClick={() =>
 											sendCommand.mutate({
@@ -676,15 +480,14 @@ export default function DevicesPage() {
 												command: "reboot",
 											})
 										}
-										className="flex min-h-16 flex-col items-start justify-between border border-[#d5ded9] bg-[#f7faf8] p-3 text-left hover:border-[#087066] hover:bg-[#eef5f2]"
+										className="text-xs gap-1.5"
 									>
-										<Power size={17} className="text-[#a9433d]" />
-										<span className="text-xs font-semibold">
-											Reboot terminal
-										</span>
-									</button>
-									<button
-										type="button"
+										<Power className="h-3.5 w-3.5 text-destructive" />
+										Reboot
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
 										disabled={sendCommand.isPending}
 										onClick={() =>
 											sendCommand.mutate({
@@ -692,15 +495,14 @@ export default function DevicesPage() {
 												command: "set.time",
 											})
 										}
-										className="flex min-h-16 flex-col items-start justify-between border border-[#d5ded9] bg-[#f7faf8] p-3 text-left hover:border-[#087066] hover:bg-[#eef5f2]"
+										className="text-xs gap-1.5"
 									>
-										<Clock size={17} className="text-[#087066]" />
-										<span className="text-xs font-semibold">
-											Sinkronkan waktu
-										</span>
-									</button>
-									<button
-										type="button"
+										<Clock className="h-3.5 w-3.5 text-primary" />
+										Sinkron Waktu
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
 										disabled={sendCommand.isPending}
 										onClick={() =>
 											sendCommand.mutate({
@@ -708,26 +510,25 @@ export default function DevicesPage() {
 												command: "reset",
 											})
 										}
-										className="flex min-h-16 flex-col items-start justify-between border border-[#d5ded9] bg-[#f7faf8] p-3 text-left hover:border-[#087066] hover:bg-[#eef5f2]"
+										className="text-xs gap-1.5"
 									>
-										<RefreshCw size={17} className="text-[#087066]" />
-										<span className="text-xs font-semibold">Reset stamp</span>
-									</button>
+										<RefreshCw className="h-3.5 w-3.5 text-primary" />
+										Reset Stamp
+									</Button>
 								</div>
-							</section>
+							</div>
 
-							<section className="border-b border-[#d5ded9] p-4 md:p-5">
-								<div className="mb-3 flex items-center gap-2">
-									<Download size={16} className="text-[#087066]" />
-									<h4 className="text-sm font-semibold">
-										Tarik daftar pegawai
-									</h4>
-								</div>
-								<p className="text-[11px] leading-5 text-[#53635d]">
+							{/* Pull Employees (X609 user.sync) */}
+							<div className="p-4 space-y-2.5">
+								<h4 className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
+									Sinkronisasi Pegawai (X609)
+								</h4>
+								<p className="text-xs text-muted-foreground">
 									Solution X609 akan mengirim USERINFO pada polling berikutnya.
 								</p>
-								<button
-									type="button"
+								<Button
+									variant="primary"
+									size="sm"
 									disabled={sendCommand.isPending}
 									onClick={() =>
 										sendCommand.mutate({
@@ -735,278 +536,229 @@ export default function DevicesPage() {
 											command: "user.sync",
 										})
 									}
-									aria-busy={sendCommand.isPending}
-									className="adms-button mt-3 w-full"
+									className="w-full gap-1.5 text-xs"
 								>
-									<Download size={16} />
-									{sendCommand.isPending
-										? "Mengirim perintah..."
-										: "Tarik pegawai dari mesin"}
-								</button>
-							</section>
+									<Download className="h-3.5 w-3.5" />
+									Tarik pegawai dari mesin
+								</Button>
+							</div>
 
-							<section className="border-b border-[#d5ded9] p-4 md:p-5">
-								<div className="mb-3 flex items-center gap-2">
-									<Download size={16} className="text-[#087066]" />
-									<h4 className="text-sm font-semibold">Tarik data absensi</h4>
-								</div>
-								<button
-									type="button"
-									disabled={sendCommand.isPending}
-									onClick={() =>
-										sendCommand.mutate({
-											id: selectedDevice.id,
-											command: "log",
-										})
-									}
-									aria-busy={sendCommand.isPending}
-									className="adms-button mb-3 w-full"
-								>
-									<Download size={16} />
-									{sendCommand.isPending
-										? "Mengirim perintah..."
-										: "Tarik SEMUA log"}
-								</button>
-								<div className="grid grid-cols-2 gap-3">
-									<label className="text-[11px] font-semibold text-[#53635d]">
-										Dari tanggal
-										<input
+							{/* Pull Attendance Logs by Date Range */}
+							<div className="p-4 space-y-3">
+								<h4 className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
+									Tarik Data Absensi
+								</h4>
+								<div className="grid grid-cols-2 gap-2.5">
+									<div className="space-y-1">
+										<label className="text-[10px] font-mono uppercase text-muted-foreground">
+											Dari Tanggal
+										</label>
+										<Input
 											type="date"
 											value={pullStartDate}
-											onChange={(event) => setPullStartDate(event.target.value)}
-											className="mt-1.5 w-full px-2 text-xs"
+											onChange={(e) => setPullStartDate(e.target.value)}
+											className="h-8 text-xs font-mono"
 										/>
-									</label>
-									<label className="text-[11px] font-semibold text-[#53635d]">
-										Sampai tanggal
-										<input
+									</div>
+									<div className="space-y-1">
+										<label className="text-[10px] font-mono uppercase text-muted-foreground">
+											Sampai Tanggal
+										</label>
+										<Input
 											type="date"
 											value={pullEndDate}
-											onChange={(event) => setPullEndDate(event.target.value)}
-											className="mt-1.5 w-full px-2 text-xs"
+											onChange={(e) => setPullEndDate(e.target.value)}
+											className="h-8 text-xs font-mono"
 										/>
-									</label>
-								</div>
-								<button
-									type="button"
-									disabled={
-										!pullStartDate ||
-										!pullEndDate ||
-										pullStartDate > pullEndDate ||
-										sendCommand.isPending
-									}
-									onClick={() =>
-										sendCommand.mutate({
-											id: selectedDevice.id,
-											command: "attendance.download",
-											payload: {
-												start_date: pullStartDate,
-												end_date: pullEndDate,
-											},
-										})
-									}
-									aria-busy={sendCommand.isPending}
-									className="adms-button mt-3 w-full"
-								>
-									<Download size={16} />
-									{sendCommand.isPending
-										? "Mengirim perintah..."
-										: "Tarik data periode ini"}
-								</button>
-							</section>
-
-							<section className="border-b border-[#d5ded9]">
-								<header className="flex items-start justify-between gap-3 bg-[#eaf0ed] px-4 py-3 md:px-5">
-									<div>
-										<h4 className="flex items-center gap-2 text-xs font-semibold">
-											<Clock size={14} className="text-[#087066]" /> Riwayat
-											perangkat
-										</h4>
-										<p className="mt-1 text-[10px]">
-											Riwayat mengambil dan menerima data
-										</p>
 									</div>
-									<span className="font-mono text-[9px] uppercase tracking-[0.1em] text-[#53635d]">
-										Live · 5d
-									</span>
-								</header>
-								<div className="max-h-[330px] overflow-y-auto p-3 custom-scrollbar">
-									{commandsLoading || attendanceLoading ? (
-										<div
-											className="space-y-2"
-											role="status"
-											aria-label="Memuat riwayat perangkat"
-										>
-											{[1, 2, 3].map((item) => (
-												<div
-													key={item}
-													className="h-16 animate-pulse bg-[#eaf0ed]"
-												/>
-											))}
-										</div>
-									) : history.length === 0 ? (
-										<p className="py-8 text-center text-xs text-[#53635d]">
-											Belum ada aktivitas perangkat.
-										</p>
-									) : (
-										<ol className="relative space-y-0 before:absolute before:bottom-3 before:left-[15px] before:top-3 before:w-px before:bg-[#d5ded9]">
-											{history.map((item) => (
-												<li
-													key={item.id}
-													className="relative flex gap-3 px-1 py-2.5"
-												>
-													<div
-														className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center border bg-white ${item.direction === "sent" ? "border-[#8db9b2] text-[#087066]" : "border-[#9dc7ad] text-[#23734b]"}`}
-													>
-														{item.direction === "sent" ? (
-															<ArrowUpFromLine size={13} />
-														) : (
-															<ArrowDownToLine size={13} />
-														)}
-													</div>
-													<div className="min-w-0 flex-1">
-														<div className="flex items-start justify-between gap-2">
-															<p className="text-[11px] font-semibold text-[#14211d]">
-																{item.title}
-															</p>
-															{item.status && (
-																<span
-																	className={`shrink-0 font-mono text-[9px] font-semibold uppercase ${item.status === "ERROR" ? "text-[#a9433d]" : item.status === "COMPLETED" ? "text-[#23734b]" : "text-[#946617]"}`}
-																>
-																	{historyStatusLabel[item.status]}
-																</span>
-															)}
-														</div>
-														<p
-															className="mt-0.5 truncate font-mono text-[9px] text-[#53635d]"
-															title={item.detail}
-														>
-															{item.detail}
-														</p>
-														<time className="mt-1 block text-[9px] text-[#75827d]">
-															{formatHistoryTime(item.timestamp)}
-														</time>
-													</div>
-												</li>
-											))}
-										</ol>
-									)}
 								</div>
-							</section>
-
-							<div className="p-4 md:p-5">
-								<button
-									type="button"
-									disabled={sendCommand.isPending}
-									onClick={() => {
-										if (
-											confirm(
-												"AWAS: Semua data pada perangkat akan dihapus. Lanjutkan?",
-											)
-										) {
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										disabled={
+											!pullStartDate ||
+											!pullEndDate ||
+											pullStartDate > pullEndDate ||
+											sendCommand.isPending
+										}
+										onClick={() =>
 											sendCommand.mutate({
 												id: selectedDevice.id,
-												command: "attendance.clear",
-											});
+												command: "attendance.download",
+												payload: {
+													start_date: pullStartDate,
+													end_date: pullEndDate,
+												},
+											})
 										}
-									}}
-									className="flex min-h-11 w-full items-center justify-center gap-2 border border-[#d9aba7] bg-white px-3 text-xs font-semibold text-[#a9433d] hover:bg-[#f8eae8]"
-								>
-									<Trash2 size={15} /> Hapus seluruh data terminal
-								</button>
-								<div className="mt-2 grid grid-cols-2 gap-2">
-									<button
-										type="button"
+										className="flex-1 text-xs gap-1.5"
+									>
+										<Download className="h-3.5 w-3.5" />
+										Tarik Periode Ini
+									</Button>
+									<Button
+										variant="secondary"
+										size="sm"
 										disabled={sendCommand.isPending}
 										onClick={() =>
 											sendCommand.mutate({
 												id: selectedDevice.id,
-												command: "reboot",
+												command: "log",
 											})
 										}
-										className="flex min-h-11 items-center justify-center gap-2 border border-[#d5ded9] bg-white px-3 text-xs font-semibold text-[#53635d] hover:bg-[#eaf0ed]"
+										className="text-xs gap-1.5"
 									>
-										Restart mesin
-									</button>
-									{selectedDevice.isBlocked ? (
-										<button
-											type="button"
-											onClick={() =>
-												api
-													.patch("/devices/unblock", {
-														deviceId: selectedDevice.id,
-													})
-													.then(() => {
-														queryClient.invalidateQueries({
-															queryKey: ["devices"],
-														});
-														toast.success("Terminal dibuka blokirnya");
-													})
-													.catch(() => toast.error("Gagal membuka blokir"))
-											}
-											className="flex min-h-11 items-center justify-center gap-2 border border-[#087066] bg-white px-3 text-xs font-semibold text-[#087066] hover:bg-[#eaf0ed]"
-										>
-											Buka blokir
-										</button>
+										Tarik Semua Log
+									</Button>
+								</div>
+							</div>
+
+							{/* Device History */}
+							<div className="p-4 space-y-3">
+								<div className="flex items-center justify-between">
+									<div>
+										<h4 className="text-xs font-mono font-bold uppercase tracking-wider text-foreground">
+											Riwayat Perangkat
+										</h4>
+										<p className="text-[11px] text-muted-foreground">
+											Riwayat mengambil dan menerima data
+										</p>
+									</div>
+									<Badge variant="outline" className="text-[10px] font-mono">
+										LIVE · 5D
+									</Badge>
+								</div>
+
+								<div className="max-h-64 overflow-y-auto divide-y divide-border border border-border">
+									{commandsLoading || attendanceLoading ? (
+										<div className="p-6 text-center text-xs text-muted-foreground">
+											Memuat riwayat perangkat...
+										</div>
+									) : history.length === 0 ? (
+										<div className="p-6 text-center text-xs text-muted-foreground">
+											Belum ada aktivitas perangkat.
+										</div>
 									) : (
-										<button
-											type="button"
-											onClick={() => {
-												if (
-													confirm(
-														"Terminal yang diblokir tidak bisa kirim data. Lanjutkan?",
-													)
-												) {
-													api
-														.patch("/devices/block", {
-															deviceId: selectedDevice.id,
-														})
-														.then(() => {
-															queryClient.invalidateQueries({
-																queryKey: ["devices"],
-															});
-															toast.success("Terminal diblokir");
-														})
-														.catch(() =>
-															toast.error("Gagal memblokir terminal"),
-														);
-												}
-											}}
-											className="flex min-h-11 items-center justify-center gap-2 border border-[#d9aba7] bg-white px-3 text-xs font-semibold text-[#a9433d] hover:bg-[#f8eae8]"
-										>
-											Blokir terminal
-										</button>
+										history.map((item) => (
+											<div
+												key={item.id}
+												className="p-2.5 flex items-start gap-2.5 text-xs bg-card hover:bg-muted/30"
+											>
+												<div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center border border-border bg-muted/40">
+													{item.direction === "sent" ? (
+														<ArrowUpFromLine className="h-3 w-3 text-primary" />
+													) : (
+														<ArrowDownToLine className="h-3 w-3 text-emerald-600" />
+													)}
+												</div>
+												<div className="min-w-0 flex-1">
+													<div className="flex items-center justify-between gap-2">
+														<span className="font-semibold text-foreground">
+															{item.title}
+														</span>
+														{item.status && (
+															<span className="font-mono text-[10px] text-muted-foreground">
+																{commandStatusLabel[item.status]}
+															</span>
+														)}
+													</div>
+													<p className="font-mono text-[11px] text-muted-foreground truncate mt-0.5">
+														{item.detail}
+													</p>
+													<p className="font-mono text-[10px] text-muted-foreground/80 mt-0.5">
+														{formatHistoryTime(item.timestamp)}
+													</p>
+												</div>
+											</div>
+										))
 									)}
 								</div>
-								<button
-									type="button"
-									onClick={() => {
-										if (
-											confirm(
-												"Hapus terminal ini dari daftar? Data absensi yang sudah tersimpan tetap ada.",
-											)
-										) {
-											api
-												.delete(`/devices/${selectedDevice.id}`)
-												.then(() => {
-													queryClient.invalidateQueries({
-														queryKey: ["devices"],
-													});
-													setSelectedDevice(null);
-													toast.success("Terminal dihapus");
-												})
-												.catch(() => toast.error("Gagal menghapus terminal"));
-										}
-									}}
-									className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 border border-[#d9aba7] bg-[#a9433d] px-3 text-xs font-semibold text-white hover:bg-[#8f3934]"
-								>
-									<Trash2 size={15} /> Hapus terminal
-								</button>
 							</div>
 						</div>
 					)}
-				</aside>
+				</div>
 			</div>
+
+			{/* Register Device Modal */}
+			{showForm && (
+				<Modal
+					open={showForm}
+					onOpenChange={setShowForm}
+					title="Registrasi Mesin Presensi ADMS"
+					description="Masukkan Serial Number (SN) ZKTeco yang sesuai dengan pengaturan ADMS di mesin fisik."
+					maxWidth="lg"
+					footer={
+						<div className="flex items-center gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setShowForm(false)}
+								disabled={createDevice.isPending}
+							>
+								Batal
+							</Button>
+							<Button
+								variant="primary"
+								size="sm"
+								onClick={() => createDevice.mutate(form)}
+								disabled={
+									createDevice.isPending || !form.serialNumber || !form.name
+								}
+							>
+								{createDevice.isPending ? "Menyimpan..." : "Simpan Perangkat"}
+							</Button>
+						</div>
+					}
+				>
+					<div className="space-y-4">
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Serial Number (SN) *
+							</label>
+							<Input
+								placeholder="Contoh: CJKV23456001"
+								value={form.serialNumber}
+								onChange={(e) =>
+									setForm({ ...form, serialNumber: e.target.value })
+								}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Nama Terminal *
+							</label>
+							<Input
+								placeholder="Contoh: Mesin Lobby Utama"
+								value={form.name}
+								onChange={(e) => setForm({ ...form, name: e.target.value })}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Lokasi Penempatan
+							</label>
+							<Input
+								placeholder="Contoh: Gedung Pelayanan Lt. 1"
+								value={form.location ?? ""}
+								onChange={(e) => setForm({ ...form, location: e.target.value })}
+							/>
+						</div>
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Alamat IP Lokal (Opsional)
+							</label>
+							<Input
+								placeholder="Contoh: 192.168.1.201"
+								value={form.ipAddress ?? ""}
+								onChange={(e) =>
+									setForm({ ...form, ipAddress: e.target.value })
+								}
+							/>
+						</div>
+					</div>
+				</Modal>
+			)}
 		</div>
 	);
 }

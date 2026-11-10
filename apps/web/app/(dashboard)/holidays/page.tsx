@@ -1,11 +1,23 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Calendar, CloudSync, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Calendar, CalendarCheck, CloudSync, Plus, Trash2 } from "lucide-react";
+import * as React from "react";
 import { toast } from "sonner";
 import PaginationControls from "@/components/pagination-controls";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
 
 interface Holiday {
@@ -17,20 +29,23 @@ interface Holiday {
 
 export default function HolidaysPage() {
 	const queryClient = useQueryClient();
-	const [showForm, setShowForm] = useState(false);
-	const [form, setForm] = useState({ date: "", name: "", description: "" });
-
-	const [page, setPage] = useState(1);
+	const [showForm, setShowForm] = React.useState(false);
+	const [form, setForm] = React.useState({
+		date: "",
+		name: "",
+		description: "",
+	});
+	const [page, setPage] = React.useState(1);
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["holidays", page],
-		queryFn: async () => {
-			return (await api.get(`/holidays?page=${page}&limit=10`)).data;
-		},
+		queryFn: async () =>
+			(await api.get(`/holidays?page=${page}&limit=10`)).data,
 	});
 
 	const holidays: Holiday[] = response?.data || [];
 	const meta = response?.meta;
+	const currentYear = new Date().getFullYear();
 
 	const syncMutation = useMutation({
 		mutationFn: async (year: number) => {
@@ -38,16 +53,11 @@ export default function HolidaysPage() {
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["holidays"] });
-			toast.success("Berhasil sinkronisasi hari libur");
+			queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+			toast.success("Berhasil sinkronisasi hari libur nasional");
 		},
-		onError: (err: unknown) => {
-			const error = err as {
-				response?: { data?: { message?: string } };
-				message?: string;
-			};
-			toast.error(
-				error.response?.data?.message || error.message || "Gagal sinkronisasi",
-			);
+		onError: (err: any) => {
+			toast.error(err.response?.data?.message || "Gagal sinkronisasi libur");
 		},
 	});
 
@@ -66,17 +76,8 @@ export default function HolidaysPage() {
 			setForm({ date: "", name: "", description: "" });
 			toast.success("Hari libur berhasil ditambahkan");
 		},
-		onError: (err: unknown) => {
-			const error = err as {
-				response?: { data?: { message?: string } };
-				message?: string;
-			};
-			toast.error(
-				"Gagal simpan: " +
-					(error?.response?.data?.message ||
-						error?.message ||
-						"Kesalahan server"),
-			);
+		onError: (err: any) => {
+			toast.error(err.response?.data?.message || "Gagal menambahkan libur");
 		},
 	});
 
@@ -93,174 +94,193 @@ export default function HolidaysPage() {
 		},
 	});
 
-	const currentYear = new Date().getFullYear();
-
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 15 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="w-full space-y-8 mx-auto min-h-[calc(100vh-6rem)]"
-		>
-			<div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-				<div>
-					<h2 className="font-display text-3xl font-semibold text-[#111c2d]">
-						Hari Libur
-					</h2>
-					<p className="font-sans text-sm text-[#6e797e] mt-1">
-						Kelola hari libur nasional dan cuti bersama.
-					</p>
-				</div>
-				<div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:gap-3">
-					<button
-						type="button"
-						onClick={() => syncMutation.mutate(currentYear)}
-						disabled={syncMutation.isPending}
-						className="adms-button-outline disabled:opacity-50"
-					>
-						<CloudSync size={18} />
-						{syncMutation.isPending
-							? "Menyinkronkan..."
-							: `Sinkron ${currentYear}`}
-					</button>
-					<button
-						type="button"
-						onClick={() => setShowForm(!showForm)}
-						className="adms-button !bg-[#00647c] !text-white hover:!bg-[#007f9d]"
-					>
-						<Plus size={18} />
-						Tambah
-					</button>
-				</div>
-			</div>
-
-			{showForm && (
-				<div className="adms-card">
-					<h3 className="font-semibold text-[#111c2d] mb-4">
-						Tambah Hari Libur Manual
-					</h3>
-					<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<input
-							type="date"
-							value={form.date}
-							onChange={(e) => setForm({ ...form, date: e.target.value })}
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-						/>
-						<input
-							type="text"
-							placeholder="Nama hari libur"
-							value={form.name}
-							onChange={(e) => setForm({ ...form, name: e.target.value })}
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-						/>
-						<button
-							type="button"
-							onClick={() => createMutation.mutate(form)}
-							disabled={!form.date || !form.name || createMutation.isPending}
-							className="bg-[#00647c] text-white rounded-lg px-4 py-2 font-semibold text-[13px] disabled:opacity-50 hover:bg-[#007f9d] transition-colors"
+		<div className="page-shell space-y-6">
+			{/* Level 1: Page Header */}
+			<PageHeader
+				title="Kalender Hari Libur"
+				description="Daftar hari libur nasional dan cuti bersama instansi untuk pengecualian jam kerja."
+				action={
+					<div className="flex items-center gap-2">
+						<Button
+							variant="outline"
+							size="sm"
+							onClick={() => syncMutation.mutate(currentYear)}
+							disabled={syncMutation.isPending}
+							className="gap-1.5"
 						>
-							{createMutation.isPending ? "Menyimpan..." : "Simpan"}
-						</button>
+							<CloudSync className="h-4 w-4" />
+							{syncMutation.isPending
+								? "Sinkron..."
+								: `Tarik Data ${currentYear}`}
+						</Button>
+						<Button
+							variant="primary"
+							size="sm"
+							onClick={() => setShowForm(true)}
+							className="gap-1.5"
+						>
+							<Plus className="h-4 w-4" />
+							Tambah Libur
+						</Button>
 					</div>
-				</div>
-			)}
+				}
+			/>
 
-			{syncMutation.isSuccess && (
-				<div className="bg-[#6cf8bb]/10 border border-[#6cf8bb]/30 p-4 rounded-xl">
-					<p className="text-[#00714d] text-[13px] font-medium flex items-center gap-2">
-						<span className="material-symbols-outlined text-[18px]">
-							check_circle
-						</span>
-						Berhasil sync {(syncMutation.data as { synced: number })?.synced}{" "}
-						hari libur dari API nasional.
-					</p>
-				</div>
-			)}
-
-			<div className="adms-card p-0 overflow-hidden">
-				<div className="mobile-scroll-hint">
-					Geser tabel untuk melihat keterangan
-				</div>
-				<div className="overflow-x-auto">
-					<table className="w-full text-left border-collapse">
-						<thead>
-							<tr className="bg-[#f0f3ff] border-b border-black/5">
-								<th className="px-6 py-4 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider w-[20%]">
-									Tanggal
-								</th>
-								<th className="px-6 py-4 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider w-[40%]">
-									Nama
-								</th>
-								<th className="px-6 py-4 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider w-[30%]">
-									Keterangan
-								</th>
-								<th className="px-6 py-4 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider w-[10%] text-right">
-									Aksi
-								</th>
-							</tr>
-						</thead>
-						<tbody className="divide-y divide-black/5 font-sans text-[14px]">
-							{isLoading ? (
-								[1, 2, 3].map((i) => (
-									<tr key={i} className="border-b border-black/5">
-										<td colSpan={4} className="p-4">
-											<div className="h-4 bg-gray-100 rounded animate-pulse" />
-										</td>
-									</tr>
-								))
-							) : holidays?.length === 0 ? (
-								<tr>
-									<td colSpan={4} className="p-12 text-center">
-										<Calendar
-											size={48}
-											className="mx-auto text-[#bdc8ce] mb-4"
-										/>
-										<p className="text-[#6e797e] text-sm">
-											Belum ada data hari libur. Klik &quot;Sync&quot; untuk
-											mengambil dari API nasional.
-										</p>
-									</td>
-								</tr>
-							) : (
-								holidays?.map((h) => (
-									<tr
-										key={h.id}
-										className="hover:bg-[#f0f3ff]/50 transition-colors group"
-									>
-										<td className="px-6 py-4 font-mono text-[13px] text-[#111c2d]">
-											{h.date}
-										</td>
-										<td className="px-6 py-4 font-medium text-[#111c2d]">
-											{h.name}
-										</td>
-										<td className="px-6 py-4 text-[#3e484d]">
-											{h.description || "-"}
-										</td>
-										<td className="px-6 py-4 text-right">
-											<button
-												type="button"
-												onClick={() => {
-													if (confirm("Hapus hari libur ini?"))
-														deleteMutation.mutate(h.id);
-												}}
-												className="p-2 text-[#6e797e] hover:bg-[#ba1a1a]/10 hover:text-[#ba1a1a] rounded-lg transition-all opacity-100 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
-											>
-												<Trash2 size={18} />
-											</button>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-
-				<PaginationControls
-					meta={meta}
-					onPageChange={setPage}
-					disabled={isLoading}
+			{/* KPI Stat Cards */}
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+				<StatCard
+					title="Total Libur Terdata"
+					value={meta?.total ?? holidays.length}
+					icon={<Calendar className="h-4 w-4" />}
+					description="Libur nasional dan cuti bersama"
+				/>
+				<StatCard
+					title="Tahun Berjalan"
+					value={String(currentYear)}
+					icon={<CalendarCheck className="h-4 w-4 text-primary" />}
+					description="Kalender operasional aktif"
 				/>
 			</div>
-		</motion.div>
+
+			{/* Table Container */}
+			<div className="border border-border bg-card">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Tanggal</TableHead>
+							<TableHead>Nama Hari Libur</TableHead>
+							<TableHead>Keterangan</TableHead>
+							<TableHead className="text-right">Aksi</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							[1, 2, 3].map((k) => (
+								<TableRow key={k} className="animate-pulse">
+									<TableCell colSpan={4} className="h-12 bg-card" />
+								</TableRow>
+							))
+						) : holidays.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={4}
+									className="py-10 text-center text-xs text-muted-foreground"
+								>
+									Belum ada hari libur. Klik "Tarik Data" untuk sinkronisasi
+									otomatis.
+								</TableCell>
+							</TableRow>
+						) : (
+							holidays.map((h) => (
+								<TableRow key={h.id}>
+									<TableCell className="font-mono text-xs font-semibold text-foreground">
+										{h.date}
+									</TableCell>
+									<TableCell className="font-bold text-foreground">
+										{h.name}
+									</TableCell>
+									<TableCell className="text-xs text-muted-foreground">
+										{h.description || "—"}
+									</TableCell>
+									<TableCell className="text-right">
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8 text-muted-foreground hover:text-destructive"
+											onClick={() => {
+												if (confirm(`Hapus libur ${h.name}?`)) {
+													deleteMutation.mutate(h.id);
+												}
+											}}
+											title="Hapus"
+										>
+											<Trash2 className="h-3.5 w-3.5" />
+										</Button>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+
+				<div className="p-3 border-t border-border bg-card">
+					<PaginationControls
+						meta={meta}
+						onPageChange={setPage}
+						disabled={isLoading}
+					/>
+				</div>
+			</div>
+
+			{/* Form Modal */}
+			{showForm && (
+				<Modal
+					open={showForm}
+					onOpenChange={setShowForm}
+					title="Tambah Hari Libur Manual"
+					description="Tentukan tanggal dan keterangan hari libur khusus."
+					maxWidth="md"
+					footer={
+						<div className="flex items-center gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setShowForm(false)}
+								disabled={createMutation.isPending}
+							>
+								Batal
+							</Button>
+							<Button
+								variant="primary"
+								size="sm"
+								onClick={() => createMutation.mutate(form)}
+								disabled={createMutation.isPending || !form.date || !form.name}
+							>
+								{createMutation.isPending ? "Menyimpan..." : "Simpan Libur"}
+							</Button>
+						</div>
+					}
+				>
+					<div className="space-y-4">
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Tanggal Libur *
+							</label>
+							<Input
+								type="date"
+								value={form.date}
+								onChange={(e) => setForm({ ...form, date: e.target.value })}
+								className="text-xs font-mono"
+							/>
+						</div>
+
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Nama Hari Libur *
+							</label>
+							<Input
+								value={form.name}
+								onChange={(e) => setForm({ ...form, name: e.target.value })}
+								placeholder="Contoh: Hari Libur Internal Puskesmas"
+							/>
+						</div>
+
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Keterangan
+							</label>
+							<Input
+								value={form.description}
+								onChange={(e) =>
+									setForm({ ...form, description: e.target.value })
+								}
+								placeholder="Catatan tambahan (opsional)"
+							/>
+						</div>
+					</div>
+				</Modal>
+			)}
+		</div>
 	);
 }

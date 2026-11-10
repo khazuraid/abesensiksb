@@ -2,10 +2,32 @@
 
 import type { Employee } from "@adms/shared-types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Check, Plus, Trash2, X as XIcon } from "lucide-react";
-import { useState } from "react";
+import {
+	CalendarOff,
+	Check,
+	Clock,
+	Plus,
+	Trash2,
+	UserCheck,
+	X as XIcon,
+} from "lucide-react";
+import * as React from "react";
+import { toast } from "sonner";
 import PaginationControls from "@/components/pagination-controls";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatCard } from "@/components/ui/stat-card";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import api from "@/lib/api";
 
 interface Leave {
@@ -29,8 +51,8 @@ const typeLabels: Record<string, string> = {
 
 export default function LeavesPage() {
 	const queryClient = useQueryClient();
-	const [showForm, setShowForm] = useState(false);
-	const [form, setForm] = useState({
+	const [showForm, setShowForm] = React.useState(false);
+	const [form, setForm] = React.useState({
 		employeeId: "",
 		type: "ANNUAL",
 		startDate: "",
@@ -38,13 +60,11 @@ export default function LeavesPage() {
 		reason: "",
 	});
 
-	const [page, setPage] = useState(1);
+	const [page, setPage] = React.useState(1);
 
 	const { data: response, isLoading } = useQuery({
 		queryKey: ["leaves", page],
-		queryFn: async () => {
-			return (await api.get(`/leaves?page=${page}&limit=10`)).data;
-		},
+		queryFn: async () => (await api.get(`/leaves?page=${page}&limit=10`)).data,
 	});
 
 	const leaves: Leave[] = response?.data || [];
@@ -54,7 +74,7 @@ export default function LeavesPage() {
 		queryKey: ["employees-list"],
 		queryFn: async () => (await api.get("/employees?page=1&limit=100")).data,
 	});
-	const employees = employeeResponse?.data;
+	const employees = employeeResponse?.data || [];
 
 	const createMutation = useMutation({
 		mutationFn: async (data: typeof form) => {
@@ -73,6 +93,12 @@ export default function LeavesPage() {
 				endDate: "",
 				reason: "",
 			});
+			toast.success("Pengajuan cuti berhasil dibuat");
+		},
+		onError: (err: any) => {
+			toast.error(
+				err.response?.data?.message || "Gagal membuat pengajuan cuti",
+			);
 		},
 	});
 
@@ -80,252 +106,317 @@ export default function LeavesPage() {
 		mutationFn: async (id: number) => {
 			await api.patch(`/leaves/${id}/approve`);
 		},
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leaves"] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["leaves"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+			toast.success("Pengajuan cuti disetujui");
+		},
 	});
 
 	const rejectMutation = useMutation({
 		mutationFn: async (id: number) => {
 			await api.patch(`/leaves/${id}/reject`);
 		},
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leaves"] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["leaves"] });
+			queryClient.invalidateQueries({ queryKey: ["dashboard-stats"] });
+			toast.info("Pengajuan cuti ditolak");
+		},
 	});
 
 	const deleteMutation = useMutation({
 		mutationFn: async (id: number) => {
 			await api.delete(`/leaves/${id}`);
 		},
-		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["leaves"] }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["leaves"] });
+			toast.success("Data cuti dihapus");
+		},
 	});
 
+	const pendingCount = leaves.filter((l) => l.status === "PENDING").length;
+	const approvedCount = leaves.filter((l) => l.status === "APPROVED").length;
+
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 15 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{ duration: 0.5 }}
-			className="space-y-8 max-w-[1440px] mx-auto min-h-[calc(100vh-6rem)]"
-		>
-			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-				<div>
-					<h2 className="font-display text-3xl font-semibold text-[#111c2d]">
-						Manajemen Cuti
-					</h2>
-					<p className="font-sans text-sm text-[#6e797e] mt-1">
-						Pengajuan dan persetujuan cuti pegawai.
-					</p>
-				</div>
-				<button
-					type="button"
-					onClick={() => setShowForm(!showForm)}
-					className="bg-[#00647c] text-white px-6 py-2.5 rounded-lg flex w-full items-center justify-center gap-2 font-semibold text-[13px] hover:bg-[#007f9d] transition-colors shadow-sm active:scale-95 sm:w-auto"
-				>
-					<Plus size={18} /> Ajukan Cuti
-				</button>
-			</div>
-
-			{showForm && (
-				<div className="bg-white rounded-xl border border-black/5 shadow-sm p-6 relative">
-					<button
-						type="button"
-						onClick={() => setShowForm(false)}
-						className="absolute top-4 right-4 p-2 text-[#6e797e] hover:bg-[#f9f9ff] hover:text-[#111c2d] rounded-lg transition-colors"
+		<div className="page-shell space-y-6">
+			{/* Level 1: Page Header */}
+			<PageHeader
+				title="Manajemen Cuti & Izin"
+				description="Verifikasi permohonan cuti tahunan, izin sakit, dan ketidakhadiran pegawai."
+				action={
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setShowForm(true)}
+						className="gap-1.5"
 					>
-						<XIcon size={20} />
-					</button>
-					<h3 className="font-semibold text-[#111c2d] mb-4">
-						Form Pengajuan Cuti
-					</h3>
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-						<select
-							value={form.employeeId}
-							onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-						>
-							<option value="">Pilih Pegawai</option>
-							{employees?.map((e) => (
-								<option key={e.id} value={e.id}>
-									{e.name}
-								</option>
-							))}
-						</select>
-						<select
-							value={form.type}
-							onChange={(e) => setForm({ ...form, type: e.target.value })}
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-						>
-							<option value="ANNUAL">Cuti Tahunan</option>
-							<option value="SICK">Sakit</option>
-							<option value="PERMISSION">Izin</option>
-							<option value="MATERNITY">Cuti Melahirkan</option>
-							<option value="OTHER">Lainnya</option>
-						</select>
-						<input
-							type="date"
-							value={form.startDate}
-							onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-							placeholder="Tanggal Mulai"
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-						/>
-						<input
-							type="date"
-							value={form.endDate}
-							onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-							placeholder="Tanggal Selesai"
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c]"
-						/>
-						<input
-							type="text"
-							value={form.reason}
-							onChange={(e) => setForm({ ...form, reason: e.target.value })}
-							placeholder="Alasan (opsional)"
-							className="w-full bg-white border border-[#bdc8ce] rounded-lg px-4 py-2 text-[13px] text-[#111c2d] focus:outline-none focus:ring-1 focus:ring-[#00647c] focus:border-[#00647c] lg:col-span-2"
-						/>
-						<button
-							type="button"
-							onClick={() => createMutation.mutate(form)}
-							disabled={
-								!form.employeeId ||
-								!form.startDate ||
-								!form.endDate ||
-								createMutation.isPending
-							}
-							className="bg-[#00647c] text-white rounded-lg px-4 py-2 font-semibold text-[13px] disabled:opacity-50 hover:bg-[#007f9d] transition-colors"
-						>
-							{createMutation.isPending ? "Menyimpan..." : "Simpan Pengajuan"}
-						</button>
-					</div>
-				</div>
-			)}
+						<Plus className="h-4 w-4" />
+						Ajukan Cuti
+					</Button>
+				}
+			/>
 
-			<div className="bg-white rounded-xl border border-black/5 overflow-hidden shadow-sm">
-				<div className="mobile-scroll-hint">
-					Geser tabel untuk melihat detail pengajuan
-				</div>
-				<div className="overflow-x-auto">
-					<table className="w-full text-left border-collapse min-w-[800px]">
-						<thead>
-							<tr className="bg-[#f0f3ff] border-b border-black/5">
-								<th className="py-4 px-6 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Pegawai
-								</th>
-								<th className="py-4 px-6 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Jenis
-								</th>
-								<th className="py-4 px-6 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Tanggal
-								</th>
-								<th className="py-4 px-6 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Alasan
-								</th>
-								<th className="py-4 px-6 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider">
-									Status
-								</th>
-								<th className="py-4 px-6 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
-									Aksi
-								</th>
-							</tr>
-						</thead>
-						<tbody className="font-sans text-[14px] divide-y divide-black/5">
-							{isLoading ? (
-								[1, 2, 3].map((k) => (
-									<tr key={k} className="animate-pulse">
-										<td colSpan={6} className="px-6 py-4 h-16 bg-white" />
-									</tr>
-								))
-							) : leaves?.length === 0 ? (
-								<tr>
-									<td
-										colSpan={6}
-										className="py-16 text-center text-[#6e797e] text-sm"
-									>
-										Tidak ada data cuti.
-									</td>
-								</tr>
-							) : (
-								leaves?.map((leave) => (
-									<tr
-										key={leave.id}
-										className="hover:bg-[#f0f3ff]/50 transition-colors group"
-									>
-										<td className="py-4 px-6 font-medium text-[#111c2d]">
-											{leave.employee?.name}
-										</td>
-										<td className="py-4 px-6 text-[#3e484d]">
-											{typeLabels[leave.type] || leave.type}
-										</td>
-										<td className="py-4 px-6 text-[#3e484d]">
-											{new Date(leave.startDate).toISOString().split("T")[0]}{" "}
-											&rarr;{" "}
-											{new Date(leave.endDate).toISOString().split("T")[0]}
-										</td>
-										<td className="py-4 px-6 text-[#3e484d]">
-											{leave.reason || "-"}
-										</td>
-										<td className="py-4 px-6">
-											{leave.status === "PENDING" && (
-												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#ffeebb] text-[#894e00]">
-													MENUNGGU
-												</span>
-											)}
-											{leave.status === "APPROVED" && (
-												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#6cf8bb] text-[#00714d]">
-													DISETUJUI
-												</span>
-											)}
-											{leave.status === "REJECTED" && (
-												<span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#ffdad6] text-[#93000a]">
-													DITOLAK
-												</span>
-											)}
-										</td>
-										<td className="py-4 px-6 text-right">
-											<div className="flex items-center justify-end gap-2 opacity-100 transition-opacity lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
-												{leave.status === "PENDING" && (
-													<>
-														<button
-															type="button"
-															onClick={() => approveMutation.mutate(leave.id)}
-															title="Setujui"
-															className="p-1.5 text-[#006c49] hover:bg-[#6cf8bb]/30 rounded-lg transition-colors"
-														>
-															<Check size={18} />
-														</button>
-														<button
-															type="button"
-															onClick={() => rejectMutation.mutate(leave.id)}
-															title="Tolak"
-															className="p-1.5 text-[#ba1a1a] hover:bg-[#ffdad6]/50 rounded-lg transition-colors"
-														>
-															<XIcon size={18} />
-														</button>
-													</>
-												)}
-												<button
-													type="button"
-													onClick={() => {
-														if (confirm("Hapus cuti ini?")) {
-															deleteMutation.mutate(leave.id);
-														}
-													}}
-													title="Hapus"
-													className="p-1.5 text-[#6e797e] hover:text-[#ba1a1a] transition-colors ml-2"
-												>
-													<Trash2 size={18} />
-												</button>
-											</div>
-										</td>
-									</tr>
-								))
-							)}
-						</tbody>
-					</table>
-				</div>
-
-				<PaginationControls
-					meta={meta}
-					onPageChange={setPage}
-					disabled={isLoading}
+			{/* KPI Stat Cards */}
+			<div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<StatCard
+					title="Total Pengajuan"
+					value={meta?.total ?? leaves.length}
+					icon={<CalendarOff className="h-4 w-4" />}
+					description="Riwayat permohonan tercatat"
+				/>
+				<StatCard
+					title="Menunggu Persetujuan"
+					value={pendingCount}
+					icon={<Clock className="h-4 w-4 text-amber-600" />}
+					description="Perlu tindakan verifikasi"
+				/>
+				<StatCard
+					title="Telah Disetujui"
+					value={approvedCount}
+					icon={<UserCheck className="h-4 w-4 text-emerald-600" />}
+					description="Cuti berstatus aktif"
 				/>
 			</div>
-		</motion.div>
+
+			{/* Table Container */}
+			<div className="border border-border bg-card">
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>NIP</TableHead>
+							<TableHead>Nama Pegawai</TableHead>
+							<TableHead>Jenis Cuti</TableHead>
+							<TableHead>Mulai</TableHead>
+							<TableHead>Selesai</TableHead>
+							<TableHead>Keterangan</TableHead>
+							<TableHead>Status</TableHead>
+							<TableHead className="text-right">Aksi</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{isLoading ? (
+							[1, 2, 3].map((k) => (
+								<TableRow key={k} className="animate-pulse">
+									<TableCell colSpan={8} className="h-12 bg-card" />
+								</TableRow>
+							))
+						) : leaves.length === 0 ? (
+							<TableRow>
+								<TableCell
+									colSpan={8}
+									className="py-10 text-center text-xs text-muted-foreground"
+								>
+									Tidak ada permohonan cuti.
+								</TableCell>
+							</TableRow>
+						) : (
+							leaves.map((leave) => (
+								<TableRow key={leave.id}>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{leave.employee?.employeeCode ?? "—"}
+									</TableCell>
+									<TableCell className="font-bold text-foreground">
+										{leave.employee?.name ?? "Tidak Diketahui"}
+									</TableCell>
+									<TableCell className="text-xs">
+										{typeLabels[leave.type] || leave.type}
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{leave.startDate}
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{leave.endDate}
+									</TableCell>
+									<TableCell className="text-xs text-muted-foreground max-w-xs truncate">
+										{leave.reason || "—"}
+									</TableCell>
+									<TableCell>
+										<Badge
+											variant={
+												leave.status === "APPROVED"
+													? "success"
+													: leave.status === "PENDING"
+														? "warning"
+														: "destructive"
+											}
+											className="text-[10px]"
+										>
+											{leave.status === "APPROVED"
+												? "DISETUJUI"
+												: leave.status === "PENDING"
+													? "MENUNGGU"
+													: "DITOLAK"}
+										</Badge>
+									</TableCell>
+									<TableCell className="text-right">
+										<div className="flex items-center justify-end gap-1">
+											{leave.status === "PENDING" && (
+												<>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 text-emerald-600 hover:bg-emerald-50"
+														onClick={() => approveMutation.mutate(leave.id)}
+														title="Setujui"
+													>
+														<Check className="h-4 w-4" />
+													</Button>
+													<Button
+														variant="ghost"
+														size="icon"
+														className="h-8 w-8 text-amber-600 hover:bg-amber-50"
+														onClick={() => rejectMutation.mutate(leave.id)}
+														title="Tolak"
+													>
+														<XIcon className="h-4 w-4" />
+													</Button>
+												</>
+											)}
+											<Button
+												variant="ghost"
+												size="icon"
+												className="h-8 w-8 text-muted-foreground hover:text-destructive"
+												onClick={() => {
+													if (confirm("Hapus permohonan cuti ini?")) {
+														deleteMutation.mutate(leave.id);
+													}
+												}}
+												title="Hapus"
+											>
+												<Trash2 className="h-3.5 w-3.5" />
+											</Button>
+										</div>
+									</TableCell>
+								</TableRow>
+							))
+						)}
+					</TableBody>
+				</Table>
+
+				<div className="p-3 border-t border-border bg-card">
+					<PaginationControls
+						meta={meta}
+						onPageChange={setPage}
+						disabled={isLoading}
+					/>
+				</div>
+			</div>
+
+			{/* Form Modal (Data Dasar Pattern) */}
+			{showForm && (
+				<Modal
+					open={showForm}
+					onOpenChange={setShowForm}
+					title="Form Pengajuan Cuti Pegawai"
+					description="Pilih pegawai dan tentukan rentang tanggal izin/cuti yang dimohonkan."
+					maxWidth="2xl"
+					footer={
+						<div className="flex items-center gap-2">
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setShowForm(false)}
+								disabled={createMutation.isPending}
+							>
+								Batal
+							</Button>
+							<Button
+								variant="primary"
+								size="sm"
+								onClick={() => createMutation.mutate(form)}
+								disabled={
+									createMutation.isPending ||
+									!form.employeeId ||
+									!form.startDate ||
+									!form.endDate
+								}
+							>
+								{createMutation.isPending ? "Menyimpan..." : "Ajukan"}
+							</Button>
+						</div>
+					}
+				>
+					<div className="space-y-4">
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Pilih Pegawai *
+							</label>
+							<select
+								value={form.employeeId}
+								onChange={(e) =>
+									setForm({ ...form, employeeId: e.target.value })
+								}
+								className="flex h-9 w-full border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:outline-none"
+							>
+								<option value="">Pilih pegawai...</option>
+								{employees.map((emp) => (
+									<option key={emp.id} value={emp.id}>
+										{emp.name} ({emp.employeeCode})
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Jenis Cuti *
+							</label>
+							<select
+								value={form.type}
+								onChange={(e) => setForm({ ...form, type: e.target.value })}
+								className="flex h-9 w-full border border-border bg-card px-3 text-xs text-foreground focus:border-primary focus:outline-none"
+							>
+								{Object.entries(typeLabels).map(([key, label]) => (
+									<option key={key} value={key}>
+										{label}
+									</option>
+								))}
+							</select>
+						</div>
+
+						<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+							<div className="space-y-1.5">
+								<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+									Tanggal Mulai *
+								</label>
+								<Input
+									type="date"
+									value={form.startDate}
+									onChange={(e) =>
+										setForm({ ...form, startDate: e.target.value })
+									}
+									className="text-xs font-mono"
+								/>
+							</div>
+
+							<div className="space-y-1.5">
+								<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+									Tanggal Selesai *
+								</label>
+								<Input
+									type="date"
+									value={form.endDate}
+									onChange={(e) =>
+										setForm({ ...form, endDate: e.target.value })
+									}
+									className="text-xs font-mono"
+								/>
+							</div>
+						</div>
+
+						<div className="space-y-1.5">
+							<label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono">
+								Alasan / Keterangan
+							</label>
+							<Input
+								value={form.reason}
+								onChange={(e) => setForm({ ...form, reason: e.target.value })}
+								placeholder="Contoh: Keperluan keluarga mendesak"
+							/>
+						</div>
+					</div>
+				</Modal>
+			)}
+		</div>
 	);
 }

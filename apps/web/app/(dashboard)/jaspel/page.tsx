@@ -1,20 +1,34 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
 import {
 	Calculator,
-	CheckCircle2,
 	FileDown,
+	Loader2,
 	RefreshCw,
 	Save,
+	Trash2,
 	Users,
 } from "lucide-react";
-import { useState } from "react";
+import * as React from "react";
+import { toast } from "sonner";
 import PaginationControls, {
 	type PageMeta,
 } from "@/components/pagination-controls";
-import api from "../../../lib/api";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import api from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 interface JaspelVariable {
 	employeeId: number;
@@ -82,61 +96,51 @@ interface HistoryItem {
 
 export default function JaspelPage() {
 	const queryClient = useQueryClient();
-	const [activeTab, setActiveTab] = useState<
+	const [activeTab, setActiveTab] = React.useState<
 		"variables" | "simulation" | "history"
 	>("variables");
-	const [month, setMonth] = useState(new Date().getMonth() + 1);
-	const [year, setYear] = useState(new Date().getFullYear());
-	const [totalFundInput, setTotalFundInput] = useState<string>("");
-	const [pendapatanInput, setPendapatanInput] = useState<string>("");
-	const [operasionalInput, setOperasionalInput] = useState<string>("");
-	const [namaPuskesmasInput, setNamaPuskesmasInput] = useState<string>("");
-	const [variablesPage, setVariablesPage] = useState(1);
-	const [distributionsPage, setDistributionsPage] = useState(1);
+	const [month, setMonth] = React.useState(new Date().getMonth() + 1);
+	const [year, setYear] = React.useState(new Date().getFullYear());
+	const [totalFundInput, setTotalFundInput] = React.useState<string>("");
+	const [pendapatanInput, setPendapatanInput] = React.useState<string>("");
+	const [operasionalInput, setOperasionalInput] = React.useState<string>("");
+	const [namaPuskesmasInput, setNamaPuskesmasInput] =
+		React.useState<string>("");
+	const [variablesPage, setVariablesPage] = React.useState(1);
+	const [distributionsPage, setDistributionsPage] = React.useState(1);
 
-	// Variables Queries
 	const {
 		data: variablesResponse,
 		isLoading: isVariablesLoading,
 		isFetching: isVariablesFetching,
 	} = useQuery<{ data: JaspelVariable[]; meta: PageMeta }>({
 		queryKey: ["jaspel-variables", variablesPage],
-		queryFn: async () => {
-			const res = await api.get(
-				`/jaspel/variables?page=${variablesPage}&limit=10`,
-			);
-			return res.data;
-		},
+		queryFn: async () =>
+			(await api.get(`/jaspel/variables?page=${variablesPage}&limit=10`)).data,
 	});
-	const variables = variablesResponse?.data;
+	const variables = variablesResponse?.data || [];
 
-	// Distributions Queries
 	const {
 		data: distributionsData,
 		isLoading: isDistributionsLoading,
 		isFetching: isDistributionsFetching,
 	} = useQuery<JaspelDistributions>({
 		queryKey: ["jaspel-distributions", month, year, distributionsPage],
-		queryFn: async () => {
-			const res = await api.get(
-				`/jaspel/distributions?month=${month}&year=${year}&page=${distributionsPage}&limit=100`,
-			);
-			return res.data;
-		},
+		queryFn: async () =>
+			(
+				await api.get(
+					`/jaspel/distributions?month=${month}&year=${year}&page=${distributionsPage}&limit=100`,
+				)
+			).data,
 	});
 
-	// History Query
 	const { data: historyData, isLoading: isHistoryLoading } = useQuery<
 		HistoryItem[]
 	>({
 		queryKey: ["jaspel-history"],
-		queryFn: async () => {
-			const res = await api.get("/jaspel/history");
-			return res.data;
-		},
+		queryFn: async () => (await api.get("/jaspel/history")).data,
 	});
 
-	// Calculate Mutation
 	const calculateMutation = useMutation({
 		mutationFn: async () => {
 			const fund = Number(totalFundInput.replace(/\D/g, ""));
@@ -157,6 +161,10 @@ export default function JaspelPage() {
 				queryKey: ["jaspel-distributions", month, year],
 			});
 			queryClient.invalidateQueries({ queryKey: ["jaspel-history"] });
+			toast.success("Perhitungan Jaspel berhasil diperbarui");
+		},
+		onError: (err: any) => {
+			toast.error(err.response?.data?.message || "Gagal menghitung Jaspel");
 		},
 	});
 
@@ -173,6 +181,7 @@ export default function JaspelPage() {
 				queryKey: ["jaspel-distributions", month, year],
 			});
 			queryClient.invalidateQueries({ queryKey: ["jaspel-history"] });
+			toast.success("Status Jaspel berhasil diperbarui");
 		},
 	});
 
@@ -184,20 +193,26 @@ export default function JaspelPage() {
 			queryClient.invalidateQueries({
 				queryKey: ["jaspel-distributions", month, year],
 			});
+			toast.success("Data perhitungan berhasil dihapus");
 		},
 	});
 
 	const handleExport = async () => {
-		const response = await api.get(
-			`/jaspel/export?month=${month}&year=${year}`,
-			{ responseType: "blob" },
-		);
-		const url = URL.createObjectURL(response.data);
-		const link = document.createElement("a");
-		link.href = url;
-		link.download = `Jaspel-${month}-${year}.xlsx`;
-		link.click();
-		URL.revokeObjectURL(url);
+		try {
+			const response = await api.get(
+				`/jaspel/export?month=${month}&year=${year}`,
+				{ responseType: "blob" },
+			);
+			const url = URL.createObjectURL(response.data);
+			const link = document.createElement("a");
+			link.href = url;
+			link.download = `Jaspel-${month}-${year}.xlsx`;
+			link.click();
+			URL.revokeObjectURL(url);
+			toast.success("Berkas Excel Jaspel diunduh");
+		} catch {
+			toast.error("Gagal mengekspor data Jaspel");
+		}
 	};
 
 	const fmtRp = (n: number) => new Intl.NumberFormat("id-ID").format(n || 0);
@@ -205,131 +220,114 @@ export default function JaspelPage() {
 		new Date(2000, m - 1).toLocaleString("id-ID", { month: "long" });
 
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 10 }}
-			animate={{ opacity: 1, y: 0 }}
-			className="flex flex-col gap-6"
-		>
-			<div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-				<div>
-					<h1 className="text-[24px] sm:text-[28px] font-bold text-[#111c2d] tracking-tight">
-						Kalkulator Jasa Pelayanan
-					</h1>
-					<p className="text-[#6e797e] text-[14px] sm:text-[15px] mt-1">
-						Penghitungan Jasa Pelayanan Medis berdasarkan poin ketenagaan,
-						kehadiran, dan tanggung jawab.
-					</p>
-				</div>
-			</div>
+		<div className="page-shell space-y-6">
+			{/* Level 1: Page Header */}
+			<PageHeader
+				title="Kalkulator Jasa Pelayanan (Jaspel)"
+				description="Penghitungan insentif jasa pelayanan medis berdasarkan poin ketenagaan, masa kerja, kehadiran, dan klaster."
+			/>
 
-			{/* Tabs */}
-			<div className="grid w-full grid-cols-3 rounded-lg border border-black/5 bg-white p-1 shadow-sm sm:w-fit">
+			{/* Navigation Tabs */}
+			<div className="inline-flex border border-border bg-card p-1 gap-1">
 				<button
 					type="button"
 					onClick={() => setActiveTab("variables")}
-					className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all ${
+					className={cn(
+						"flex items-center gap-2 px-4 py-2 text-xs font-semibold transition-colors border",
 						activeTab === "variables"
-							? "bg-[#00647c] text-white shadow-md"
-							: "text-[#6e797e] hover:bg-[#f0f3ff] hover:text-[#111c2d]"
-					}`}
+							? "border-primary bg-primary text-primary-foreground"
+							: "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+					)}
 				>
-					<Users className="w-4 h-4" />
-					Variabel
+					<Users className="h-3.5 w-3.5" />
+					Variabel Ketenagaan
 				</button>
 				<button
 					type="button"
 					onClick={() => setActiveTab("simulation")}
-					className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all ${
+					className={cn(
+						"flex items-center gap-2 px-4 py-2 text-xs font-semibold transition-colors border",
 						activeTab === "simulation"
-							? "bg-[#00647c] text-white shadow-md"
-							: "text-[#6e797e] hover:bg-[#f0f3ff] hover:text-[#111c2d]"
-					}`}
+							? "border-primary bg-primary text-primary-foreground"
+							: "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+					)}
 				>
-					<Calculator className="w-4 h-4" />
-					Perhitungan
+					<Calculator className="h-3.5 w-3.5" />
+					Simulasi & Perhitungan
 				</button>
 				<button
 					type="button"
 					onClick={() => setActiveTab("history")}
-					className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-[13px] font-medium transition-all ${
+					className={cn(
+						"flex items-center gap-2 px-4 py-2 text-xs font-semibold transition-colors border",
 						activeTab === "history"
-							? "bg-[#00647c] text-white shadow-md"
-							: "text-[#6e797e] hover:bg-[#f0f3ff] hover:text-[#111c2d]"
-					}`}
+							? "border-primary bg-primary text-primary-foreground"
+							: "border-transparent text-muted-foreground hover:bg-muted hover:text-foreground",
+					)}
 				>
-					<RefreshCw className="w-4 h-4" />
-					History
+					<RefreshCw className="h-3.5 w-3.5" />
+					Riwayat Distribusi
 				</button>
 			</div>
 
+			{/* TAB 1: VARIABLES */}
 			{activeTab === "variables" && (
-				<div className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
-					<div className="p-5 border-b border-black/5 bg-[#f0f3ff]/50">
-						<h3 className="font-semibold text-[#111c2d]">
+				<div className="border border-border bg-card">
+					<div className="p-4 border-b border-border bg-muted/30">
+						<h3 className="text-sm font-bold text-foreground">
 							Pengaturan Variabel Ketenagaan
 						</h3>
-						<p className="text-[13px] text-[#6e797e] mt-1">
+						<p className="text-xs text-muted-foreground mt-0.5">
 							Atur poin jenis ketenagaan, masa kerja, rangkap tugas, dan
-							tanggung jawab klaster untuk setiap pegawai.
+							tanggung jawab klaster per pegawai.
 						</p>
 					</div>
-					<div className="mobile-scroll-hint">
-						Geser tabel untuk mengatur seluruh variabel
-					</div>
-					<div className="overflow-x-auto">
-						<table className="w-full text-left border-collapse">
-							<thead>
-								<tr className="bg-[#f8f9fa] border-b border-black/5">
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider whitespace-nowrap">
-										Pegawai
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-										1. Poin Jenis Ketenagaan
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-										2. Masa Kerja (thn)
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-										3. Poin Masa Kerja
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-										6. Rangkap Tugas
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-										7. Tg Jawab Klaster
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-										8 = 1+3+6+7
-									</th>
-									<th className="px-3 py-3 font-sans text-[11px] font-semibold text-[#6e797e] uppercase tracking-wider text-right whitespace-nowrap">
-										Aksi
-									</th>
-								</tr>
-							</thead>
-							<tbody className="divide-y divide-black/5">
-								{isVariablesLoading ? (
-									<tr>
-										<td colSpan={8} className="text-center py-10">
-											<RefreshCw className="w-6 h-6 animate-spin text-[#00647c] mx-auto" />
-										</td>
-									</tr>
-								) : variables?.length === 0 ? (
-									<tr>
-										<td
-											colSpan={8}
-											className="text-center py-10 text-[#6e797e]"
-										>
-											Belum ada data pegawai aktif.
-										</td>
-									</tr>
-								) : (
-									variables?.map((emp) => (
-										<VariableRow key={emp.employeeId} employee={emp} />
-									))
-								)}
-							</tbody>
-						</table>
-					</div>
+
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Pegawai</TableHead>
+								<TableHead className="text-center">
+									1. Poin Ketenagaan
+								</TableHead>
+								<TableHead className="text-center">
+									2. Masa Kerja (Thn)
+								</TableHead>
+								<TableHead className="text-center">
+									3. Poin Masa Kerja
+								</TableHead>
+								<TableHead className="text-center">4. Rangkap Tugas</TableHead>
+								<TableHead className="text-center">
+									5. Tg Jawab Klaster
+								</TableHead>
+								<TableHead className="text-center">Total Poin</TableHead>
+								<TableHead className="text-right">Aksi</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{isVariablesLoading ? (
+								[1, 2, 3].map((k) => (
+									<TableRow key={k} className="animate-pulse">
+										<TableCell colSpan={8} className="h-12 bg-card" />
+									</TableRow>
+								))
+							) : variables.length === 0 ? (
+								<TableRow>
+									<TableCell
+										colSpan={8}
+										className="py-10 text-center text-xs text-muted-foreground"
+									>
+										Belum ada data pegawai.
+									</TableCell>
+								</TableRow>
+							) : (
+								variables.map((emp) => (
+									<VariableRow key={emp.employeeId} employee={emp} />
+								))
+							)}
+						</TableBody>
+					</Table>
+
 					<PaginationControls
 						meta={variablesResponse?.meta}
 						onPageChange={setVariablesPage}
@@ -338,23 +336,45 @@ export default function JaspelPage() {
 				</div>
 			)}
 
+			{/* TAB 2: SIMULATION */}
 			{activeTab === "simulation" && (
 				<div className="space-y-6">
-					{/* Controls */}
-					<div className="bg-white rounded-xl border border-black/5 shadow-sm p-6">
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
+					{/* Input Parameter Box */}
+					<div className="border border-border bg-card p-5 space-y-4">
+						<div className="border-b border-border/60 pb-3 flex flex-wrap items-center justify-between gap-2">
 							<div>
-								<label
-									htmlFor="month"
-									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
+								<h3 className="text-sm font-bold text-foreground">
+									Parameter Dana Jasa Pelayanan
+								</h3>
+								<p className="text-xs text-muted-foreground">
+									Tentukan periode dan pagu dana untuk menghitung distribusi per
+									pegawai.
+								</p>
+							</div>
+							{distributionsData?.fund && (
+								<Badge
+									variant={
+										distributionsData.fund.status === "LOCKED"
+											? "destructive"
+											: distributionsData.fund.status === "FINAL"
+												? "success"
+												: "info"
+									}
 								>
+									STATUS: {distributionsData.fund.status}
+								</Badge>
+							)}
+						</div>
+
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+							<div className="space-y-1.5">
+								<label className="text-xs font-mono font-semibold uppercase text-muted-foreground">
 									Bulan
 								</label>
 								<select
-									id="month"
 									value={month}
 									onChange={(e) => setMonth(Number(e.target.value))}
-									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20"
+									className="flex h-9 w-full border border-border bg-card px-2.5 text-xs font-mono"
 								>
 									{Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
 										<option key={m} value={m}>
@@ -363,362 +383,221 @@ export default function JaspelPage() {
 									))}
 								</select>
 							</div>
-							<div>
-								<label
-									htmlFor="year"
-									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
-								>
+
+							<div className="space-y-1.5">
+								<label className="text-xs font-mono font-semibold uppercase text-muted-foreground">
 									Tahun
 								</label>
-								<input
-									id="year"
+								<Input
 									type="number"
 									value={year}
 									onChange={(e) => setYear(Number(e.target.value))}
-									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20"
+									className="font-mono text-xs"
 								/>
 							</div>
-							<div>
-								<label
-									htmlFor="namaPuskesmas"
-									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
-								>
+
+							<div className="space-y-1.5">
+								<label className="text-xs font-mono font-semibold uppercase text-muted-foreground">
 									Nama Puskesmas
 								</label>
-								<input
-									id="namaPuskesmas"
-									type="text"
+								<Input
+									placeholder={
+										distributionsData?.fund?.namaPuskesmas || "Puskesmas"
+									}
 									value={namaPuskesmasInput}
 									onChange={(e) => setNamaPuskesmasInput(e.target.value)}
-									placeholder="Contoh: PUSKESMAS KESAMBI"
-									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20"
+									className="text-xs"
 								/>
 							</div>
-						</div>
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end mb-4">
-							<div>
-								<label
-									htmlFor="pendapatan"
-									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
-								>
-									Pendapatan Kapitasi (Rp)
+
+							<div className="space-y-1.5">
+								<label className="text-xs font-mono font-semibold uppercase text-muted-foreground">
+									Pendapatan (Rp)
 								</label>
-								<input
-									id="pendapatan"
-									type="text"
-									placeholder="0"
+								<Input
+									placeholder={fmtRp(distributionsData?.fund?.pendapatan || 0)}
 									value={pendapatanInput}
-									onChange={(e) => {
-										const val = e.target.value.replace(/\D/g, "");
-										setPendapatanInput(
-											val
-												? new Intl.NumberFormat("id-ID").format(Number(val))
-												: "",
-										);
-									}}
-									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20 font-semibold text-[#00647c]"
+									onChange={(e) => setPendapatanInput(e.target.value)}
+									className="font-mono text-xs"
 								/>
 							</div>
-							<div>
-								<label
-									htmlFor="operasional"
-									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
-								>
-									Biaya Operasional (Rp)
+
+							<div className="space-y-1.5">
+								<label className="text-xs font-mono font-semibold uppercase text-muted-foreground">
+									Operasional (Rp)
 								</label>
-								<input
-									id="operasional"
-									type="text"
-									placeholder="0"
+								<Input
+									placeholder={fmtRp(distributionsData?.fund?.operasional || 0)}
 									value={operasionalInput}
-									onChange={(e) => {
-										const val = e.target.value.replace(/\D/g, "");
-										setOperasionalInput(
-											val
-												? new Intl.NumberFormat("id-ID").format(Number(val))
-												: "",
-										);
-									}}
-									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20 font-semibold text-[#00647c]"
+									onChange={(e) => setOperasionalInput(e.target.value)}
+									className="font-mono text-xs"
 								/>
 							</div>
-							<div>
-								<label
-									htmlFor="totalFund"
-									className="block text-[13px] font-semibold text-[#6e797e] mb-2 uppercase tracking-wide"
-								>
-									Jumlah Jaspel (Rp)
+
+							<div className="space-y-1.5">
+								<label className="text-xs font-mono font-semibold uppercase text-primary">
+									Pagu Jaspel (Rp) *
 								</label>
-								<input
-									id="totalFund"
-									type="text"
-									placeholder="Contoh: 45570456"
+								<Input
+									placeholder={fmtRp(distributionsData?.fund?.totalFund || 0)}
 									value={totalFundInput}
-									onChange={(e) => {
-										const val = e.target.value.replace(/\D/g, "");
-										setTotalFundInput(
-											val
-												? new Intl.NumberFormat("id-ID").format(Number(val))
-												: "",
-										);
-									}}
-									className="w-full h-[42px] px-3 bg-[#f8f9fa] border border-black/10 rounded-lg text-[14px] focus:outline-none focus:ring-2 focus:ring-[#00647c]/20 font-semibold text-[#00647c]"
+									onChange={(e) => setTotalFundInput(e.target.value)}
+									className="font-mono text-xs font-bold"
 								/>
 							</div>
 						</div>
-						<div className="flex gap-2">
-							<button
-								type="button"
-								onClick={handleCalculate}
-								disabled={calculateMutation.isPending}
-								className="flex-1 h-[42px] bg-[#00647c] text-white rounded-lg font-medium text-[14px] hover:bg-[#005266] transition-colors flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
-							>
-								{calculateMutation.isPending ? (
-									<RefreshCw className="w-4 h-4 animate-spin" />
-								) : (
-									<Calculator className="w-4 h-4" />
+
+						<div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/60">
+							<div className="flex flex-wrap items-center gap-2">
+								<Button
+									variant="primary"
+									size="sm"
+									onClick={handleCalculate}
+									disabled={
+										calculateMutation.isPending ||
+										distributionsData?.fund?.status === "LOCKED"
+									}
+									className="gap-1.5"
+								>
+									{calculateMutation.isPending ? (
+										<Loader2 className="h-4 w-4 animate-spin" />
+									) : (
+										<Calculator className="h-4 w-4" />
+									)}
+									Hitung Jaspel
+								</Button>
+
+								{distributionsData?.fund && (
+									<>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => transition.mutate("review")}
+											disabled={transition.isPending}
+										>
+											Tandai Review
+										</Button>
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => transition.mutate("finalize")}
+											disabled={transition.isPending}
+										>
+											Finalisasi
+										</Button>
+										{distributionsData.fund.status === "LOCKED" ? (
+											<Button
+												variant="secondary"
+												size="sm"
+												onClick={() => transition.mutate("unlock")}
+												disabled={transition.isPending}
+											>
+												Buka Kunci
+											</Button>
+										) : (
+											<Button
+												variant="destructive"
+												size="sm"
+												onClick={() => transition.mutate("lock")}
+												disabled={transition.isPending}
+											>
+												Kunci Periode
+											</Button>
+										)}
+									</>
 								)}
-								Hitung Jaspel
-							</button>
-							{distributionsData?.fund?.status === "DRAFT" && (
-								<button
-									type="button"
-									className="adms-button"
-									onClick={() => transition.mutate("review")}
+							</div>
+
+							{distributionsData?.distributions?.length ? (
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={handleExport}
+									className="gap-1.5"
 								>
-									Review
-								</button>
-							)}
-							{distributionsData?.fund?.status === "REVIEWED" && (
-								<button
-									type="button"
-									className="adms-button"
-									onClick={() => transition.mutate("finalize")}
-								>
-									Finalisasi
-								</button>
-							)}
-							{distributionsData?.fund?.status === "FINAL" && (
-								<button
-									type="button"
-									className="adms-button"
-									onClick={() => transition.mutate("lock")}
-								>
-									Kunci
-								</button>
-							)}
-							{distributionsData?.fund &&
-								distributionsData.fund.status !== "DRAFT" && (
-									<button
-										type="button"
-										className="h-[42px] px-4 bg-white border border-[#ba1a1a]/30 text-[#ba1a1a] rounded-lg font-medium text-[14px] hover:bg-[#ba1a1a]/5 transition-colors shadow-sm disabled:opacity-50"
-										onClick={() => {
-											if (
-												window.confirm(
-													`Buka kunci jaspel ${bulanNama(month)} ${year}? Periode bisa diedit dan dihitung ulang.`,
-												)
-											)
-												transition.mutate("unlock");
-										}}
-										disabled={transition.isPending}
-									>
-										Buka Kunci
-									</button>
-								)}
+									<FileDown className="h-4 w-4" />
+									Export Excel
+								</Button>
+							) : null}
 						</div>
 					</div>
 
-					{/* Results Table */}
-					<div className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
-						<div className="p-5 border-b border-black/5 flex justify-between items-center bg-[#f0f3ff]/50">
-							<div>
-								<h3 className="font-semibold text-[#111c2d]">
-									Hasil Penghitungan
-								</h3>
-								{distributionsData?.fund && (
-									<p className="text-[13px] text-[#006c49] mt-1 font-medium flex items-center gap-1">
-										<CheckCircle2 className="w-3.5 h-3.5" />
-										{distributionsData.fund.namaPuskesmas || "PUSKESMAS"} ·{" "}
-										Jaspel Rp {fmtRp(distributionsData.fund.totalFund)} ·{" "}
-										{distributionsData.fund.status}
-									</p>
-								)}
-							</div>
-							{(distributionsData?.distributions?.length ?? 0) > 0 && (
-								<button
-									type="button"
-									onClick={handleExport}
-									className="flex items-center gap-2 px-4 py-2 bg-white border border-[#00647c]/30 text-[#00647c] rounded-md text-[13px] font-medium hover:bg-[#f0f3ff] transition-colors shadow-sm"
-								>
-									<FileDown className="w-4 h-4" />
-									Export Excel
-								</button>
-							)}
-						</div>
-						<div className="mobile-scroll-hint">
-							Geser tabel untuk melihat seluruh kolom perhitungan
-						</div>
-						<div className="overflow-x-auto">
-							<table className="w-full text-left border-collapse">
-								<thead>
-									<tr className="bg-[#f8f9fa] border-b border-black/5">
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											No
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider whitespace-nowrap">
-											Nama
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider whitespace-nowrap">
-											Jabatan
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											Gol
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											Pend
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											1 Poin Ket.
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											3 Poin MK
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											4 Hadir
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											5 Hr Kerja
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											6 Rangkap
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											7 Tg Jawab
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											8 Poin Var
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											9 % Hadir
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-semibold text-[#6e797e] uppercase tracking-wider text-center whitespace-nowrap">
-											10 Total Poin
-										</th>
-										<th className="px-2 py-3 font-sans text-[10px] font-bold text-[#111c2d] uppercase tracking-wider text-right whitespace-nowrap">
-											Jasa Pelayanan
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y divide-black/5">
-									{isDistributionsLoading ? (
-										<tr>
-											<td colSpan={15} className="text-center py-10">
-												<RefreshCw className="w-6 h-6 animate-spin text-[#00647c] mx-auto" />
-											</td>
-										</tr>
-									) : distributionsData?.distributions?.length === 0 ? (
-										<tr>
-											<td
-												colSpan={15}
-												className="text-center py-12 text-[#6e797e]"
-											>
-												<Calculator className="w-10 h-10 mx-auto mb-3 opacity-20" />
-												<p>Belum ada data perhitungan untuk bulan ini.</p>
-												<p className="text-[13px] mt-1">
-													Masukkan nominal dana dan klik Hitung Jaspel.
-												</p>
-											</td>
-										</tr>
-									) : (
-										distributionsData?.distributions?.map((dist, i) => (
-											<tr key={dist.employeeId} className="hover:bg-[#f9f9ff]">
-												<td className="px-2 py-3 text-center text-[12px] text-[#6e797e]">
-													{i + 1}
-												</td>
-												<td className="px-2 py-3">
-													<p className="font-medium text-[#111c2d] text-[13px]">
+					{/* Distributions Table */}
+					<div className="border border-border bg-card">
+						<Table>
+							<TableHeader>
+								<TableRow>
+									<TableHead className="w-10 text-center">No</TableHead>
+									<TableHead>Pegawai</TableHead>
+									<TableHead>Jabatan</TableHead>
+									<TableHead className="text-center">
+										Hadir / Hari Kerja
+									</TableHead>
+									<TableHead className="text-center">% Kehadiran</TableHead>
+									<TableHead className="text-center">Poin Variabel</TableHead>
+									<TableHead className="text-center">Total Poin</TableHead>
+									<TableHead className="text-right">
+										Terima Bersih (Rp)
+									</TableHead>
+								</TableRow>
+							</TableHeader>
+							<TableBody>
+								{isDistributionsLoading ? (
+									<TableRow>
+										<TableCell colSpan={8} className="py-10 text-center">
+											<Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
+										</TableCell>
+									</TableRow>
+								) : !distributionsData?.distributions?.length ? (
+									<TableRow>
+										<TableCell
+											colSpan={8}
+											className="py-12 text-center text-xs text-muted-foreground"
+										>
+											Belum ada data perhitungan pada bulan ini. Masukkan
+											nominal Pagu Jaspel dan klik Hitung Jaspel.
+										</TableCell>
+									</TableRow>
+								) : (
+									distributionsData.distributions.map((dist, idx) => (
+										<TableRow key={dist.employeeId}>
+											<TableCell className="text-center font-mono text-xs text-muted-foreground">
+												{idx + 1}
+											</TableCell>
+											<TableCell>
+												<div className="flex flex-col">
+													<span className="font-bold text-foreground text-xs">
 														{dist.name}
-													</p>
-													<p className="text-[10px] text-[#6e797e]">
+													</span>
+													<span className="font-mono text-[10px] text-muted-foreground">
 														{dist.employeeCode}
-													</p>
-												</td>
-												<td className="px-2 py-3 text-[12px] text-[#3e484d]">
-													{dist.position || "-"}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.golongan || "-"}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.pendidikan || "-"}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.jenisKetenagaanPoin}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.masaKerjaPoin}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.hariMasukKerja}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.hariKerja}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.rangkapTugas || "-"}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] text-[#3e484d]">
-													{dist.tanggungJawabKlaster || "-"}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] font-medium text-[#3e484d]">
-													{dist.poinVariabelKetenagaan.toFixed(2)}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] font-medium text-[#3e484d]">
-													{(dist.persentaseKehadiran * 100).toFixed(2)}
-												</td>
-												<td className="px-2 py-3 text-center text-[12px] font-semibold text-[#00647c]">
-													{dist.jumlahTotalPoin.toFixed(2)}
-												</td>
-												<td className="px-2 py-3 text-right text-[13px] font-bold text-[#111c2d]">
-													{dist.finalAmount > 0 ? fmtRp(dist.finalAmount) : "-"}
-												</td>
-											</tr>
-										))
-									)}
-								</tbody>
-								{distributionsData?.distributions?.length ? (
-									<tfoot>
-										<tr className="bg-[#00647c] text-white">
-											<td
-												colSpan={11}
-												className="px-2 py-3 text-right text-[12px] font-bold"
-											>
-												JUMLAH
-											</td>
-											<td className="px-2 py-3 text-center text-[12px] font-bold">
-												{distributionsData.distributions
-													.reduce((s, d) => s + d.poinVariabelKetenagaan, 0)
-													.toFixed(2)}
-											</td>
-											<td className="px-2 py-3" />
-											<td className="px-2 py-3 text-center text-[12px] font-bold">
-												{distributionsData.distributions
-													.reduce((s, d) => s + d.jumlahTotalPoin, 0)
-													.toFixed(2)}
-											</td>
-											<td className="px-2 py-3 text-right text-[12px] font-bold">
-												{fmtRp(
-													distributionsData.distributions.reduce(
-														(s, d) => s + d.finalAmount,
-														0,
-													),
-												)}
-											</td>
-										</tr>
-									</tfoot>
-								) : null}
-							</table>
-						</div>
+													</span>
+												</div>
+											</TableCell>
+											<TableCell className="text-xs text-muted-foreground">
+												{dist.position || "—"}
+											</TableCell>
+											<TableCell className="text-center font-mono text-xs">
+												{dist.hariMasukKerja} / {dist.hariKerja}
+											</TableCell>
+											<TableCell className="text-center font-mono text-xs">
+												{(dist.persentaseKehadiran * 100).toFixed(0)}%
+											</TableCell>
+											<TableCell className="text-center font-mono text-xs">
+												{dist.poinVariabelKetenagaan.toFixed(2)}
+											</TableCell>
+											<TableCell className="text-center font-mono text-xs font-bold text-primary">
+												{dist.jumlahTotalPoin.toFixed(2)}
+											</TableCell>
+											<TableCell className="text-right font-mono text-xs font-bold text-foreground">
+												Rp {fmtRp(dist.finalAmount)}
+											</TableCell>
+										</TableRow>
+									))
+								)}
+							</TableBody>
+						</Table>
+
 						<PaginationControls
 							meta={distributionsData?.meta}
 							onPageChange={setDistributionsPage}
@@ -728,147 +607,122 @@ export default function JaspelPage() {
 				</div>
 			)}
 
+			{/* TAB 3: HISTORY */}
 			{activeTab === "history" && (
-				<div className="bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
-					<div className="p-5 border-b border-black/5 bg-[#f0f3ff]/50">
-						<h3 className="font-semibold text-[#111c2d]">
-							History Perhitungan
-						</h3>
-						<p className="text-[13px] text-[#6e797e] mt-1">
-							Daftar perhitungan jaspel yang pernah dilakukan per bulan.
-						</p>
-					</div>
-					{isHistoryLoading ? (
-						<div className="text-center py-10">
-							<RefreshCw className="w-6 h-6 animate-spin text-[#00647c] mx-auto" />
-						</div>
-					) : !historyData?.length ? (
-						<div className="text-center py-12 text-[#6e797e]">
-							<p>Belum ada history perhitungan.</p>
-						</div>
-					) : (
-						<div className="overflow-x-auto">
-							<table className="w-full text-left border-collapse">
-								<thead>
-									<tr className="bg-[#f8f9fa] border-b border-black/5">
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-											Periode
-										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider">
-											Puskesmas
-										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
-											Pendapatan
-										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
-											Operasional
-										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-right">
-											Jaspel
-										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-											Status
-										</th>
-										<th className="px-5 py-3 font-sans text-[12px] font-semibold text-[#6e797e] uppercase tracking-wider text-center">
-											Aksi
-										</th>
-									</tr>
-								</thead>
-								<tbody className="divide-y divide-black/5">
-									{historyData?.map((item) => (
-										<tr
-											key={`${item.year}-${item.month}`}
-											className="hover:bg-[#f9f9ff] cursor-pointer"
-											onClick={() => {
-												setMonth(item.month);
-												setYear(item.year);
-												setActiveTab("simulation");
-											}}
-										>
-											<td className="px-5 py-4 text-[14px] font-medium text-[#111c2d]">
-												{bulanNama(item.month)} {item.year}
-											</td>
-											<td className="px-5 py-4 text-[13px] text-[#3e484d]">
-												{item.namaPuskesmas || "-"}
-											</td>
-											<td className="px-5 py-4 text-right text-[13px] text-[#3e484d]">
-												Rp {fmtRp(item.pendapatan)}
-											</td>
-											<td className="px-5 py-4 text-right text-[13px] text-[#3e484d]">
-												Rp {fmtRp(item.operasional)}
-											</td>
-											<td className="px-5 py-4 text-right text-[14px] font-bold text-[#111c2d]">
-												Rp {fmtRp(item.totalFund)}
-											</td>
-											<td className="px-5 py-4 text-center">
-												<span
-													className={`inline-flex px-2 py-1 rounded text-[11px] font-bold ${
-														item.status === "LOCKED"
-															? "bg-[#ba1a1a]/10 text-[#ba1a1a]"
-															: item.status === "FINAL"
-																? "bg-[#006c49]/10 text-[#006c49]"
-																: item.status === "REVIEWED"
-																	? "bg-[#894e00]/10 text-[#894e00]"
-																	: "bg-[#00647c]/10 text-[#00647c]"
-													}`}
+				<div className="border border-border bg-card">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Periode</TableHead>
+								<TableHead>Unit Puskesmas</TableHead>
+								<TableHead className="text-right">Pendapatan</TableHead>
+								<TableHead className="text-right">Pagu Jaspel</TableHead>
+								<TableHead className="text-center">Status</TableHead>
+								<TableHead className="text-right">Aksi</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{isHistoryLoading ? (
+								<TableRow>
+									<TableCell colSpan={6} className="py-10 text-center">
+										<Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
+									</TableCell>
+								</TableRow>
+							) : !historyData?.length ? (
+								<TableRow>
+									<TableCell
+										colSpan={6}
+										className="py-12 text-center text-xs text-muted-foreground"
+									>
+										Belum ada riwayat perhitungan Jaspel yang tersimpan.
+									</TableCell>
+								</TableRow>
+							) : (
+								historyData.map((item) => (
+									<TableRow key={`${item.month}-${item.year}`}>
+										<TableCell className="font-bold text-foreground text-xs">
+											{bulanNama(item.month)} {item.year}
+										</TableCell>
+										<TableCell className="text-xs text-muted-foreground">
+											{item.namaPuskesmas || "—"}
+										</TableCell>
+										<TableCell className="text-right font-mono text-xs text-muted-foreground">
+											Rp {fmtRp(item.pendapatan)}
+										</TableCell>
+										<TableCell className="text-right font-mono text-xs font-bold text-foreground">
+											Rp {fmtRp(item.totalFund)}
+										</TableCell>
+										<TableCell className="text-center">
+											<Badge
+												variant={
+													item.status === "LOCKED"
+														? "destructive"
+														: item.status === "FINAL"
+															? "success"
+															: "secondary"
+												}
+												className="text-[10px]"
+											>
+												{item.status}
+											</Badge>
+										</TableCell>
+										<TableCell className="text-right">
+											<div className="flex items-center justify-end gap-2">
+												<Button
+													variant="outline"
+													size="sm"
+													className="text-xs h-7"
+													onClick={() => {
+														setMonth(item.month);
+														setYear(item.year);
+														setActiveTab("simulation");
+													}}
 												>
-													{item.status}
-												</span>
-											</td>
-											<td className="px-5 py-4 text-center text-[12px]">
-												<div className="flex items-center justify-center gap-3">
-													<button
-														type="button"
-														className="text-[#00647c] hover:underline font-medium"
-														onClick={() => {
-															setMonth(item.month);
-															setYear(item.year);
-															setActiveTab("simulation");
-														}}
-													>
-														Lihat detail
-													</button>
-													<button
-														type="button"
-														className="text-[#ba1a1a] hover:underline font-medium"
-														disabled={deleteMutation.isPending}
-														onClick={() => {
-															if (
-																window.confirm(
-																	`Hapus perhitungan jaspel ${bulanNama(item.month)} ${item.year}? Data distribusi ikut terhapus dan tidak bisa dikembalikan.`,
-																)
+													Buka Detail
+												</Button>
+												<Button
+													variant="ghost"
+													size="icon"
+													className="h-7 w-7 text-destructive"
+													disabled={deleteMutation.isPending}
+													onClick={() => {
+														if (
+															window.confirm(
+																`Hapus perhitungan Jaspel ${bulanNama(item.month)} ${item.year}?`,
 															)
-																deleteMutation.mutate({
-																	month: item.month,
-																	year: item.year,
-																});
-														}}
-														onClickCapture={(e) => e.stopPropagation()}
-													>
-														Hapus
-													</button>
-												</div>
-											</td>
-										</tr>
-									))}
-								</tbody>
-							</table>
-						</div>
-					)}
+														) {
+															deleteMutation.mutate({
+																month: item.month,
+																year: item.year,
+															});
+														}
+													}}
+												>
+													<Trash2 className="h-3.5 w-3.5" />
+												</Button>
+											</div>
+										</TableCell>
+									</TableRow>
+								))
+							)}
+						</TableBody>
+					</Table>
 				</div>
 			)}
-		</motion.div>
+		</div>
 	);
 }
 
 function VariableRow({ employee }: { employee: JaspelVariable }) {
 	const queryClient = useQueryClient();
-	const [jenis, setJenis] = useState(employee.jenisKetenagaanPoin);
-	const [masaKerja, setMasaKerja] = useState(employee.masaKerja);
-	const [masaKerjaPoin, setMasaKerjaPoin] = useState(employee.masaKerjaPoin);
-	const [rangkap, setRangkap] = useState(employee.rangkapTugas);
-	const [klaster, setKlaster] = useState(employee.tanggungJawabKlaster);
-	const [isEditing, setIsEditing] = useState(false);
+	const [jenis, setJenis] = React.useState(employee.jenisKetenagaanPoin);
+	const [masaKerja, setMasaKerja] = React.useState(employee.masaKerja);
+	const [masaKerjaPoin, setMasaKerjaPoin] = React.useState(
+		employee.masaKerjaPoin,
+	);
+	const [rangkap, setRangkap] = React.useState(employee.rangkapTugas);
+	const [klaster, setKlaster] = React.useState(employee.tanggungJawabKlaster);
+	const [isEditing, setIsEditing] = React.useState(false);
 
 	const updateMutation = useMutation({
 		mutationFn: async () => {
@@ -883,6 +737,7 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["jaspel-variables"] });
 			setIsEditing(false);
+			toast.success(`Variabel ${employee.name} disimpan`);
 		},
 	});
 
@@ -890,20 +745,22 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 		Number(jenis) + Number(masaKerjaPoin) + Number(rangkap) + Number(klaster);
 
 	const inputClass =
-		"w-16 px-2 py-1 border border-black/20 rounded text-[12px] text-center";
+		"w-16 h-7 px-2 border border-border bg-card font-mono text-xs text-center focus:border-primary focus:outline-none";
 
 	return (
-		<tr className="hover:bg-[#f9f9ff]">
-			<td className="px-3 py-3">
-				<p className="font-medium text-[#111c2d] text-[13px]">
-					{employee.name}
-				</p>
-				<p className="text-[11px] text-[#6e797e]">
-					{employee.employeeCode}
-					{employee.position ? ` · ${employee.position}` : ""}
-				</p>
-			</td>
-			<td className="px-3 py-3 text-center">
+		<TableRow>
+			<TableCell>
+				<div className="flex flex-col">
+					<span className="font-bold text-foreground text-xs">
+						{employee.name}
+					</span>
+					<span className="text-[11px] font-mono text-muted-foreground">
+						{employee.employeeCode}
+						{employee.position ? ` · ${employee.position}` : ""}
+					</span>
+				</div>
+			</TableCell>
+			<TableCell className="text-center font-mono text-xs">
 				{isEditing ? (
 					<input
 						type="number"
@@ -912,10 +769,10 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 						className={inputClass}
 					/>
 				) : (
-					<span className="text-[13px]">{employee.jenisKetenagaanPoin}</span>
+					employee.jenisKetenagaanPoin
 				)}
-			</td>
-			<td className="px-3 py-3 text-center">
+			</TableCell>
+			<TableCell className="text-center font-mono text-xs">
 				{isEditing ? (
 					<input
 						type="number"
@@ -924,10 +781,10 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 						className={inputClass}
 					/>
 				) : (
-					<span className="text-[13px]">{employee.masaKerja}</span>
+					employee.masaKerja
 				)}
-			</td>
-			<td className="px-3 py-3 text-center">
+			</TableCell>
+			<TableCell className="text-center font-mono text-xs">
 				{isEditing ? (
 					<input
 						type="number"
@@ -936,10 +793,10 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 						className={inputClass}
 					/>
 				) : (
-					<span className="text-[13px]">{employee.masaKerjaPoin}</span>
+					employee.masaKerjaPoin
 				)}
-			</td>
-			<td className="px-3 py-3 text-center">
+			</TableCell>
+			<TableCell className="text-center font-mono text-xs">
 				{isEditing ? (
 					<input
 						type="number"
@@ -948,10 +805,10 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 						className={inputClass}
 					/>
 				) : (
-					<span className="text-[13px]">{employee.rangkapTugas || "-"}</span>
+					employee.rangkapTugas || "—"
 				)}
-			</td>
-			<td className="px-3 py-3 text-center">
+			</TableCell>
+			<TableCell className="text-center font-mono text-xs">
 				{isEditing ? (
 					<input
 						type="number"
@@ -960,35 +817,45 @@ function VariableRow({ employee }: { employee: JaspelVariable }) {
 						className={inputClass}
 					/>
 				) : (
-					<span className="text-[13px]">
-						{employee.tanggungJawabKlaster || "-"}
-					</span>
+					employee.tanggungJawabKlaster || "—"
 				)}
-			</td>
-			<td className="px-3 py-3 text-center font-semibold text-[#00647c] text-[13px]">
+			</TableCell>
+			<TableCell className="text-center font-mono text-xs font-bold text-primary">
 				{total.toFixed(2)}
-			</td>
-			<td className="px-3 py-3 text-right">
+			</TableCell>
+			<TableCell className="text-right">
 				{isEditing ? (
-					<button
-						type="button"
-						onClick={() => updateMutation.mutate()}
-						disabled={updateMutation.isPending}
-						className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#006c49] text-white text-[12px] font-medium rounded hover:bg-[#005237]"
-					>
-						<Save className="w-3 h-3" />
-						Simpan
-					</button>
+					<div className="flex items-center justify-end gap-1.5">
+						<Button
+							variant="outline"
+							size="sm"
+							className="h-7 text-xs px-2"
+							onClick={() => setIsEditing(false)}
+						>
+							Batal
+						</Button>
+						<Button
+							variant="primary"
+							size="sm"
+							className="h-7 text-xs px-2 gap-1"
+							onClick={() => updateMutation.mutate()}
+							disabled={updateMutation.isPending}
+						>
+							<Save className="h-3 w-3" />
+							Simpan
+						</Button>
+					</div>
 				) : (
-					<button
-						type="button"
+					<Button
+						variant="ghost"
+						size="sm"
+						className="h-7 text-xs text-primary hover:underline"
 						onClick={() => setIsEditing(true)}
-						className="text-[12px] text-[#00647c] hover:underline font-medium"
 					>
-						Edit
-					</button>
+						Ubah
+					</Button>
 				)}
-			</td>
-		</tr>
+			</TableCell>
+		</TableRow>
 	);
 }

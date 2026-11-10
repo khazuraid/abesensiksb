@@ -17,6 +17,7 @@ coverage
 
 # Local database backups
 backups/
+*.sql
 
 # Turbo
 .turbo
