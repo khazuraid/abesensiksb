@@ -9,6 +9,8 @@ services:
     image: absensi:latest
     restart: unless-stopped
     environment:
+      DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: ${REDIS_URL:-}
       DB_USER: ${DB_USER:-adms}
       DB_PASSWORD: ${DB_PASSWORD:-adms123}
       DB_NAME: ${DB_NAME:-adms_db}
