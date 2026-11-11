@@ -3700,6 +3700,9 @@ export class AdmsService {
 			.orderBy(asc(schema.deviceCommands.id))
 			.limit(1);
 		if (!command) return "OK";
+		this.logger.info(
+			`[ADMS] getrequest sn=${sn} deviceId=${device.id} -> C:${command.id}:${command.command}`,
+		);
 		return `C:${command.id}:${command.command}`;
 	}
 	async ackCommand(
@@ -3718,6 +3721,9 @@ export class AdmsService {
 					: eq(schema.devices.serialNumber, sn),
 			);
 		if (!device) return;
+		this.logger.info(
+			`[ADMS] devicecmd sn=${sn} deviceId=${device.id} id=${id} return=${success ? 0 : 1}`,
+		);
 		await this.db
 			.update(schema.deviceCommands)
 			.set({ status: success ? "COMPLETED" : "ERROR", updatedAt: new Date() })

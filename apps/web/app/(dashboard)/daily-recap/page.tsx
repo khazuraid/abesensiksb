@@ -90,10 +90,7 @@ export default function DailyRecapPage() {
 		return Array.from({ length: total }, (_, i) => {
 			const dayNum = i + 1;
 			const dateStr = `${year}-${String(month).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-			const dayOfWeek = new Date(year, month - 1, dayNum).getDay();
-			const isSunday = dayOfWeek === 0;
-			const isSaturday = dayOfWeek === 6;
-			return { dayNum, dateStr, isSunday, isSaturday };
+			return { dayNum, dateStr };
 		});
 	}, [month, year]);
 
@@ -556,23 +553,11 @@ export default function DailyRecapPage() {
 									{daysInMonth.map((d) => (
 										<th
 											key={d.dateStr}
-											className={cn(
-												"px-0.5 py-2 text-center border-r border-border/50 font-mono",
-												d.isSunday
-													? "bg-red-500/10 text-red-600 dark:text-red-400 font-bold"
-													: d.isSaturday
-														? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-														: "",
-											)}
+											className="px-0.5 py-2 text-center border-r border-border/50 font-mono"
 										>
-											<div className="leading-tight">
-												<span className="block text-[11px] font-bold">
-													{d.dayNum}
-												</span>
-												<span className="block text-[8px] opacity-70">
-													{d.isSunday ? "MIN" : d.isSaturday ? "SAB" : ""}
-												</span>
-											</div>
+											<span className="block text-[11px] font-bold">
+												{d.dayNum}
+											</span>
 										</th>
 									))}
 
