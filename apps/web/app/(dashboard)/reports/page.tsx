@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import {
+	Building2,
 	Eye,
 	FileSpreadsheet,
 	FileText,
@@ -66,8 +67,9 @@ interface DailyReportEmployee {
 }
 
 export default function ReportsPage() {
-	const [month, setMonth] = React.useState(new Date().getMonth() + 1);
-	const [year, setYear] = React.useState(new Date().getFullYear());
+	const today = new Date();
+	const [month, setMonth] = React.useState(today.getMonth() + 1);
+	const [year, setYear] = React.useState(today.getFullYear());
 	const [search, setSearch] = React.useState("");
 	const [page, setPage] = React.useState(1);
 	const [selectedEmployee, setSelectedEmployee] = React.useState<string | null>(
@@ -141,7 +143,7 @@ export default function ReportsPage() {
 		try {
 			const { jsPDF } = await import("jspdf");
 			await import("jspdf-autotable");
-			const { PDF_COLORS, drawHeader, drawFooter, TABLE_STYLES } = await import(
+			const { drawHeader, drawFooter, TABLE_STYLES } = await import(
 				"@/lib/pdf-design"
 			);
 
@@ -159,48 +161,76 @@ export default function ReportsPage() {
 				pageWidth,
 			);
 
-			// @ts-expect-error jspdf-autotable augments jsPDF
-			doc.autoTable({
+			const tableData = reportData.map((row, index) => [
+				index + 1,
+				row.name,
+				row.employeeCode,
+				row.department || "-",
+				row.totalPresent,
+				row.totalLate,
+				row.totalAbsent,
+				row.totalLeave,
+			]);
+
+			(doc as any).autoTable({
 				...TABLE_STYLES.primary,
+				startY: 110,
 				head: [
-					["Nama", "NIP", "Departemen", "Hadir", "Telat", "Alpa", "Cuti/Izin"],
+					[
+						"No",
+						"Nama Pegawai",
+						"NIP",
+						"Departemen",
+						"Hadir",
+						"Telat",
+						"Alpa",
+						"Cuti",
+					],
 				],
-				body: reportData.map((row) => [
-					row.name,
-					row.employeeCode,
-					row.department || "-",
-					String(row.totalPresent),
-					String(row.totalLate),
-					String(row.totalAbsent),
-					String(row.totalLeave),
-				]),
-				startY: 120,
-				styles: { fontSize: 8, cellPadding: 4, lineColor: PDF_COLORS.border },
+				body: tableData,
+				columnStyles: {
+					0: { cellWidth: 30, halign: "center" },
+					1: { cellWidth: 140 },
+					2: { cellWidth: 70 },
+					3: { cellWidth: 90 },
+					4: { cellWidth: 45, halign: "center" },
+					5: { cellWidth: 45, halign: "center" },
+					6: { cellWidth: 45, halign: "center" },
+					7: { cellWidth: 45, halign: "center" },
+				},
+				didDrawPage: () => {
+					drawFooter(doc, pageWidth, pageHeight);
+				},
 			});
 
-			drawFooter(doc, pageWidth, pageHeight);
-			doc.save(`Laporan-Absensi-${month}-${year}.pdf`);
+			doc.save(`Laporan-Performa-${month}-${year}.pdf`);
 			toast.success("Berkas PDF berhasil diunduh");
 		} catch {
-			toast.error("Gagal mengunduh PDF");
+			toast.error("Gagal mencetak dokumen PDF");
 		} finally {
 			setIsExporting(null);
 		}
 	};
 
-	const totalPresentSum = reportData.reduce(
-		(acc, r) => acc + r.totalPresent,
-		0,
+	const totalPresentSum = React.useMemo(
+		() => reportData.reduce((acc, r) => acc + (r.totalPresent || 0), 0),
+		[reportData],
 	);
-	const totalLateSum = reportData.reduce((acc, r) => acc + r.totalLate, 0);
-	const totalAbsentSum = reportData.reduce((acc, r) => acc + r.totalAbsent, 0);
+	const totalLateSum = React.useMemo(
+		() => reportData.reduce((acc, r) => acc + (r.totalLate || 0), 0),
+		[reportData],
+	);
+	const totalAbsentSum = React.useMemo(
+		() => reportData.reduce((acc, r) => acc + (r.totalAbsent || 0), 0),
+		[reportData],
+	);
 
 	return (
 		<div className="page-shell space-y-6">
 			{/* Level 1: Page Header */}
 			<PageHeader
-				title="Laporan & Rekapitulasi Ekspor"
-				description="Konsolidasi laporan kedisiplinan pegawai, absensi periodik, dan berkas cetak resmi."
+				title="Laporan Presensi Bulanan"
+				description="Akumulasi kehadiran bulanan seluruh pegawai, rekap ketepatan waktu, dan ekspor formal."
 				action={
 					<div className="flex items-center gap-2">
 						<Button
@@ -214,14 +244,14 @@ export default function ReportsPage() {
 							{isExporting === "excel" ? "Mengunduh..." : "Export Excel"}
 						</Button>
 						<Button
-							variant="primary"
+							variant="outline"
 							size="sm"
 							onClick={handleExportPdf}
 							disabled={Boolean(isExporting)}
 							className="gap-1.5"
 						>
 							<FileText className="h-4 w-4" />
-							{isExporting === "pdf" ? "Mengunduh..." : "Cetak PDF"}
+							{isExporting === "pdf" ? "Mengunduh..." : "Export PDF"}
 						</Button>
 					</div>
 				}
@@ -236,10 +266,10 @@ export default function ReportsPage() {
 					description="Pada periode terpilih"
 				/>
 				<StatCard
-					title="Total Presensi"
+					title="Total Hadir"
 					value={totalPresentSum}
 					icon={<UserCheck className="h-4 w-4 text-emerald-600" />}
-					description="Akumulasi kehadiran hadir"
+					description="Akumulasi kehadiran masuk"
 				/>
 				<StatCard
 					title="Total Terlambat"
@@ -251,7 +281,7 @@ export default function ReportsPage() {
 					title="Total Alpa"
 					value={totalAbsentSum}
 					icon={<UserX className="h-4 w-4 text-red-600" />}
-					description="Tanpa keterangan sah"
+					description="Hari tanpa keterangan"
 				/>
 			</div>
 
@@ -304,7 +334,7 @@ export default function ReportsPage() {
 				<div className="relative w-full sm:w-64">
 					<Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
 					<Input
-						placeholder="Cari nama atau NIP..."
+						placeholder="Cari pegawai atau NIP..."
 						value={search}
 						onChange={(e) => {
 							setSearch(e.target.value);
@@ -315,24 +345,24 @@ export default function ReportsPage() {
 				</div>
 			</div>
 
-			{/* Table Container */}
+			{/* Main Summary Table */}
 			<div className="border border-border bg-card">
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>NIP</TableHead>
+							<TableHead className="w-32">NIP</TableHead>
 							<TableHead>Nama Pegawai</TableHead>
 							<TableHead>Departemen</TableHead>
 							<TableHead className="text-center">Hadir</TableHead>
 							<TableHead className="text-center">Terlambat</TableHead>
 							<TableHead className="text-center">Alpa</TableHead>
-							<TableHead className="text-center">Cuti/Izin</TableHead>
+							<TableHead className="text-center">Cuti / Izin</TableHead>
 							<TableHead className="text-right">Aksi</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{isLoading ? (
-							[1, 2, 3].map((k) => (
+							[1, 2, 3, 4, 5].map((k) => (
 								<TableRow key={k} className="animate-pulse">
 									<TableCell colSpan={8} className="h-12 bg-card" />
 								</TableRow>
@@ -341,44 +371,50 @@ export default function ReportsPage() {
 							<TableRow>
 								<TableCell
 									colSpan={8}
-									className="py-10 text-center text-xs text-muted-foreground"
+									className="py-12 text-center text-xs text-muted-foreground"
 								>
 									Tidak ada rekaman data pada periode ini.
 								</TableCell>
 							</TableRow>
 						) : (
 							reportData.map((row) => (
-								<TableRow key={row.id}>
+								<TableRow
+									key={row.id}
+									className="hover:bg-muted/30 transition-colors"
+								>
 									<TableCell className="font-mono text-xs text-muted-foreground">
 										{row.employeeCode}
 									</TableCell>
-									<TableCell className="font-bold text-foreground">
+									<TableCell className="font-semibold text-foreground">
 										{row.name}
 									</TableCell>
 									<TableCell className="text-xs text-muted-foreground">
-										{row.department || "—"}
+										<div className="inline-flex items-center gap-1.5">
+											<Building2 className="h-3 w-3 opacity-60" />
+											<span>{row.department || "Umum"}</span>
+										</div>
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-emerald-600">
+									<TableCell className="text-center font-mono text-xs font-bold text-emerald-600 bg-emerald-500/5">
 										{row.totalPresent}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-amber-600">
+									<TableCell className="text-center font-mono text-xs font-bold text-amber-600 bg-amber-500/5">
 										{row.totalLate}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-red-600">
+									<TableCell className="text-center font-mono text-xs font-bold text-red-600 bg-red-500/5">
 										{row.totalAbsent}
 									</TableCell>
-									<TableCell className="text-center font-mono text-xs font-bold text-sky-600">
+									<TableCell className="text-center font-mono text-xs font-bold text-sky-600 bg-sky-500/5">
 										{row.totalLeave}
 									</TableCell>
 									<TableCell className="text-right">
 										<Button
 											variant="outline"
 											size="sm"
-											className="text-xs gap-1"
+											className="text-xs gap-1 h-7 px-2.5"
 											onClick={() => setSelectedEmployee(row.id)}
 										>
 											<Eye className="h-3.5 w-3.5" />
-											Detail
+											Rincian
 										</Button>
 									</TableCell>
 								</TableRow>
@@ -387,104 +423,129 @@ export default function ReportsPage() {
 					</TableBody>
 				</Table>
 
-				<div className="p-3 border-t border-border bg-card">
+				{meta && (
 					<PaginationControls
 						meta={meta}
 						onPageChange={setPage}
 						disabled={isLoading}
 					/>
-				</div>
+				)}
 			</div>
 
-			{/* Detail Inspector Modal */}
+			{/* Modal Detail Individu */}
 			{selectedEmployee && (
 				<Modal
 					open={Boolean(selectedEmployee)}
 					onOpenChange={() => setSelectedEmployee(null)}
-					title="Rekapitulasi Kehadiran Individu"
-					description="Rincian status harian pegawai pada bulan terpilih."
+					title="Rincian Kehadiran Pegawai"
+					description="Rincian hari kerja, jam log, dan kalkulasi keterlambatan per tanggal."
 					maxWidth="4xl"
 				>
 					{isLoadingDaily ? (
 						<div className="py-12 text-center text-xs text-muted-foreground flex items-center justify-center gap-2">
-							<Loader2 className="h-4 w-4 animate-spin" /> Memuat data...
+							<Loader2 className="h-4 w-4 animate-spin" /> Memuat rincian
+							data...
 						</div>
 					) : selectedEmployeeDetail ? (
 						<div className="space-y-4">
+							{/* Mini KPI */}
 							<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 border border-border p-3 bg-muted/20">
 								<div>
 									<span className="text-[10px] uppercase font-mono text-muted-foreground">
-										Total Menit Telat
+										Total Keterlambatan
 									</span>
-									<p className="text-sm font-bold font-mono text-foreground">
-										{selectedEmployeeDetail.totalLateMinutesSum}m
+									<p className="text-base font-bold font-mono text-amber-600">
+										{selectedEmployeeDetail.totalLateMinutesSum} Menit
 									</p>
 								</div>
 								<div>
 									<span className="text-[10px] uppercase font-mono text-muted-foreground">
-										Total Pulang Cepat
+										Pulang Cepat
 									</span>
-									<p className="text-sm font-bold font-mono text-foreground">
-										{selectedEmployeeDetail.totalEarlyOutMinutesSum}m
+									<p className="text-base font-bold font-mono text-amber-600">
+										{selectedEmployeeDetail.totalEarlyOutMinutesSum} Menit
 									</p>
 								</div>
 								<div>
 									<span className="text-[10px] uppercase font-mono text-muted-foreground">
 										Total Alpa
 									</span>
-									<p className="text-sm font-bold font-mono text-red-600">
-										{selectedEmployeeDetail.totalAbsent} hari
+									<p className="text-base font-bold font-mono text-red-600">
+										{selectedEmployeeDetail.totalAbsent} Hari
 									</p>
 								</div>
 								<div>
 									<span className="text-[10px] uppercase font-mono text-muted-foreground">
-										Total Cuti
+										Total Cuti / Izin
 									</span>
-									<p className="text-sm font-bold font-mono text-sky-600">
-										{selectedEmployeeDetail.totalLeave} hari
+									<p className="text-base font-bold font-mono text-sky-600">
+										{selectedEmployeeDetail.totalLeave} Hari
 									</p>
 								</div>
 							</div>
 
-							<div className="border border-border">
+							{/* Tabel Harian Individu */}
+							<div className="border border-border max-h-[50vh] overflow-y-auto">
 								<Table>
-									<TableHeader>
+									<TableHeader className="sticky top-0 bg-muted z-10">
 										<TableRow>
 											<TableHead>Tanggal</TableHead>
-											<TableHead>Jam Masuk</TableHead>
-											<TableHead>Jam Pulang</TableHead>
-											<TableHead>Telat (m)</TableHead>
-											<TableHead>Status</TableHead>
+											<TableHead className="text-center">Jam Masuk</TableHead>
+											<TableHead className="text-center">Jam Pulang</TableHead>
+											<TableHead className="text-center">Telat</TableHead>
+											<TableHead className="text-center">Status</TableHead>
 										</TableRow>
 									</TableHeader>
 									<TableBody>
-										{selectedEmployeeDetail.days.map((day) => (
-											<TableRow key={day.date}>
+										{selectedEmployeeDetail.days.map((d) => (
+											<TableRow key={d.date} className="hover:bg-muted/20">
 												<TableCell className="font-mono text-xs">
-													{day.date}
+													{d.date}
 												</TableCell>
-												<TableCell className="font-mono text-xs">
-													{day.clockIn || "—"}
+												<TableCell className="text-center font-mono text-xs font-semibold">
+													{d.clockIn || "—"}
 												</TableCell>
-												<TableCell className="font-mono text-xs">
-													{day.clockOut || "—"}
+												<TableCell className="text-center font-mono text-xs font-semibold">
+													{d.clockOut || "—"}
 												</TableCell>
-												<TableCell className="font-mono text-xs text-muted-foreground">
-													{day.lateMinutes > 0 ? `${day.lateMinutes}m` : "—"}
+												<TableCell className="text-center font-mono text-xs">
+													{d.lateMinutes > 0 ? (
+														<span className="text-amber-600 font-bold">
+															{d.lateMinutes}m
+														</span>
+													) : (
+														"—"
+													)}
 												</TableCell>
-												<TableCell>
-													<Badge
-														variant={
-															day.status === "PRESENT"
-																? "success"
-																: day.status === "LATE"
-																	? "warning"
-																	: "default"
-														}
-														className="text-[10px]"
-													>
-														{day.status}
-													</Badge>
+												<TableCell className="text-center">
+													{d.isHoliday ? (
+														<span className="border border-purple-200 bg-purple-50 text-purple-700 font-mono text-[10px] px-1.5 py-0.5">
+															LIBUR
+														</span>
+													) : !d.isWorkDay ? (
+														<span className="border border-border bg-muted text-muted-foreground font-mono text-[10px] px-1.5 py-0.5">
+															OFF
+														</span>
+													) : d.status === "PRESENT" ? (
+														<Badge variant="success" className="text-[10px]">
+															HADIR
+														</Badge>
+													) : d.status === "LATE" ? (
+														<Badge variant="warning" className="text-[10px]">
+															TELAT
+														</Badge>
+													) : d.status === "ABSENT" ? (
+														<Badge
+															variant="destructive"
+															className="text-[10px]"
+														>
+															ALPA
+														</Badge>
+													) : (
+														<Badge variant="info" className="text-[10px]">
+															{d.status}
+														</Badge>
+													)}
 												</TableCell>
 											</TableRow>
 										))}
@@ -493,9 +554,9 @@ export default function ReportsPage() {
 							</div>
 						</div>
 					) : (
-						<div className="py-8 text-center text-xs text-muted-foreground">
-							Detail harian tidak ditemukan.
-						</div>
+						<p className="text-xs text-muted-foreground text-center py-6">
+							Data tidak ditemukan.
+						</p>
 					)}
 				</Modal>
 			)}
