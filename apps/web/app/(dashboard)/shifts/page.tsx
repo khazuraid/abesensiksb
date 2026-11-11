@@ -171,6 +171,42 @@ function ShiftFormModal({
 					</div>
 				</div>
 
+				{/* Batas jam masuk/pulang — di luar rentang ini scan tidak dihitung */}
+				<div className="border-t border-border pt-4 space-y-3">
+					<p className="text-xs text-muted-foreground">
+						Batas jam absen: scan di luar rentang ini tidak dihitung sebagai jam
+						masuk/pulang.
+					</p>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+						{(
+							[
+								["minInTime", "Min. Jam Masuk"],
+								["maxLateTime", "Maks. Jam Masuk"],
+								["minOutTime", "Min. Jam Pulang"],
+								["maxOutTime", "Maks. Jam Pulang"],
+							] as const
+						).map(([key, label]) => (
+							<div key={key} className="space-y-1.5">
+								<label
+									htmlFor={key}
+									className="text-xs font-semibold uppercase tracking-wider text-muted-foreground font-mono"
+								>
+									{label}
+								</label>
+								<Input
+									id={key}
+									type="time"
+									value={form[key] || ""}
+									onChange={(e) =>
+										setForm({ ...form, [key]: e.target.value || null })
+									}
+									className="font-mono text-xs"
+								/>
+							</div>
+						))}
+					</div>
+				</div>
+
 				{/* Effective Date Range */}
 				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
 					<div className="space-y-1.5">
@@ -349,6 +385,8 @@ export default function ShiftsPage() {
 						<TableRow>
 							<TableHead>Nama Shift</TableHead>
 							<TableHead>Jam Kerja</TableHead>
+							<TableHead>Batas Jam Masuk</TableHead>
+							<TableHead>Batas Jam Pulang</TableHead>
 							<TableHead>Toleransi Masuk</TableHead>
 							<TableHead>Toleransi Pulang</TableHead>
 							<TableHead>Hari Kerja</TableHead>
@@ -360,13 +398,13 @@ export default function ShiftsPage() {
 						{isLoading ? (
 							[1, 2, 3].map((k) => (
 								<TableRow key={k} className="animate-pulse">
-									<TableCell colSpan={7} className="h-12 bg-card" />
+									<TableCell colSpan={9} className="h-12 bg-card" />
 								</TableRow>
 							))
 						) : shifts.length === 0 ? (
 							<TableRow>
 								<TableCell
-									colSpan={7}
+									colSpan={9}
 									className="py-10 text-center text-xs text-muted-foreground"
 								>
 									Belum ada shift kerja yang dibuat.
@@ -380,6 +418,14 @@ export default function ShiftsPage() {
 									</TableCell>
 									<TableCell className="font-mono text-xs text-muted-foreground">
 										{shift.startTime} - {shift.endTime}
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{shift.minInTime?.slice(0, 5) || "—"} –{" "}
+										{shift.maxLateTime?.slice(0, 5) || "—"}
+									</TableCell>
+									<TableCell className="font-mono text-xs text-muted-foreground">
+										{shift.minOutTime?.slice(0, 5) || "—"} –{" "}
+										{shift.maxOutTime?.slice(0, 5) || "—"}
 									</TableCell>
 									<TableCell className="font-mono text-xs text-muted-foreground">
 										{shift.toleranceMinutes} menit

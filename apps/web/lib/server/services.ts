@@ -3666,12 +3666,29 @@ export class AdmsService {
 				})
 				.where(eq(schema.devices.id, device.id));
 		}
+		// Command PENDING yang tidak pernah di-ack (mis. perintah terakhir di batch
+		// tidak diproses terminal) ditandai ERROR agar tidak dikirim ulang selamanya.
+		const stale = new Date(
+			Date.now() - Number(process.env.COMMAND_ACK_TIMEOUT_MS || 300_000),
+		);
+		await this.db
+			.update(schema.deviceCommands)
+			.set({ status: "ERROR", updatedAt: new Date() })
+			.where(
+				and(
+					eq(schema.deviceCommands.deviceId, device.id),
+					eq(schema.deviceCommands.status, "PENDING"),
+					lte(schema.deviceCommands.createdAt, stale),
+				),
+			);
 		// ponytail: sejator parity — do NOT mark commands as SENT on getrequest.
 		// The terminal polls getrequest repeatedly; if it sees OK (empty) on the
 		// next poll before acking, it may abort command execution. Keeping
 		// commands PENDING until devicecmd ack ensures the terminal always
 		// receives the command on every poll, matching sejator behavior.
-		const commands = await this.db
+		// Kirim satu command per poll: firmware ZKTeco hanya mengeksekusi baris
+		// pertama, batch multi-baris membuat sisa perintah tidak pernah dijalankan.
+		const [command] = await this.db
 			.select()
 			.from(schema.deviceCommands)
 			.where(
@@ -3679,9 +3696,11 @@ export class AdmsService {
 					eq(schema.deviceCommands.deviceId, device.id),
 					eq(schema.deviceCommands.status, "PENDING"),
 				),
-			);
-		if (!commands.length) return "OK";
-		return commands.map((c) => `C:${c.id}:${c.command}`).join("\n");
+			)
+			.orderBy(asc(schema.deviceCommands.id))
+			.limit(1);
+		if (!command) return "OK";
+		return `C:${command.id}:${command.command}`;
 	}
 	async ackCommand(
 		id: number,

@@ -18,6 +18,7 @@ import {
 	RefreshCw,
 	Search,
 	Server,
+	Trash2,
 	Wifi,
 	WifiOff,
 } from "lucide-react";
@@ -610,6 +611,95 @@ export default function DevicesPage() {
 										className="text-xs gap-1.5"
 									>
 										Tarik Semua Log
+									</Button>
+								</div>
+							</div>
+
+							{/* Khusus Terminal */}
+							<div className="p-4 space-y-2">
+								<h4 className="text-xs font-mono font-bold uppercase tracking-wider text-muted-foreground">
+									Khusus Terminal
+								</h4>
+								<Button
+									variant="outline"
+									size="sm"
+									disabled={sendCommand.isPending}
+									onClick={() => {
+										if (
+											confirm(
+												"AWAS: Semua data pada perangkat akan dihapus. Lanjutkan?",
+											)
+										)
+											sendCommand.mutate({
+												id: selectedDevice.id,
+												command: "attendance.clear",
+											});
+									}}
+									className="w-full gap-1.5 text-xs text-destructive"
+								>
+									<Trash2 className="h-3.5 w-3.5" />
+									Hapus Seluruh Data Terminal
+								</Button>
+								<div className="grid grid-cols-2 gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() =>
+											api
+												.patch(
+													selectedDevice.isBlocked
+														? "/devices/unblock"
+														: "/devices/block",
+													{ deviceId: selectedDevice.id },
+												)
+												.then(
+													() => {
+														queryClient.invalidateQueries({
+															queryKey: ["devices"],
+														});
+														toast.success(
+															selectedDevice.isBlocked
+																? "Terminal dibuka blokirnya"
+																: "Terminal diblokir",
+														);
+													},
+													() =>
+														toast.error(
+															selectedDevice.isBlocked
+																? "Gagal membuka blokir"
+																: "Gagal memblokir terminal",
+														),
+												)
+										}
+										className="text-xs"
+									>
+										{selectedDevice.isBlocked
+											? "Buka Blokir"
+											: "Blokir Terminal"}
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => {
+											if (
+												confirm(
+													"Hapus terminal ini dari daftar? Data absensi yang sudah tersimpan tetap ada.",
+												)
+											)
+												api.delete(`/devices/${selectedDevice.id}`).then(
+													() => {
+														queryClient.invalidateQueries({
+															queryKey: ["devices"],
+														});
+														setSelectedDevice(null);
+														toast.success("Terminal dihapus");
+													},
+													() => toast.error("Gagal menghapus terminal"),
+												);
+										}}
+										className="text-xs text-destructive"
+									>
+										Hapus Terminal
 									</Button>
 								</div>
 							</div>

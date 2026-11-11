@@ -130,12 +130,11 @@ export default function EmployeesPage() {
 				throw new Error("Pilih minimal satu shift");
 			}
 			const payload = {
-				employeeIds: bulkShiftAll ? [] : selectedIds,
-				allFiltered: bulkShiftAll,
-				search: bulkShiftAll ? search : undefined,
+				employeeIds: bulkShiftAll ? undefined : selectedIds,
+				allEmployees: bulkShiftAll,
 				shiftIds: bulkShiftIds,
 			};
-			return (await api.post("/employees/bulk-shifts", payload)).data;
+			return (await api.patch("/employees/bulk/shift", payload)).data;
 		},
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["employees"] });
