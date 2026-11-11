@@ -1471,8 +1471,23 @@ function parseTime(value: string) {
 	const [h = "0", m = "0"] = value.split(":");
 	return Number(h) * 60 + Number(m);
 }
+const jakartaTime = new Intl.DateTimeFormat("en-GB", {
+	timeZone: "Asia/Jakarta",
+	hour: "2-digit",
+	minute: "2-digit",
+	hour12: false,
+});
+const jakartaDate = new Intl.DateTimeFormat("en-CA", {
+	timeZone: "Asia/Jakarta",
+});
 function formatTime(value: Date) {
-	return `${String(value.getHours()).padStart(2, "0")}:${String(value.getMinutes()).padStart(2, "0")}`;
+	return jakartaTime.format(value);
+}
+function timezoneDate(value: Date) {
+	return jakartaDate.format(value);
+}
+function scanMinutes(value: Date) {
+	return parseTime(formatTime(value));
 }
 export class ReportsService {
 	constructor(private db: DbExecutor) {}
@@ -1612,9 +1627,7 @@ export class ReportsService {
 					.filter(
 						(log) =>
 							log.employeeId === employee.id &&
-							log.timestamp.getFullYear() === year &&
-							log.timestamp.getMonth() === month - 1 &&
-							log.timestamp.getDate() === day,
+							timezoneDate(log.timestamp) === dateStr,
 					)
 					.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
@@ -1635,24 +1648,24 @@ export class ReportsService {
 					const outEnd = shift.maxOutTime ? parseTime(shift.maxOutTime) : 1439;
 
 					const inCandidates = dayLogs.filter((log) => {
-						const scan =
-							log.timestamp.getHours() * 60 + log.timestamp.getMinutes();
+						const scan = scanMinutes(log.timestamp);
 						return scan >= inStart && scan <= inEnd;
 					});
 					const outCandidates = dayLogs.filter((log) => {
-						const scan =
-							log.timestamp.getHours() * 60 + log.timestamp.getMinutes();
+						const scan = scanMinutes(log.timestamp);
 						return scan >= outStart && scan <= outEnd;
 					});
 
-					inLog = inCandidates[0];
-					outLog = outCandidates[outCandidates.length - 1];
-
-					if (dayLogs.length === 1) {
+					// `type` dari mesin fingerprint adalah penentu utama arah scan.
+					// Rentang jam hanya dipakai sebagai cadangan bila `type` tidak tersedia.
+					const typedIn = dayLogs.filter((log) => log.type === "IN");
+					const typedOut = dayLogs.filter((log) => log.type === "OUT");
+					if (typedIn.length || typedOut.length) {
+						inLog = typedIn[0];
+						outLog = typedOut[typedOut.length - 1];
+					} else if (dayLogs.length === 1) {
 						const singleScan = dayLogs[0]!;
-						const scanTime =
-							singleScan.timestamp.getHours() * 60 +
-							singleScan.timestamp.getMinutes();
+						const scanTime = scanMinutes(singleScan.timestamp);
 						if (scanTime < midpoint) {
 							inLog = singleScan;
 							outLog = undefined;
@@ -1660,26 +1673,36 @@ export class ReportsService {
 							inLog = undefined;
 							outLog = singleScan;
 						}
-					} else if (inLog && outLog && inLog.id === outLog.id) {
-						const scanTime =
-							inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
-						if (scanTime < midpoint) {
-							outLog = undefined;
-						} else {
-							inLog = undefined;
+					} else {
+						inLog = inCandidates[0];
+						outLog = outCandidates[outCandidates.length - 1];
+						if (inLog && outLog && inLog.id === outLog.id) {
+							const scanTime = scanMinutes(inLog.timestamp);
+							if (scanTime < midpoint) {
+								outLog = undefined;
+							} else {
+								inLog = undefined;
+							}
 						}
 					}
 				} else {
-					inLog = dayLogs[0];
-					const lastLog =
-						dayLogs.length > 1 ? dayLogs[dayLogs.length - 1] : undefined;
-					outLog =
-						lastLog &&
-						inLog &&
-						lastLog.timestamp.getTime() - inLog.timestamp.getTime() >=
-							5 * 60_000
-							? lastLog
-							: undefined;
+					const typedIn = dayLogs.filter((log) => log.type === "IN");
+					const typedOut = dayLogs.filter((log) => log.type === "OUT");
+					if (typedIn.length || typedOut.length) {
+						inLog = typedIn[0];
+						outLog = typedOut[typedOut.length - 1];
+					} else {
+						inLog = dayLogs[0];
+						const lastLog =
+							dayLogs.length > 1 ? dayLogs[dayLogs.length - 1] : undefined;
+						outLog =
+							lastLog &&
+							inLog &&
+							lastLog.timestamp.getTime() - inLog.timestamp.getTime() >=
+								5 * 60_000
+								? lastLog
+								: undefined;
+					}
 				}
 
 				let status: string,
@@ -1691,8 +1714,7 @@ export class ReportsService {
 				if (!isWorkDay) status = "-";
 				else if (inLog || outLog) {
 					if (inLog && shift) {
-						const scan =
-							inLog.timestamp.getHours() * 60 + inLog.timestamp.getMinutes();
+						const scan = scanMinutes(inLog.timestamp);
 						const cutoff = parseTime(shift.startTime) + shift.toleranceMinutes;
 						if (scan > cutoff) {
 							isLate = true;
@@ -1700,8 +1722,7 @@ export class ReportsService {
 						}
 					}
 					if (outLog && shift) {
-						const scan =
-							outLog.timestamp.getHours() * 60 + outLog.timestamp.getMinutes();
+						const scan = scanMinutes(outLog.timestamp);
 						const end = parseTime(shift.endTime);
 						const limit = end - shift.earlyOutTolerance;
 						if (scan < limit) {

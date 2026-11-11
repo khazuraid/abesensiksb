@@ -8,11 +8,30 @@ const services = readFileSync(
 	"utf8",
 );
 
-test("rekap harian mengambil scan pertama di window masuk dan scan terakhir di window pulang", () => {
+test("rekap harian memakai type IN/OUT sebagai penentu utama arah scan", () => {
+	assert.match(
+		services,
+		/const typedIn = dayLogs\.filter\(\(log\) => log\.type === "IN"\)/,
+	);
+	assert.match(
+		services,
+		/const typedOut = dayLogs\.filter\(\(log\) => log\.type === "OUT"\)/,
+	);
+	assert.match(services, /inLog = typedIn\[0\]/);
+	assert.match(services, /outLog = typedOut\[typedOut\.length - 1\]/);
+});
+
+test("rekap harian memakai window jam sebagai cadangan bila type tidak tersedia", () => {
 	assert.match(services, /const inCandidates = dayLogs\.filter/);
 	assert.match(services, /const outCandidates = dayLogs\.filter/);
 	assert.match(services, /inLog = inCandidates\[0\]/);
 	assert.match(services, /outLog = outCandidates\[outCandidates\.length - 1\]/);
+});
+
+test("rekap harian mengelompokkan log memakai tanggal Asia/Jakarta, bukan waktu lokal server", () => {
+	assert.match(services, /timezoneDate\(log\.timestamp\) === dateStr/);
+	assert.doesNotMatch(services, /log\.timestamp\.getFullYear\(\) === year/);
+	assert.doesNotMatch(services, /log\.timestamp\.getMonth\(\) === month - 1/);
 });
 
 test("rekap harian mendukung single scan dan memisahkannya berdasarkan midpoint jadwal", () => {
